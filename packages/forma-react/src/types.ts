@@ -124,14 +124,69 @@ export interface MultiSelectFieldProps extends Omit<BaseFieldProps, "value" | "o
 export type SelectionFieldProps = SelectFieldProps | MultiSelectFieldProps;
 
 /**
+ * Array item field props returned by getItemFieldProps
+ */
+export interface ArrayItemFieldPropsResult {
+  /** Field path/name */
+  name: string;
+  /** Current field value */
+  value: unknown;
+  /** Field type */
+  type: string;
+  /** Display label */
+  label: string;
+  /** Help text or description */
+  description?: string;
+  /** Placeholder text */
+  placeholder?: string;
+  /** Whether field is visible */
+  visible: boolean;
+  /** Whether field is enabled */
+  enabled: boolean;
+  /** Whether field is required */
+  required: boolean;
+  /** Whether field has been touched */
+  touched: boolean;
+  /** Validation errors for this field */
+  errors: FieldError[];
+  /** Handler for value changes */
+  onChange: (value: unknown) => void;
+  /** Handler for blur events */
+  onBlur: () => void;
+  /** Item index in the array */
+  itemIndex: number;
+  /** Field name within the item */
+  fieldName: string;
+  /** Options for select fields */
+  options?: SelectOption[];
+}
+
+/**
  * Array manipulation helpers
  */
 export interface ArrayHelpers {
-  push: (item: unknown) => void;
+  /** Current array items */
+  items: unknown[];
+  /** Add item to end of array */
+  push: (item?: unknown) => void;
+  /** Insert item at specific index */
   insert: (index: number, item: unknown) => void;
+  /** Remove item at index */
   remove: (index: number) => void;
+  /** Move item from one index to another */
   move: (from: number, to: number) => void;
+  /** Swap items at two indices */
   swap: (indexA: number, indexB: number) => void;
+  /** Get field props for an item field */
+  getItemFieldProps: (index: number, fieldName: string) => ArrayItemFieldPropsResult;
+  /** Minimum number of items allowed */
+  minItems: number;
+  /** Maximum number of items allowed */
+  maxItems: number;
+  /** Whether more items can be added */
+  canAdd: boolean;
+  /** Whether items can be removed */
+  canRemove: boolean;
 }
 
 /**
@@ -142,7 +197,8 @@ export interface ArrayFieldProps extends Omit<BaseFieldProps, "value" | "onChang
   value: unknown[];
   onChange: (value: unknown[]) => void;
   helpers: ArrayHelpers;
-  itemFields?: FieldDefinition[];
+  /** Item field definitions keyed by field name */
+  itemFields: Record<string, FieldDefinition>;
   minItems?: number;
   maxItems?: number;
 }
@@ -200,24 +256,25 @@ export type FieldProps =
 
 /**
  * Map of field types to React components
+ * Components receive wrapper props with { field, spec } structure
  */
 export interface ComponentMap {
-  text?: React.ComponentType<TextFieldProps>;
-  email?: React.ComponentType<TextFieldProps>;
-  password?: React.ComponentType<TextFieldProps>;
-  url?: React.ComponentType<TextFieldProps>;
-  textarea?: React.ComponentType<TextFieldProps>;
-  number?: React.ComponentType<NumberFieldProps>;
-  integer?: React.ComponentType<IntegerFieldProps>;
-  boolean?: React.ComponentType<BooleanFieldProps>;
-  date?: React.ComponentType<DateFieldProps>;
-  datetime?: React.ComponentType<DateTimeFieldProps>;
-  select?: React.ComponentType<SelectFieldProps>;
-  multiselect?: React.ComponentType<MultiSelectFieldProps>;
-  array?: React.ComponentType<ArrayFieldProps>;
-  object?: React.ComponentType<ObjectFieldProps>;
-  computed?: React.ComponentType<ComputedFieldProps>;
-  fallback?: React.ComponentType<BaseFieldProps>;
+  text?: React.ComponentType<TextComponentProps>;
+  email?: React.ComponentType<TextComponentProps>;
+  password?: React.ComponentType<TextComponentProps>;
+  url?: React.ComponentType<TextComponentProps>;
+  textarea?: React.ComponentType<TextComponentProps>;
+  number?: React.ComponentType<NumberComponentProps>;
+  integer?: React.ComponentType<IntegerComponentProps>;
+  boolean?: React.ComponentType<BooleanComponentProps>;
+  date?: React.ComponentType<DateComponentProps>;
+  datetime?: React.ComponentType<DateTimeComponentProps>;
+  select?: React.ComponentType<SelectComponentProps>;
+  multiselect?: React.ComponentType<MultiSelectComponentProps>;
+  array?: React.ComponentType<ArrayComponentProps>;
+  object?: React.ComponentType<ObjectComponentProps>;
+  computed?: React.ComponentType<ComputedComponentProps>;
+  fallback?: React.ComponentType<FieldComponentProps>;
 }
 
 /**

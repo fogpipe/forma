@@ -62,6 +62,7 @@ export type {
   ArrayFieldProps,
   ArrayHelpers,
   ArrayItemFieldProps,
+  ArrayItemFieldPropsResult,
 
   // Component props (wrapper types with spec)
   FieldComponentProps,

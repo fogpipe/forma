@@ -1,6 +1,6 @@
 {
   "name": "@fogpipe/forma-react",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Headless React form renderer for Forma specifications",
   "type": "module",
   "main": "./dist/index.js",

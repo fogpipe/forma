@@ -47,6 +47,23 @@ function getNumberConstraints(schema?: JSONSchemaProperty): { min?: number; max?
 }
 
 /**
+ * Create a default item for an array field based on item field definitions
+ */
+function createDefaultItem(itemFields: Record<string, FieldDefinition>): Record<string, unknown> {
+  const item: Record<string, unknown> = {};
+  for (const [fieldName, fieldDef] of Object.entries(itemFields)) {
+    if (fieldDef.type === "boolean") {
+      item[fieldName] = false;
+    } else if (fieldDef.type === "number" || fieldDef.type === "integer") {
+      item[fieldName] = null;
+    } else {
+      item[fieldName] = "";
+    }
+  }
+  return item;
+}
+
+/**
  * FieldRenderer component
  *
  * @example
@@ -145,8 +162,16 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
     } as MultiSelectFieldProps;
   } else if (fieldType === "array" && fieldDef.itemFields) {
     const arrayValue = (baseProps.value as unknown[] | undefined) ?? [];
+    const minItems = fieldDef.minItems ?? 0;
+    const maxItems = fieldDef.maxItems ?? Infinity;
+    const itemFieldDefs = fieldDef.itemFields;
+
     const helpers: ArrayHelpers = {
-      push: (item: unknown) => forma.setFieldValue(fieldPath, [...arrayValue, item]),
+      items: arrayValue,
+      push: (item?: unknown) => {
+        const newItem = item ?? createDefaultItem(itemFieldDefs);
+        forma.setFieldValue(fieldPath, [...arrayValue, newItem]);
+      },
       insert: (index: number, item: unknown) => {
         const newArray = [...arrayValue];
         newArray.splice(index, 0, item);
@@ -168,6 +193,38 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
         [newArray[indexA], newArray[indexB]] = [newArray[indexB], newArray[indexA]];
         forma.setFieldValue(fieldPath, newArray);
       },
+      getItemFieldProps: (index: number, fieldName: string) => {
+        const itemFieldDef = itemFieldDefs[fieldName];
+        const itemPath = `${fieldPath}[${index}].${fieldName}`;
+        const itemValue = (arrayValue[index] as Record<string, unknown>)?.[fieldName];
+        return {
+          name: itemPath,
+          value: itemValue,
+          type: itemFieldDef?.type ?? "text",
+          label: itemFieldDef?.label ?? fieldName,
+          description: itemFieldDef?.description,
+          placeholder: itemFieldDef?.placeholder,
+          visible: true,
+          enabled: !disabled,
+          required: itemFieldDef?.requiredWhen === "true",
+          touched: forma.touched[itemPath] ?? false,
+          errors: forma.errors.filter((e) => e.field === itemPath),
+          onChange: (value: unknown) => {
+            const newArray = [...arrayValue];
+            const item = (newArray[index] ?? {}) as Record<string, unknown>;
+            newArray[index] = { ...item, [fieldName]: value };
+            forma.setFieldValue(fieldPath, newArray);
+          },
+          onBlur: () => forma.setFieldTouched(itemPath),
+          itemIndex: index,
+          fieldName,
+          options: itemFieldDef?.options,
+        };
+      },
+      minItems,
+      maxItems,
+      canAdd: arrayValue.length < maxItems,
+      canRemove: arrayValue.length > minItems,
     };
     fieldProps = {
       ...baseProps,
@@ -175,12 +232,9 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
       value: arrayValue,
       onChange: baseProps.onChange as (value: unknown[]) => void,
       helpers,
-      itemFields: Object.entries(fieldDef.itemFields).map(([name, def]) => ({
-        ...def,
-        label: def.label ?? name,
-      } as FieldDefinition)),
-      minItems: fieldDef.minItems,
-      maxItems: fieldDef.maxItems,
+      itemFields: itemFieldDefs,
+      minItems,
+      maxItems,
     } as ArrayFieldProps;
   } else {
     // Text-based fields
@@ -192,7 +246,9 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
     };
   }
 
-  const element = React.createElement(Component as React.ComponentType<typeof fieldProps>, fieldProps);
+  // Wrap props in { field, spec } structure for components
+  const componentProps = { field: fieldProps, spec };
+  const element = React.createElement(Component as React.ComponentType<typeof componentProps>, componentProps);
 
   if (className) {
     return <div className={className}>{element}</div>;

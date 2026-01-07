@@ -6,11 +6,12 @@ import { render, type RenderOptions } from "@testing-library/react";
 import type { Forma, FieldDefinition, PageDefinition } from "@fogpipe/forma-core";
 import type {
   ComponentMap,
-  TextFieldProps,
-  NumberFieldProps,
-  BooleanFieldProps,
-  SelectFieldProps,
-  ArrayFieldProps,
+  TextComponentProps,
+  NumberComponentProps,
+  BooleanComponentProps,
+  SelectComponentProps,
+  MultiSelectComponentProps,
+  ArrayComponentProps,
 } from "../types.js";
 
 /**
@@ -111,12 +112,11 @@ export function createTestSpec(
 /**
  * Create a basic component map for testing
  *
- * Components receive props directly matching the field type interfaces
- * (TextFieldProps, NumberFieldProps, etc.) from FormRenderer
+ * Components receive wrapper props { field, spec } from FormRenderer
  */
 export function createTestComponentMap(): ComponentMap {
   // Text-based fields (text, email, password, url, textarea)
-  const TextComponent = (props: TextFieldProps) => {
+  const TextComponent = ({ field: props }: TextComponentProps) => {
     const { name, field, value, errors, onChange, onBlur, disabled } = props;
     return (
       <div data-testid={`field-${name}`}>
@@ -137,7 +137,7 @@ export function createTestComponentMap(): ComponentMap {
   };
 
   // Number fields
-  const NumberComponent = (props: NumberFieldProps) => {
+  const NumberComponent = ({ field: props }: NumberComponentProps) => {
     const { name, field, value, errors, onChange, onBlur, disabled } = props;
     return (
       <div data-testid={`field-${name}`}>
@@ -161,7 +161,7 @@ export function createTestComponentMap(): ComponentMap {
   };
 
   // Boolean/checkbox fields
-  const BooleanComponent = (props: BooleanFieldProps) => {
+  const BooleanComponent = ({ field: props }: BooleanComponentProps) => {
     const { name, field, value, onChange, onBlur, disabled } = props;
     return (
       <div data-testid={`field-${name}`}>
@@ -179,12 +179,34 @@ export function createTestComponentMap(): ComponentMap {
     );
   };
 
-  // Select/multiselect fields
-  const SelectComponent = (props: SelectFieldProps) => {
-    const { name, field, value, options, onChange, onBlur, disabled, fieldType } = props;
-    const displayValue = fieldType === "multiselect"
-      ? ((value as unknown as string[]) || []).join(",")
-      : String(value ?? "");
+  // Select fields (single selection)
+  const SelectComponent = ({ field: props }: SelectComponentProps) => {
+    const { name, field, value, options, onChange, onBlur, disabled } = props;
+    return (
+      <div data-testid={`field-${name}`}>
+        <label htmlFor={name}>{field.label}</label>
+        <select
+          id={name}
+          value={String(value ?? "")}
+          onChange={(e) => onChange(e.target.value || null)}
+          onBlur={onBlur}
+          disabled={disabled}
+        >
+          <option value="">Select...</option>
+          {options.map((opt) => (
+            <option key={String(opt.value)} value={String(opt.value)}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  };
+
+  // Multiselect fields
+  const MultiSelectComponent = ({ field: props }: MultiSelectComponentProps) => {
+    const { name, field, value, options, onChange, onBlur, disabled } = props;
+    const displayValue = (value || []).join(",");
     return (
       <div data-testid={`field-${name}`}>
         <label htmlFor={name}>{field.label}</label>
@@ -193,11 +215,7 @@ export function createTestComponentMap(): ComponentMap {
           value={displayValue}
           onChange={(e) => {
             const val = e.target.value;
-            if (fieldType === "multiselect") {
-              (onChange as (value: string[]) => void)(val ? val.split(",") : []);
-            } else {
-              onChange(val || null);
-            }
+            onChange(val ? val.split(",") : []);
           }}
           onBlur={onBlur}
           disabled={disabled}
@@ -214,7 +232,7 @@ export function createTestComponentMap(): ComponentMap {
   };
 
   // Array fields
-  const ArrayComponent = (props: ArrayFieldProps) => {
+  const ArrayComponent = ({ field: props }: ArrayComponentProps) => {
     const { name, field, value, helpers } = props;
     const items = (value || []) as unknown[];
     return (
@@ -257,7 +275,7 @@ export function createTestComponentMap(): ComponentMap {
     date: TextComponent as ComponentMap["date"],
     datetime: TextComponent as ComponentMap["datetime"],
     select: SelectComponent,
-    multiselect: SelectComponent as ComponentMap["multiselect"],
+    multiselect: MultiSelectComponent,
     array: ArrayComponent,
     object: TextComponent as ComponentMap["object"],
     computed: TextComponent as ComponentMap["computed"],
