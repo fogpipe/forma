@@ -35,30 +35,20 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Update package versions
-        run: |
-          # Update forma-core version
-          cd packages/forma-core
-          npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version --allow-same-version
-          cd ../..
-
-          # Update forma-react version
-          cd packages/forma-react
-          npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version --allow-same-version
-          # Update forma-core dependency
-          npm pkg set "dependencies.@fogpipe/forma-core=^${{ steps.version.outputs.VERSION }}"
-          cd ../..
-
-      - name: Publish forma-core
+      - name: Update and publish forma-core
         run: |
           cd packages/forma-core
+          npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version --allow-same-version
           npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish forma-react
+      - name: Update and publish forma-react
         run: |
           cd packages/forma-react
+          npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version --allow-same-version
+          # Update forma-core dependency - use sed to avoid npm pkg set validation
+          sed -i 's/"@fogpipe\/forma-core": "[^"]*"/"@fogpipe\/forma-core": "^${{ steps.version.outputs.VERSION }}"/' package.json
           npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
