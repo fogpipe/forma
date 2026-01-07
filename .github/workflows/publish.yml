@@ -39,12 +39,12 @@ jobs:
         run: |
           # Update forma-core version
           cd packages/forma-core
-          npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
+          npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version --allow-same-version
           cd ../..
 
           # Update forma-react version
           cd packages/forma-react
-          npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
+          npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version --allow-same-version
           # Update forma-core dependency
           npm pkg set "dependencies.@fogpipe/forma-core=^${{ steps.version.outputs.VERSION }}"
           cd ../..
