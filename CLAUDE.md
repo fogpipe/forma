@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Forma is a declarative form specification language with FEEL (Friendly Enough Expression Language) expressions for dynamic form behavior. It's a TypeScript monorepo using Turborepo with two main packages:
 
 - **@fogpipe/forma-core** - Core runtime library for form validation, visibility, required states, and FEEL evaluation
-- **@fogpipe/forma-react** - React integration with hooks and components
+- **@fogpipe/forma-react** - React integration with hooks and components (depends on forma-core)
 
 ## Commands
 
@@ -45,6 +45,18 @@ packages/
 └── eslint-config/        # Shared ESLint configs
 ```
 
+### Package Dependencies
+
+```
+@fogpipe/forma-react
+    └── depends on: @fogpipe/forma-core
+
+@fogpipe/forma-core
+    └── depends on: feelin (FEEL expression parser)
+```
+
+When making changes to forma-core that affect forma-react, ensure both packages build successfully.
+
 ### Entry Points
 
 forma-core exports three entry points:
@@ -70,13 +82,93 @@ FEEL expressions have access to:
 - `item` / `itemIndex` - Array iteration context
 - `value` - Current field value
 
-## Code Conventions
+## Quality Checks
 
-- Test files colocated with source: `foo.ts` → `foo.test.ts`
-- TypeScript strict mode enabled
-- Conventional Commits for commit messages (feat:, fix:, docs:, etc.)
-- Branch names: `feat/name`, `fix/name`, etc.
+**Always run before committing:**
 
-## Publishing
+```bash
+npx turbo run lint check-types build test
+```
 
-Releases are triggered by version tags. Maintainers tag with `git tag v1.0.0` and push to trigger the publish workflow to GitHub Packages.
+This runs all quality checks across the monorepo with proper caching. All checks must pass before merging.
+
+## Git Workflow
+
+### Conventional Commits
+
+All commits must follow the Conventional Commits specification:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+```
+
+**Types:**
+- `feat:` - New feature (triggers MINOR version bump)
+- `fix:` - Bug fix (triggers PATCH version bump)
+- `docs:` - Documentation only changes
+- `refactor:` - Code change that neither fixes a bug nor adds a feature
+- `test:` - Adding or updating tests
+- `chore:` - Build, CI, dependencies, tooling
+
+**Breaking Changes:**
+- Add `!` after type: `feat!: remove deprecated API`
+- Triggers MAJOR version bump
+
+**Examples:**
+```bash
+git commit -m "feat: add date picker field type"
+git commit -m "fix: correct validation message for required fields"
+git commit -m "feat!: change API response format"
+```
+
+### Branch Names
+
+Use descriptive branch names:
+- `feat/add-date-field` - New features
+- `fix/validation-error` - Bug fixes
+- `docs/update-readme` - Documentation
+- `refactor/simplify-engine` - Code refactoring
+
+## Releases
+
+Use the `/release` command to create a new release. This will:
+
+1. Check prerequisites (git status, branch, etc.)
+2. Run all quality checks
+3. Analyze commits since last release
+4. Determine semantic version bump
+5. Update all package.json versions
+6. Create git tag and GitHub release
+7. Trigger the publish workflow to GitHub Packages
+
+The publish workflow automatically:
+- Runs quality checks
+- Publishes @fogpipe/forma-core
+- Publishes @fogpipe/forma-react
+
+## Troubleshooting
+
+### Build Failures
+
+If `npm run build` fails:
+1. Check TypeScript errors: `npm run check-types`
+2. Ensure dependencies are installed: `npm install`
+3. Clear Turbo cache: `rm -rf .turbo node_modules/.cache`
+
+### TypeScript Errors in forma-react
+
+forma-react depends on forma-core types. If you see type errors:
+1. Ensure forma-core builds first: `cd packages/forma-core && npm run build`
+2. Then build forma-react: `cd packages/forma-react && npm run build`
+
+Or just run `npm run build` at root - Turbo handles the order.
+
+### Test Failures
+
+Run tests in watch mode for faster iteration:
+```bash
+cd packages/forma-core
+npm run test:watch
+```
