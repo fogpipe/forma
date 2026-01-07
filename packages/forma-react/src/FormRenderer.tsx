@@ -237,6 +237,12 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
         errors,
         onChange: (value: unknown) => forma.setFieldValue(fieldPath, value),
         onBlur: () => forma.setFieldTouched(fieldPath),
+        // Convenience properties
+        visible: true, // Always true since we already filtered for visibility
+        enabled: !disabled,
+        label: fieldDef.label ?? fieldPath,
+        description: fieldDef.description,
+        placeholder: fieldDef.placeholder,
       };
 
       // Build type-specific props

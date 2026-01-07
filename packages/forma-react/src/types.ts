@@ -26,6 +26,17 @@ export interface BaseFieldProps {
   onChange: (value: unknown) => void;
   /** Handler for blur events */
   onBlur: () => void;
+  // Convenience properties (derived from field definition)
+  /** Whether field is visible (always true since FormRenderer handles visibility) */
+  visible: boolean;
+  /** Whether field is enabled (inverse of disabled) */
+  enabled: boolean;
+  /** Display label from field definition */
+  label: string;
+  /** Help text or description from field definition */
+  description?: string;
+  /** Placeholder text from field definition */
+  placeholder?: string;
 }
 
 /**
