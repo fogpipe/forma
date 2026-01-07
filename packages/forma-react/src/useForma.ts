@@ -5,8 +5,9 @@
  * This is a placeholder - the full implementation will be migrated from formidable.
  */
 
-import { useCallback, useMemo, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import type { Forma, FieldError, ValidationResult } from "@fogpipe/forma-core";
+import type { GetFieldPropsResult, GetSelectFieldPropsResult, GetArrayHelpersResult } from "./types.js";
 import {
   getVisibility,
   getRequired,
@@ -30,6 +31,8 @@ export interface UseFormaOptions {
   onChange?: (data: Record<string, unknown>, computed?: Record<string, unknown>) => void;
   /** When to validate: on change, blur, or submit only */
   validateOn?: "change" | "blur" | "submit";
+  /** Additional reference data to merge with spec.referenceData */
+  referenceData?: Record<string, unknown>;
 }
 
 /**
@@ -98,6 +101,8 @@ export interface UseFormaReturn {
   required: Record<string, boolean>;
   /** Field enabled state map */
   enabled: Record<string, boolean>;
+  /** Field touched state map */
+  touched: Record<string, boolean>;
   /** Validation errors */
   errors: FieldError[];
   /** Whether form is valid */
@@ -127,6 +132,14 @@ export interface UseFormaReturn {
   submitForm: () => Promise<void>;
   /** Reset the form */
   resetForm: () => void;
+
+  // Helper methods for getting field props
+  /** Get props for any field */
+  getFieldProps: (path: string) => GetFieldPropsResult;
+  /** Get props for select field (includes options) */
+  getSelectFieldProps: (path: string) => GetSelectFieldPropsResult;
+  /** Get array helpers for array field */
+  getArrayHelpers: (path: string) => GetArrayHelpersResult;
 }
 
 /**
@@ -138,6 +151,7 @@ function formReducer(state: FormState, action: FormAction): FormState {
       return {
         ...state,
         data: { ...state.data, [action.field]: action.value },
+        isSubmitted: false, // Clear on data change
       };
     case "SET_FIELD_TOUCHED":
       return {
@@ -148,6 +162,7 @@ function formReducer(state: FormState, action: FormAction): FormState {
       return {
         ...state,
         data: { ...state.data, ...action.values },
+        isSubmitted: false, // Clear on data change
       };
     case "SET_SUBMITTING":
       return { ...state, isSubmitting: action.isSubmitting };
@@ -172,7 +187,19 @@ function formReducer(state: FormState, action: FormAction): FormState {
  * Main Forma hook
  */
 export function useForma(options: UseFormaOptions): UseFormaReturn {
-  const { spec, initialData = {}, onSubmit, onChange, validateOn = "blur" } = options;
+  const { spec: inputSpec, initialData = {}, onSubmit, onChange, validateOn = "blur", referenceData } = options;
+
+  // Merge referenceData from options with spec.referenceData
+  const spec = useMemo((): Forma => {
+    if (!referenceData) return inputSpec;
+    return {
+      ...inputSpec,
+      referenceData: {
+        ...inputSpec.referenceData,
+        ...referenceData,
+      },
+    };
+  }, [inputSpec, referenceData]);
 
   const [state, dispatch] = useReducer(formReducer, {
     data: initialData,
@@ -181,6 +208,9 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     isSubmitted: false,
     currentPage: 0,
   });
+
+  // Track if we've initialized (to avoid calling onChange on first render)
+  const hasInitialized = useRef(false);
 
   // Calculate computed values
   const computed = useMemo(
@@ -212,22 +242,68 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     [state.data, spec, computed]
   );
 
-  // Check if form is dirty
+  // Check if form is dirty (data differs from initial)
   const isDirty = useMemo(
-    () => Object.keys(state.touched).length > 0,
-    [state.touched]
+    () => JSON.stringify(state.data) !== JSON.stringify(initialData),
+    [state.data, initialData]
   );
+
+  // Call onChange when data changes (not on initial render)
+  useEffect(() => {
+    if (hasInitialized.current) {
+      onChange?.(state.data, computed);
+    } else {
+      hasInitialized.current = true;
+    }
+  }, [state.data, computed, onChange]);
+
+  // Helper function to set value at nested path
+  const setNestedValue = useCallback((path: string, value: unknown): void => {
+    // Handle array index notation: "items[0].name" -> nested structure
+    const parts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
+
+    if (parts.length === 1) {
+      // Simple path - just set directly
+      dispatch({ type: "SET_FIELD_VALUE", field: path, value });
+      return;
+    }
+
+    // Build nested object for complex paths
+    const buildNestedObject = (data: Record<string, unknown>, pathParts: string[], val: unknown): Record<string, unknown> => {
+      const result = { ...data };
+      let current: Record<string, unknown> = result;
+
+      for (let i = 0; i < pathParts.length - 1; i++) {
+        const part = pathParts[i];
+        const nextPart = pathParts[i + 1];
+        const isNextArrayIndex = /^\d+$/.test(nextPart);
+
+        if (current[part] === undefined) {
+          current[part] = isNextArrayIndex ? [] : {};
+        } else if (Array.isArray(current[part])) {
+          current[part] = [...(current[part] as unknown[])];
+        } else {
+          current[part] = { ...(current[part] as Record<string, unknown>) };
+        }
+        current = current[part] as Record<string, unknown>;
+      }
+
+      current[pathParts[pathParts.length - 1]] = val;
+      return result;
+    };
+
+    dispatch({ type: "SET_VALUES", values: buildNestedObject(state.data, parts, value) });
+  }, [state.data]);
 
   // Actions
   const setFieldValue = useCallback(
     (path: string, value: unknown) => {
-      dispatch({ type: "SET_FIELD_VALUE", field: path, value });
+      setNestedValue(path, value);
       if (validateOn === "change") {
         dispatch({ type: "SET_FIELD_TOUCHED", field: path, touched: true });
       }
-      onChange?.(state.data, computed);
     },
-    [validateOn, onChange, state.data, computed]
+    [validateOn, setNestedValue]
   );
 
   const setFieldTouched = useCallback((path: string, touched = true) => {
@@ -270,9 +346,9 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     if (!spec.pages || spec.pages.length === 0) return null;
 
     const pageVisibility = getPageVisibility(state.data, spec, { computed });
-    const visiblePages = spec.pages.filter((p) => pageVisibility[p.id] !== false);
 
-    const pages: PageState[] = visiblePages.map((p) => ({
+    // Include all pages with their visibility status
+    const pages: PageState[] = spec.pages.map((p) => ({
       id: p.id,
       title: p.title,
       description: p.description,
@@ -280,10 +356,12 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       fields: p.fields,
     }));
 
-    const currentPage = pages[state.currentPage] || null;
-    const hasNextPage = state.currentPage < pages.length - 1;
+    // For navigation, only count visible pages
+    const visiblePages = pages.filter((p) => p.visible);
+    const currentPage = visiblePages[state.currentPage] || null;
+    const hasNextPage = state.currentPage < visiblePages.length - 1;
     const hasPreviousPage = state.currentPage > 0;
-    const isLastPage = state.currentPage === pages.length - 1;
+    const isLastPage = state.currentPage === visiblePages.length - 1;
 
     return {
       pages,
@@ -321,12 +399,207 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     };
   }, [spec, state.data, state.currentPage, computed, validation]);
 
+  // Helper to get value at nested path
+  const getValueAtPath = useCallback((path: string): unknown => {
+    // Handle array index notation: "items[0].name" -> ["items", "0", "name"]
+    const parts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
+    let value: unknown = state.data;
+    for (const part of parts) {
+      if (value === null || value === undefined) return undefined;
+      value = (value as Record<string, unknown>)[part];
+    }
+    return value;
+  }, [state.data]);
+
+  // Helper to set value at nested path
+  const setValueAtPath = useCallback((path: string, value: unknown): void => {
+    // For nested paths, we need to build the nested structure
+    const parts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
+    if (parts.length === 1) {
+      dispatch({ type: "SET_FIELD_VALUE", field: path, value });
+      return;
+    }
+
+    // Build nested object
+    const newData = { ...state.data };
+    let current: Record<string, unknown> = newData;
+
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i];
+      const nextPart = parts[i + 1];
+      const isNextArrayIndex = /^\d+$/.test(nextPart);
+
+      if (current[part] === undefined) {
+        current[part] = isNextArrayIndex ? [] : {};
+      } else if (Array.isArray(current[part])) {
+        current[part] = [...(current[part] as unknown[])];
+      } else {
+        current[part] = { ...(current[part] as Record<string, unknown>) };
+      }
+      current = current[part] as Record<string, unknown>;
+    }
+
+    current[parts[parts.length - 1]] = value;
+    dispatch({ type: "SET_VALUES", values: newData });
+  }, [state.data]);
+
+  // Memoized onChange/onBlur handlers for fields
+  const fieldHandlers = useRef<Map<string, { onChange: (value: unknown) => void; onBlur: () => void }>>(new Map());
+
+  const getFieldHandlers = useCallback((path: string) => {
+    if (!fieldHandlers.current.has(path)) {
+      fieldHandlers.current.set(path, {
+        onChange: (value: unknown) => setValueAtPath(path, value),
+        onBlur: () => setFieldTouched(path),
+      });
+    }
+    return fieldHandlers.current.get(path)!;
+  }, [setValueAtPath, setFieldTouched]);
+
+  // Get field props for any field
+  const getFieldProps = useCallback((path: string): GetFieldPropsResult => {
+    const fieldDef = spec.fields[path];
+    const handlers = getFieldHandlers(path);
+
+    // Determine field type from definition or infer from schema
+    let fieldType = fieldDef?.type || "text";
+    if (!fieldType || fieldType === "computed") {
+      const schemaProperty = spec.schema.properties[path];
+      if (schemaProperty) {
+        if (schemaProperty.type === "number") fieldType = "number";
+        else if (schemaProperty.type === "integer") fieldType = "integer";
+        else if (schemaProperty.type === "boolean") fieldType = "boolean";
+        else if (schemaProperty.type === "array") fieldType = "array";
+        else if (schemaProperty.type === "object") fieldType = "object";
+        else if ("enum" in schemaProperty && schemaProperty.enum) fieldType = "select";
+        else if ("format" in schemaProperty) {
+          if (schemaProperty.format === "date") fieldType = "date";
+          else if (schemaProperty.format === "date-time") fieldType = "datetime";
+          else if (schemaProperty.format === "email") fieldType = "email";
+          else if (schemaProperty.format === "uri") fieldType = "url";
+        }
+      }
+    }
+
+    const fieldErrors = validation.errors.filter((e) => e.field === path);
+    const isTouched = state.touched[path] ?? false;
+    const showErrors = validateOn === "change" || (validateOn === "blur" && isTouched) || state.isSubmitted;
+
+    return {
+      name: path,
+      value: getValueAtPath(path),
+      type: fieldType,
+      label: fieldDef?.label || path.charAt(0).toUpperCase() + path.slice(1),
+      description: fieldDef?.description,
+      placeholder: fieldDef?.placeholder,
+      visible: visibility[path] !== false,
+      enabled: enabled[path] !== false,
+      required: required[path] ?? false,
+      touched: isTouched,
+      errors: showErrors ? fieldErrors : [],
+      onChange: handlers.onChange,
+      onBlur: handlers.onBlur,
+    };
+  }, [spec, state.touched, state.isSubmitted, visibility, enabled, required, validation.errors, validateOn, getValueAtPath, getFieldHandlers]);
+
+  // Get select field props
+  const getSelectFieldProps = useCallback((path: string): GetSelectFieldPropsResult => {
+    const baseProps = getFieldProps(path);
+    const fieldDef = spec.fields[path];
+
+    return {
+      ...baseProps,
+      options: fieldDef?.options ?? [],
+    };
+  }, [getFieldProps, spec.fields]);
+
+  // Get array helpers
+  const getArrayHelpers = useCallback((path: string): GetArrayHelpersResult => {
+    const fieldDef = spec.fields[path];
+    const currentValue = (getValueAtPath(path) as unknown[]) ?? [];
+    const minItems = fieldDef?.minItems ?? 0;
+    const maxItems = fieldDef?.maxItems ?? Infinity;
+
+    const canAdd = currentValue.length < maxItems;
+    const canRemove = currentValue.length > minItems;
+
+    const getItemFieldProps = (index: number, fieldName: string): GetFieldPropsResult => {
+      const itemPath = `${path}[${index}].${fieldName}`;
+      const itemFieldDef = fieldDef?.itemFields?.[fieldName];
+      const handlers = getFieldHandlers(itemPath);
+
+      // Get item value
+      const item = currentValue[index] as Record<string, unknown> | undefined;
+      const itemValue = item?.[fieldName];
+
+      const fieldErrors = validation.errors.filter((e) => e.field === itemPath);
+      const isTouched = state.touched[itemPath] ?? false;
+      const showErrors = validateOn === "change" || (validateOn === "blur" && isTouched) || state.isSubmitted;
+
+      return {
+        name: itemPath,
+        value: itemValue,
+        type: itemFieldDef?.type || "text",
+        label: itemFieldDef?.label || fieldName.charAt(0).toUpperCase() + fieldName.slice(1),
+        description: itemFieldDef?.description,
+        placeholder: itemFieldDef?.placeholder,
+        visible: true,
+        enabled: enabled[path] !== false,
+        required: false, // TODO: Evaluate item field required
+        touched: isTouched,
+        errors: showErrors ? fieldErrors : [],
+        onChange: handlers.onChange,
+        onBlur: handlers.onBlur,
+      };
+    };
+
+    return {
+      items: currentValue,
+      push: (item: unknown) => {
+        if (canAdd) {
+          setValueAtPath(path, [...currentValue, item]);
+        }
+      },
+      remove: (index: number) => {
+        if (canRemove) {
+          const newArray = [...currentValue];
+          newArray.splice(index, 1);
+          setValueAtPath(path, newArray);
+        }
+      },
+      move: (from: number, to: number) => {
+        const newArray = [...currentValue];
+        const [item] = newArray.splice(from, 1);
+        newArray.splice(to, 0, item);
+        setValueAtPath(path, newArray);
+      },
+      swap: (indexA: number, indexB: number) => {
+        const newArray = [...currentValue];
+        [newArray[indexA], newArray[indexB]] = [newArray[indexB], newArray[indexA]];
+        setValueAtPath(path, newArray);
+      },
+      insert: (index: number, item: unknown) => {
+        if (canAdd) {
+          const newArray = [...currentValue];
+          newArray.splice(index, 0, item);
+          setValueAtPath(path, newArray);
+        }
+      },
+      getItemFieldProps,
+      minItems,
+      maxItems,
+      canAdd,
+      canRemove,
+    };
+  }, [spec.fields, getValueAtPath, setValueAtPath, getFieldHandlers, enabled, state.touched, state.isSubmitted, validation.errors, validateOn]);
+
   return {
     data: state.data,
     computed,
     visibility,
     required,
     enabled,
+    touched: state.touched,
     errors: validation.errors,
     isValid: validation.valid,
     isSubmitting: state.isSubmitting,
@@ -341,5 +614,8 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     validateForm,
     submitForm,
     resetForm,
+    getFieldProps,
+    getSelectFieldProps,
+    getArrayHelpers,
   };
 }

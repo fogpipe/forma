@@ -271,10 +271,8 @@ export function isValidExpression(expression: FEELExpression): boolean {
     feelinEvaluate(expression, {});
     return true;
   } catch {
-    // Some expressions may fail at runtime but parse correctly
-    // For now, we consider any expression that doesn't throw during
-    // evaluation setup as valid
-    return true;
+    // Expression failed to parse or evaluate
+    return false;
   }
 }
 

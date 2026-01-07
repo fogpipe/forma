@@ -200,8 +200,8 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       return spec.fieldOrder;
     }, [spec.pages, spec.fieldOrder, forma.wizard]);
 
-    // Render a single field
-    const renderField = (fieldPath: string) => {
+    // Render a single field (memoized)
+    const renderField = useCallback((fieldPath: string) => {
       const fieldDef = spec.fields[fieldPath];
       if (!fieldDef) return null;
 
@@ -219,7 +219,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       }
 
       const errors = forma.errors.filter((e) => e.field === fieldPath);
-      const touched = fieldPath in forma.data;
+      const touched = forma.touched[fieldPath] ?? false;
       const required = forma.required[fieldPath] ?? false;
       const disabled = forma.enabled[fieldPath] === false;
 
@@ -228,6 +228,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
 
       // Base field props
       const baseProps: BaseFieldProps = {
+        name: fieldPath,
         field: fieldDef,
         value: forma.data[fieldPath],
         touched,
@@ -318,10 +319,13 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
           {React.createElement(Component as React.ComponentType<typeof fieldProps>, fieldProps)}
         </FieldWrapper>
       );
-    };
+    }, [spec, forma, components, FieldWrapper]);
 
-    // Render fields
-    const renderedFields = fieldsToRender.map(renderField);
+    // Render fields (memoized)
+    const renderedFields = useMemo(
+      () => fieldsToRender.map(renderField),
+      [fieldsToRender, renderField]
+    );
 
     // Render with page wrapper if using pages
     const content = useMemo(() => {

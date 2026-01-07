@@ -20,6 +20,7 @@ import type {
 } from "../types.js";
 import { calculate } from "./calculate.js";
 import { getVisibility } from "./visibility.js";
+import { isFieldRequired } from "./required.js";
 
 // ============================================================================
 // Types
@@ -146,8 +147,8 @@ function validateField(
   };
 
   // 1. Required validation
-  const isRequired = checkIfRequired(fieldDef, spec, path, context);
-  if (isRequired && isEmpty(value)) {
+  const required = isFieldRequired(path, fieldDef, spec, context);
+  if (required && isEmpty(value)) {
     errors.push({
       field: path,
       message: fieldDef.label
@@ -187,28 +188,6 @@ function validateField(
   }
 
   return errors;
-}
-
-// ============================================================================
-// Required Check
-// ============================================================================
-
-/**
- * Determine if a field is currently required
- */
-function checkIfRequired(
-  fieldDef: FieldDefinition,
-  spec: Forma,
-  fieldPath: string,
-  context: EvaluationContext
-): boolean {
-  // If field has requiredWhen, evaluate it
-  if (fieldDef.requiredWhen) {
-    return evaluateBoolean(fieldDef.requiredWhen, context);
-  }
-
-  // Otherwise, check schema required array
-  return spec.schema.required?.includes(fieldPath) ?? false;
 }
 
 /**
@@ -421,7 +400,16 @@ function validateFormat(
     case "date": {
       // ISO date format YYYY-MM-DD
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(value) || isNaN(Date.parse(value))) {
+      if (!dateRegex.test(value)) {
+        return {
+          field: path,
+          message: `${label} must be a valid date`,
+          severity: "error",
+        };
+      }
+      // Verify the date is actually valid (e.g., not Feb 30)
+      const parsed = new Date(value + "T00:00:00Z");
+      if (isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
         return {
           field: path,
           message: `${label} must be a valid date`,

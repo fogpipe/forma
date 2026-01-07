@@ -25,22 +25,63 @@ export type { UseFormaOptions, UseFormaReturn, PageState, WizardHelpers } from "
 // Components
 export { FormRenderer } from "./FormRenderer.js";
 export type { FormRendererProps, FormRendererHandle } from "./FormRenderer.js";
+export { FieldRenderer } from "./FieldRenderer.js";
+export type { FieldRendererProps } from "./FieldRenderer.js";
 
 // Context
 export { FormaContext, useFormaContext } from "./context.js";
 
 // Types
 export type {
+  // Base field props
   BaseFieldProps,
-  ComponentMap,
+
+  // Helper method return types
+  GetFieldPropsResult,
+  GetSelectFieldPropsResult,
+  GetArrayHelpersResult,
+
+  // Deprecated alias
+  LegacyFieldProps,
+
+  // Discriminated field props (for type narrowing)
   FieldProps,
   TextFieldProps,
   NumberFieldProps,
+  IntegerFieldProps,
   BooleanFieldProps,
   DateFieldProps,
+  DateTimeFieldProps,
   SelectFieldProps,
+  MultiSelectFieldProps,
+  SelectionFieldProps,
+  ObjectFieldProps,
+  ComputedFieldProps,
+
+  // Array types
   ArrayFieldProps,
   ArrayHelpers,
+  ArrayItemFieldProps,
+
+  // Component props (wrapper types with spec)
+  FieldComponentProps,
+  TextComponentProps,
+  NumberComponentProps,
+  IntegerComponentProps,
+  BooleanComponentProps,
+  DateComponentProps,
+  DateTimeComponentProps,
+  SelectComponentProps,
+  MultiSelectComponentProps,
+  ArrayComponentProps,
+  ObjectComponentProps,
+  ComputedComponentProps,
+  ComponentMap,
+
+  // Form state
+  FormState,
+
+  // Renderer props
   LayoutProps,
   FieldWrapperProps,
   PageWrapperProps,

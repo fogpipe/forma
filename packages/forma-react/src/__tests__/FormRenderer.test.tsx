@@ -1,0 +1,803 @@
+/// <reference types="@testing-library/jest-dom" />
+/**
+ * Tests for FormRenderer component
+ */
+
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, waitFor, act } from "@testing-library/react";
+import { userEvent } from "@testing-library/user-event";
+import { useRef } from "react";
+import { FormRenderer } from "../FormRenderer.js";
+import { useFormaContext } from "../context.js";
+import { createTestSpec, createTestComponentMap } from "./test-utils.js";
+import type { FormRendererHandle } from "../FormRenderer.js";
+import type { LayoutProps, PageWrapperProps, ComponentMap } from "../types.js";
+import type { UseFormaReturn } from "../useForma.js";
+
+describe("FormRenderer", () => {
+  // ============================================================================
+  // Basic Rendering
+  // ============================================================================
+
+  describe("basic rendering", () => {
+    it("should render fields from spec", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name" },
+          email: { type: "email", label: "Email" },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+        />
+      );
+
+      expect(screen.getByTestId("field-name")).toBeInTheDocument();
+      expect(screen.getByTestId("field-email")).toBeInTheDocument();
+    });
+
+    it("should render fields in fieldOrder", () => {
+      const spec = createTestSpec({
+        fields: {
+          a: { type: "text", label: "A" },
+          b: { type: "text", label: "B" },
+          c: { type: "text", label: "C" },
+        },
+        fieldOrder: ["c", "a", "b"],
+      });
+
+      const { container } = render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+        />
+      );
+
+      const fields = container.querySelectorAll("[data-testid^='field-']");
+      expect(fields[0]).toHaveAttribute("data-testid", "field-c");
+      expect(fields[1]).toHaveAttribute("data-testid", "field-a");
+      expect(fields[2]).toHaveAttribute("data-testid", "field-b");
+    });
+
+    it("should render with initial data", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name" },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ name: "John Doe" }}
+          components={createTestComponentMap()}
+        />
+      );
+
+      const input = screen.getByRole("textbox");
+      expect(input).toHaveValue("John Doe");
+    });
+
+    it("should use custom layout component", () => {
+      const spec = createTestSpec({
+        fields: { name: { type: "text" } },
+      });
+
+      const CustomLayout = ({ children }: LayoutProps) => (
+        <div data-testid="custom-layout">{children}</div>
+      );
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+          layout={CustomLayout}
+        />
+      );
+
+      expect(screen.getByTestId("custom-layout")).toBeInTheDocument();
+    });
+  });
+
+  // ============================================================================
+  // Field Type Rendering
+  // ============================================================================
+
+  describe("field type rendering", () => {
+    it("should render text field", () => {
+      const spec = createTestSpec({
+        fields: { name: { type: "text" } },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+        />
+      );
+
+      expect(screen.getByRole("textbox")).toBeInTheDocument();
+    });
+
+    it("should render number field", () => {
+      const spec = createTestSpec({
+        fields: { age: { type: "number" } },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+        />
+      );
+
+      expect(screen.getByRole("spinbutton")).toBeInTheDocument();
+    });
+
+    it("should render boolean field", () => {
+      const spec = createTestSpec({
+        fields: { agree: { type: "boolean" } },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+        />
+      );
+
+      expect(screen.getByRole("checkbox")).toBeInTheDocument();
+    });
+
+    it("should render select field with options", () => {
+      const spec = createTestSpec({
+        fields: {
+          country: {
+            type: "select",
+            options: [
+              { value: "us", label: "United States" },
+              { value: "ca", label: "Canada" },
+            ],
+          },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+        />
+      );
+
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      expect(screen.getByText("United States")).toBeInTheDocument();
+      expect(screen.getByText("Canada")).toBeInTheDocument();
+    });
+
+    it("should render array field", () => {
+      const spec = createTestSpec({
+        fields: {
+          items: {
+            type: "array",
+            label: "Items",
+            itemFields: { name: { type: "text" } },
+          },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ items: [{ name: "Item 1" }] }}
+          components={createTestComponentMap()}
+        />
+      );
+
+      expect(screen.getByTestId("field-items")).toBeInTheDocument();
+      expect(screen.getByTestId("add-items")).toBeInTheDocument();
+    });
+  });
+
+  // ============================================================================
+  // User Interactions
+  // ============================================================================
+
+  describe("user interactions", () => {
+    it("should update value on text input", async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      const spec = createTestSpec({
+        fields: { name: { type: "text" } },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+          onChange={onChange}
+        />
+      );
+
+      const input = screen.getByRole("textbox");
+      await user.type(input, "Hello");
+
+      expect(input).toHaveValue("Hello");
+      expect(onChange).toHaveBeenCalled();
+    });
+
+    it("should update value on checkbox toggle", async () => {
+      const user = userEvent.setup();
+      const spec = createTestSpec({
+        fields: { agree: { type: "boolean" } },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ agree: false }}
+          components={createTestComponentMap()}
+        />
+      );
+
+      const checkbox = screen.getByRole("checkbox");
+      expect(checkbox).not.toBeChecked();
+
+      await user.click(checkbox);
+      expect(checkbox).toBeChecked();
+    });
+
+    it("should update value on select change", async () => {
+      const user = userEvent.setup();
+      const spec = createTestSpec({
+        fields: {
+          country: {
+            type: "select",
+            options: [
+              { value: "us", label: "United States" },
+              { value: "ca", label: "Canada" },
+            ],
+          },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+        />
+      );
+
+      const select = screen.getByRole("combobox");
+      await user.selectOptions(select, "ca");
+
+      expect(select).toHaveValue("ca");
+    });
+  });
+
+  // ============================================================================
+  // Form Submission
+  // ============================================================================
+
+  describe("form submission", () => {
+    it("should call onSubmit with form data", async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
+      const spec = createTestSpec({
+        fields: { name: { type: "text" } },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ name: "John" }}
+          onSubmit={onSubmit}
+          components={createTestComponentMap()}
+        />
+      );
+
+      const submitButton = screen.getByRole("button", { name: /submit/i });
+      await user.click(submitButton);
+
+      expect(onSubmit).toHaveBeenCalledWith({ name: "John" });
+    });
+
+    it("should not submit when form is invalid", async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
+      const spec = createTestSpec({
+        fields: { name: { type: "text", required: true } },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          onSubmit={onSubmit}
+          components={createTestComponentMap()}
+        />
+      );
+
+      const submitButton = screen.getByRole("button", { name: /submit/i });
+      await user.click(submitButton);
+
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+
+    it("should show validation errors after submit attempt", async () => {
+      const user = userEvent.setup();
+      const spec = createTestSpec({
+        fields: { name: { type: "text", required: true } },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+        />
+      );
+
+      const submitButton = screen.getByRole("button", { name: /submit/i });
+      await user.click(submitButton);
+
+      // Error should now be visible
+      await waitFor(() => {
+        expect(screen.getByTestId("error-name")).toBeInTheDocument();
+      });
+    });
+
+    it("should disable submit button while submitting", async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn(
+        (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 100))
+      );
+      const spec = createTestSpec({
+        fields: { name: { type: "text" } },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ name: "John" }}
+          onSubmit={onSubmit}
+          components={createTestComponentMap()}
+        />
+      );
+
+      const submitButton = screen.getByRole("button", { name: /submit/i });
+      await user.click(submitButton);
+
+      expect(submitButton).toBeDisabled();
+      expect(submitButton).toHaveTextContent("Submitting...");
+
+      await waitFor(() => {
+        expect(submitButton).not.toBeDisabled();
+      });
+    });
+  });
+
+  // ============================================================================
+  // Imperative Handle (ref)
+  // ============================================================================
+
+  describe("imperative handle (ref)", () => {
+    it("should expose submitForm via ref", async () => {
+      const onSubmit = vi.fn();
+      const spec = createTestSpec({
+        fields: { name: { type: "text" } },
+      });
+
+      let formRef: React.RefObject<FormRendererHandle | null>;
+
+      function TestComponent() {
+        formRef = useRef<FormRendererHandle>(null);
+        return (
+          <FormRenderer
+            ref={formRef}
+            spec={spec}
+            initialData={{ name: "Test" }}
+            onSubmit={onSubmit}
+            components={createTestComponentMap()}
+          />
+        );
+      }
+
+      render(<TestComponent />);
+
+      await act(async () => {
+        await formRef!.current?.submitForm();
+      });
+
+      expect(onSubmit).toHaveBeenCalledWith({ name: "Test" });
+    });
+
+    it("should expose resetForm via ref", async () => {
+      const spec = createTestSpec({
+        fields: { name: { type: "text" } },
+      });
+
+      let formRef: React.RefObject<FormRendererHandle | null>;
+
+      function TestComponent() {
+        formRef = useRef<FormRendererHandle>(null);
+        return (
+          <FormRenderer
+            ref={formRef}
+            spec={spec}
+            initialData={{ name: "Original" }}
+            components={createTestComponentMap()}
+          />
+        );
+      }
+
+      const { rerender } = render(<TestComponent />);
+      const user = userEvent.setup();
+
+      const input = screen.getByRole("textbox");
+      await user.clear(input);
+      await user.type(input, "Changed");
+      expect(input).toHaveValue("Changed");
+
+      act(() => {
+        formRef!.current?.resetForm();
+      });
+      rerender(<TestComponent />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("textbox")).toHaveValue("Original");
+      });
+    });
+
+    it("should expose validateForm via ref", () => {
+      const spec = createTestSpec({
+        fields: { name: { type: "text", required: true } },
+      });
+
+      let formRef: React.RefObject<FormRendererHandle | null>;
+
+      function TestComponent() {
+        formRef = useRef<FormRendererHandle>(null);
+        return (
+          <FormRenderer
+            ref={formRef}
+            spec={spec}
+            components={createTestComponentMap()}
+          />
+        );
+      }
+
+      render(<TestComponent />);
+
+      const result = formRef!.current?.validateForm();
+
+      expect(result?.valid).toBe(false);
+      expect(result?.errors.length).toBeGreaterThan(0);
+    });
+
+    it("should expose getValues via ref", () => {
+      const spec = createTestSpec({
+        fields: { name: { type: "text" } },
+      });
+
+      let formRef: React.RefObject<FormRendererHandle | null>;
+
+      function TestComponent() {
+        formRef = useRef<FormRendererHandle>(null);
+        return (
+          <FormRenderer
+            ref={formRef}
+            spec={spec}
+            initialData={{ name: "Test Value" }}
+            components={createTestComponentMap()}
+          />
+        );
+      }
+
+      render(<TestComponent />);
+
+      const values = formRef!.current?.getValues();
+
+      expect(values).toEqual({ name: "Test Value" });
+    });
+
+    it("should expose setValues via ref", async () => {
+      const spec = createTestSpec({
+        fields: { name: { type: "text" } },
+      });
+
+      let formRef: React.RefObject<FormRendererHandle | null>;
+
+      function TestComponent() {
+        formRef = useRef<FormRendererHandle>(null);
+        return (
+          <FormRenderer
+            ref={formRef}
+            spec={spec}
+            components={createTestComponentMap()}
+          />
+        );
+      }
+
+      const { rerender } = render(<TestComponent />);
+
+      act(() => {
+        formRef!.current?.setValues({ name: "New Value" });
+      });
+      rerender(<TestComponent />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("textbox")).toHaveValue("New Value");
+      });
+    });
+
+    it("should expose isValid and isDirty via ref", async () => {
+      const spec = createTestSpec({
+        fields: { name: { type: "text", required: true } },
+      });
+
+      let formRef: React.RefObject<FormRendererHandle | null>;
+
+      function TestComponent() {
+        formRef = useRef<FormRendererHandle>(null);
+        return (
+          <FormRenderer
+            ref={formRef}
+            spec={spec}
+            components={createTestComponentMap()}
+          />
+        );
+      }
+
+      const { rerender } = render(<TestComponent />);
+
+      expect(formRef!.current?.isValid).toBe(false);
+      expect(formRef!.current?.isDirty).toBe(false);
+
+      act(() => {
+        formRef!.current?.setValues({ name: "Value" });
+      });
+      rerender(<TestComponent />);
+
+      await waitFor(() => {
+        expect(formRef!.current?.isValid).toBe(true);
+        expect(formRef!.current?.isDirty).toBe(true);
+      });
+    });
+  });
+
+  // ============================================================================
+  // Context
+  // ============================================================================
+
+  describe("context", () => {
+    it("should provide form state via FormaContext", () => {
+      const spec = createTestSpec({
+        fields: { name: { type: "text" } },
+      });
+
+      let contextValue: UseFormaReturn | null = null;
+
+      function ContextConsumer() {
+        contextValue = useFormaContext();
+        return <div data-testid="consumer">Consumer</div>;
+      }
+
+      // Custom component that uses context
+      const components: ComponentMap = {
+        ...createTestComponentMap(),
+        text: () => <ContextConsumer />,
+      };
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ name: "Test" }}
+          components={components}
+        />
+      );
+
+      expect(screen.getByTestId("consumer")).toBeInTheDocument();
+      expect(contextValue).not.toBeNull();
+      expect(contextValue!.data).toEqual({ name: "Test" });
+    });
+
+    it("should throw error when useFormaContext used outside provider", () => {
+      function BadComponent() {
+        useFormaContext();
+        return null;
+      }
+
+      expect(() => render(<BadComponent />)).toThrow(
+        /useFormaContext must be used within/
+      );
+    });
+  });
+
+  // ============================================================================
+  // Wizard / Multi-page Forms
+  // ============================================================================
+
+  describe("wizard / multi-page forms", () => {
+    it("should render fields for current page only", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name" },
+          email: { type: "email", label: "Email" },
+        },
+        pages: [
+          { id: "page1", title: "Step 1", fields: ["name"] },
+          { id: "page2", title: "Step 2", fields: ["email"] },
+        ],
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+        />
+      );
+
+      // First page should be visible
+      expect(screen.getByTestId("field-name")).toBeInTheDocument();
+      // Second page should not be visible
+      expect(screen.queryByTestId("field-email")).not.toBeInTheDocument();
+    });
+
+    it("should use custom page wrapper", () => {
+      const spec = createTestSpec({
+        fields: { name: { type: "text" } },
+        pages: [{ id: "page1", title: "Step 1", fields: ["name"] }],
+      });
+
+      // Note: forma-oss passes title/description directly, not a page object
+      const CustomPageWrapper = ({ title, children }: PageWrapperProps) => (
+        <div data-testid="custom-page" data-page-title={title}>
+          {children}
+        </div>
+      );
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+          pageWrapper={CustomPageWrapper}
+        />
+      );
+
+      const pageWrapper = screen.getByTestId("custom-page");
+      expect(pageWrapper).toBeInTheDocument();
+      expect(pageWrapper).toHaveAttribute("data-page-title", "Step 1");
+    });
+  });
+
+  // ============================================================================
+  // Visibility
+  // ============================================================================
+
+  describe("visibility", () => {
+    it("should hide fields when visibility is false", () => {
+      const spec = createTestSpec({
+        fields: {
+          showDetails: { type: "boolean", label: "Show Details" },
+          details: {
+            type: "text",
+            label: "Details",
+            visibleWhen: "showDetails = true",
+          },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ showDetails: false }}
+          components={createTestComponentMap()}
+        />
+      );
+
+      // Details field should not be rendered when hidden
+      expect(screen.queryByTestId("field-details")).not.toBeInTheDocument();
+    });
+
+    it("should show fields when visibility becomes true", async () => {
+      const user = userEvent.setup();
+      const spec = createTestSpec({
+        fields: {
+          showDetails: { type: "boolean", label: "Show Details" },
+          details: {
+            type: "text",
+            label: "Details",
+            visibleWhen: "showDetails = true",
+          },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ showDetails: false }}
+          components={createTestComponentMap()}
+        />
+      );
+
+      // Initially hidden
+      expect(screen.queryByTestId("field-details")).not.toBeInTheDocument();
+
+      // Click checkbox to show
+      const checkbox = screen.getByRole("checkbox");
+      await user.click(checkbox);
+
+      // Now visible
+      await waitFor(() => {
+        expect(screen.getByTestId("field-details")).toBeInTheDocument();
+      });
+    });
+  });
+
+  // ============================================================================
+  // Array Field Interactions
+  // ============================================================================
+
+  describe("array field interactions", () => {
+    it("should add item when add button clicked", async () => {
+      const user = userEvent.setup();
+      const spec = createTestSpec({
+        fields: {
+          items: {
+            type: "array",
+            label: "Items",
+            itemFields: { name: { type: "text" } },
+          },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ items: [] }}
+          components={createTestComponentMap()}
+        />
+      );
+
+      const addButton = screen.getByTestId("add-items");
+      await user.click(addButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("array-item-items-0")).toBeInTheDocument();
+      });
+    });
+
+    it("should remove item when remove button clicked", async () => {
+      const user = userEvent.setup();
+      const spec = createTestSpec({
+        fields: {
+          items: {
+            type: "array",
+            label: "Items",
+            itemFields: { name: { type: "text" } },
+          },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ items: [{ name: "Item 1" }, { name: "Item 2" }] }}
+          components={createTestComponentMap()}
+        />
+      );
+
+      expect(screen.getByTestId("array-item-items-0")).toBeInTheDocument();
+      expect(screen.getByTestId("array-item-items-1")).toBeInTheDocument();
+
+      const removeButton = screen.getByTestId("remove-items-0");
+      await user.click(removeButton);
+
+      await waitFor(() => {
+        // After removing first item, we should have only 1 item (at index 0)
+        expect(screen.queryByTestId("array-item-items-1")).not.toBeInTheDocument();
+      });
+    });
+  });
+});

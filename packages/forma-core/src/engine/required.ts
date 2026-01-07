@@ -85,7 +85,7 @@ export function getRequired(
           for (const [itemFieldName, itemFieldDef] of Object.entries(fieldDef.itemFields)) {
             const itemFieldPath = `${fieldPath}[${i}].${itemFieldName}`;
             result[itemFieldPath] = isFieldRequired(
-              itemFieldName,
+              itemFieldPath,
               itemFieldDef,
               spec,
               itemContext
@@ -104,9 +104,10 @@ export function getRequired(
 // ============================================================================
 
 /**
- * Check if a single field is required
+ * Check if a single field is required based on requiredWhen or schema
+ * @internal Exported for use by validate.ts
  */
-function isFieldRequired(
+export function isFieldRequired(
   fieldPath: string,
   fieldDef: FieldDefinition,
   spec: Forma,
