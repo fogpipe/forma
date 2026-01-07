@@ -9,16 +9,26 @@ Forma is a declarative form specification language with FEEL (Friendly Enough Ex
 - **@fogpipe/forma-core** - Core runtime library for form validation, visibility, required states, and FEEL evaluation
 - **@fogpipe/forma-react** - React integration with hooks and components (depends on forma-core)
 
+## Important: Verify Changes
+
+**VERY IMPORTANT:** After making any code modifications, always run quality checks to verify everything works:
+
+```bash
+turbo run lint check-types build test
+```
+
+Do this immediately after changes - don't wait until the end. Fix any issues before proceeding.
+
 ## Commands
 
 ```bash
 # Root level (runs across all packages via Turbo)
-npm run build          # Build all packages
-npm run dev            # Watch mode for development
-npm run lint           # ESLint
-npm run check-types    # TypeScript type checking
-npm run test           # Run all tests
-npm run format         # Prettier formatting
+turbo run build        # Build all packages
+turbo run dev          # Watch mode for development
+turbo run lint         # ESLint
+turbo run check-types  # TypeScript type checking
+turbo run test         # Run all tests
+npm run format         # Prettier formatting (not a turbo task)
 
 # Package level (run from packages/forma-core or packages/forma-react)
 npm run test:watch     # Run tests in watch mode
@@ -87,7 +97,7 @@ FEEL expressions have access to:
 **Always run before committing:**
 
 ```bash
-npx turbo run lint check-types build test
+turbo run lint check-types build test
 ```
 
 This runs all quality checks across the monorepo with proper caching. All checks must pass before merging.
@@ -152,8 +162,8 @@ The publish workflow automatically:
 
 ### Build Failures
 
-If `npm run build` fails:
-1. Check TypeScript errors: `npm run check-types`
+If `turbo run build` fails:
+1. Check TypeScript errors: `turbo run check-types`
 2. Ensure dependencies are installed: `npm install`
 3. Clear Turbo cache: `rm -rf .turbo node_modules/.cache`
 
@@ -163,7 +173,7 @@ forma-react depends on forma-core types. If you see type errors:
 1. Ensure forma-core builds first: `cd packages/forma-core && npm run build`
 2. Then build forma-react: `cd packages/forma-react && npm run build`
 
-Or just run `npm run build` at root - Turbo handles the order.
+Or just run `turbo run build` at root - Turbo handles the order.
 
 ### Test Failures
 
