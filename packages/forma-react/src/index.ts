@@ -20,7 +20,7 @@ export type {
 
 // Hook
 export { useForma } from "./useForma.js";
-export type { UseFormaOptions, UseFormaReturn } from "./useForma.js";
+export type { UseFormaOptions, UseFormaReturn, PageState, WizardHelpers } from "./useForma.js";
 
 // Components
 export { FormRenderer } from "./FormRenderer.js";
@@ -31,13 +31,17 @@ export { FormaContext, useFormaContext } from "./context.js";
 
 // Types
 export type {
+  BaseFieldProps,
   ComponentMap,
   FieldProps,
   TextFieldProps,
   NumberFieldProps,
   BooleanFieldProps,
+  DateFieldProps,
   SelectFieldProps,
   ArrayFieldProps,
+  ArrayHelpers,
   LayoutProps,
   FieldWrapperProps,
+  PageWrapperProps,
 } from "./types.js";

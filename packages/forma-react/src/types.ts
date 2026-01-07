@@ -147,6 +147,7 @@ export interface FieldWrapperProps {
   errors: FieldError[];
   touched: boolean;
   required: boolean;
+  visible: boolean;
 }
 
 /**

@@ -1,71 +1,147 @@
 /**
- * Enabled Engine
+ * Enabled Fields Engine
  *
- * Evaluates which fields are enabled/disabled based on FEEL expressions.
+ * Determines which fields are currently enabled (editable) based on
+ * conditional enabledWhen expressions.
  */
 
-import type { Forma, FieldDefinition } from "../types.js";
-import { evaluateBoolean, type EvaluationContext } from "../feel/index.js";
+import { evaluateBoolean } from "../feel/index.js";
+import type {
+  Forma,
+  FieldDefinition,
+  EvaluationContext,
+  EnabledResult,
+} from "../types.js";
+import { calculate } from "./calculate.js";
+
+// ============================================================================
+// Types
+// ============================================================================
 
 export interface EnabledOptions {
-  /** Computed values to include in context */
+  /** Pre-calculated computed values */
   computed?: Record<string, unknown>;
-  /** Reference data to include in context */
-  ref?: Record<string, unknown>;
 }
 
+// ============================================================================
+// Main Function
+// ============================================================================
+
 /**
- * Get enabled state for all fields in a Forma spec
+ * Determine which fields are currently enabled (editable)
+ *
+ * Returns a map of field paths to boolean enabled states.
+ * Fields without enabledWhen expressions are always enabled.
+ *
+ * @param data - Current form data
+ * @param spec - Form specification
+ * @param options - Optional pre-calculated computed values
+ * @returns Map of field paths to enabled states
+ *
+ * @example
+ * const enabled = getEnabled(
+ *   { isLocked: true },
+ *   forma
+ * );
+ * // => { isLocked: true, lockedField: false, ... }
  */
 export function getEnabled(
   data: Record<string, unknown>,
   spec: Forma,
   options: EnabledOptions = {}
-): Record<string, boolean> {
-  const enabled: Record<string, boolean> = {};
+): EnabledResult {
+  const computed = options.computed ?? calculate(data, spec);
   const context: EvaluationContext = {
     data,
-    computed: options.computed,
-    ref: options.ref,
+    computed,
+    referenceData: spec.referenceData,
   };
 
-  for (const field of spec.fields) {
-    enabled[field.id] = evaluateFieldEnabled(field, context);
+  const result: EnabledResult = {};
+
+  // Evaluate each field's enabled status
+  for (const fieldPath of spec.fieldOrder) {
+    const fieldDef = spec.fields[fieldPath];
+    if (fieldDef) {
+      result[fieldPath] = isFieldEnabled(fieldDef, context);
+    }
   }
 
-  return enabled;
+  // Also check array item fields
+  for (const [fieldPath, fieldDef] of Object.entries(spec.fields)) {
+    if (fieldDef.itemFields) {
+      const arrayData = data[fieldPath];
+      if (Array.isArray(arrayData)) {
+        for (let i = 0; i < arrayData.length; i++) {
+          const item = arrayData[i] as Record<string, unknown>;
+          const itemContext: EvaluationContext = {
+            data,
+            computed,
+            referenceData: spec.referenceData,
+            item,
+            itemIndex: i,
+          };
+
+          for (const [itemFieldName, itemFieldDef] of Object.entries(fieldDef.itemFields)) {
+            const itemFieldPath = `${fieldPath}[${i}].${itemFieldName}`;
+            result[itemFieldPath] = isFieldEnabled(itemFieldDef, itemContext);
+          }
+        }
+      }
+    }
+  }
+
+  return result;
 }
 
-/**
- * Check if a specific field is enabled
- */
-export function isEnabled(
-  fieldId: string,
-  data: Record<string, unknown>,
-  spec: Forma,
-  options: EnabledOptions = {}
-): boolean {
-  const field = spec.fields.find((f) => f.id === fieldId);
-  if (!field) return true; // Default to enabled if field not found
-
-  const context: EvaluationContext = {
-    data,
-    computed: options.computed,
-    ref: options.ref,
-  };
-
-  return evaluateFieldEnabled(field, context);
-}
+// ============================================================================
+// Field Enabled Check
+// ============================================================================
 
 /**
- * Evaluate enabled state for a single field
+ * Check if a field is enabled based on its definition
  */
-function evaluateFieldEnabled(
-  field: FieldDefinition,
+function isFieldEnabled(
+  fieldDef: FieldDefinition,
   context: EvaluationContext
 ): boolean {
-  if (!field.enabled) {
-    return true;
+  // If field has enabledWhen, evaluate it
+  if (fieldDef.enabledWhen) {
+    return evaluateBoolean(fieldDef.enabledWhen, context);
   }
-  return evaluateBoolean(field.enabled, context);
+
+  // No condition = always enabled
+  return true;
+}
+
+/**
+ * Check if a single field is currently enabled
+ *
+ * @param fieldPath - Path to the field
+ * @param data - Current form data
+ * @param spec - Form specification
+ * @returns True if the field is enabled
+ */
+export function isEnabled(
+  fieldPath: string,
+  data: Record<string, unknown>,
+  spec: Forma
+): boolean {
+  const fieldDef = spec.fields[fieldPath];
+  if (!fieldDef) {
+    return true; // Unknown fields are enabled by default
+  }
+
+  if (!fieldDef.enabledWhen) {
+    return true; // No condition = always enabled
+  }
+
+  const computed = calculate(data, spec);
+  const context: EvaluationContext = {
+    data,
+    computed,
+    referenceData: spec.referenceData,
+  };
+
+  return evaluateBoolean(fieldDef.enabledWhen, context);
 }

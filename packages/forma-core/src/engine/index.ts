@@ -1,16 +1,54 @@
 /**
- * Form State Engines
+ * Engine module exports
  *
- * This module provides the core engines for evaluating form state:
- * - Visibility: Which fields should be shown
- * - Required: Which fields are required
- * - Enabled: Which fields are enabled/disabled
- * - Calculation: Computed field values
- * - Validation: Form data validation
+ * Core form logic engines for visibility, validation, calculation, etc.
  */
 
-export * from "./visibility.js";
-export * from "./required.js";
-export * from "./enabled.js";
-export * from "./calculate.js";
-export * from "./validate.js";
+// Calculate
+export {
+  calculate,
+  calculateWithErrors,
+  calculateField,
+  getFormattedValue,
+} from "./calculate.js";
+
+// Visibility
+export {
+  getVisibility,
+  isFieldVisible,
+  getPageVisibility,
+} from "./visibility.js";
+
+export type {
+  VisibilityOptions,
+} from "./visibility.js";
+
+// Required
+export {
+  getRequired,
+  isRequired,
+} from "./required.js";
+
+export type {
+  RequiredOptions,
+} from "./required.js";
+
+// Enabled
+export {
+  getEnabled,
+  isEnabled,
+} from "./enabled.js";
+
+export type {
+  EnabledOptions,
+} from "./enabled.js";
+
+// Validate
+export {
+  validate,
+  validateSingleField,
+} from "./validate.js";
+
+export type {
+  ValidateOptions,
+} from "./validate.js";

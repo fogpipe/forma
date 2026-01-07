@@ -1,249 +1,659 @@
 /**
  * Validation Engine
  *
- * Validates form data against Forma field definitions.
+ * Validates form data against Forma rules including:
+ * - JSON Schema type validation
+ * - Required field validation (with conditional requiredWhen)
+ * - Custom FEEL validation rules
+ * - Array item validation
  */
 
-import type { Forma, FieldDefinition, FieldError, ValidationResult } from "../types.js";
-import { evaluateBoolean, type EvaluationContext } from "../feel/index.js";
+import { evaluateBoolean } from "../feel/index.js";
+import type {
+  Forma,
+  FieldDefinition,
+  ValidationRule,
+  EvaluationContext,
+  ValidationResult,
+  FieldError,
+  JSONSchemaProperty,
+} from "../types.js";
+import { calculate } from "./calculate.js";
 import { getVisibility } from "./visibility.js";
-import { getRequired } from "./required.js";
+
+// ============================================================================
+// Types
+// ============================================================================
 
 export interface ValidateOptions {
-  /** Computed values to include in context */
+  /** Pre-calculated computed values */
   computed?: Record<string, unknown>;
-  /** Reference data to include in context */
-  ref?: Record<string, unknown>;
-  /** Only validate visible fields */
+  /** Pre-calculated visibility */
+  visibility?: Record<string, boolean>;
+  /** Only validate visible fields (default: true) */
   onlyVisible?: boolean;
 }
 
+// ============================================================================
+// Main Function
+// ============================================================================
+
 /**
- * Validate form data against a Forma specification
+ * Validate form data against a Forma
+ *
+ * Performs comprehensive validation including:
+ * - Required field checks (respecting conditional requiredWhen)
+ * - JSON Schema type validation
+ * - Custom FEEL validation rules
+ * - Array min/max items validation
+ * - Array item field validation
+ *
+ * By default, only visible fields are validated.
+ *
+ * @param data - Current form data
+ * @param spec - Form specification
+ * @param options - Validation options
+ * @returns Validation result with valid flag and errors array
+ *
+ * @example
+ * const result = validate(
+ *   { name: "", age: 15 },
+ *   forma
+ * );
+ * // => {
+ * //   valid: false,
+ * //   errors: [
+ * //     { field: "name", message: "Name is required", severity: "error" },
+ * //     { field: "age", message: "Must be 18 or older", severity: "error" }
+ * //   ]
+ * // }
  */
 export function validate(
   data: Record<string, unknown>,
   spec: Forma,
   options: ValidateOptions = {}
 ): ValidationResult {
+  const { onlyVisible = true } = options;
+
+  // Calculate computed values
+  const computed = options.computed ?? calculate(data, spec);
+
+  // Calculate visibility
+  const visibility = options.visibility ?? getVisibility(data, spec, { computed });
+
+  // Collect errors
   const errors: FieldError[] = [];
-  const context: EvaluationContext = {
-    data,
-    computed: options.computed,
-    ref: options.ref,
-  };
 
-  // Get visibility and required state
-  const visibility = options.onlyVisible
-    ? getVisibility(data, spec, options)
-    : null;
-  const required = getRequired(data, spec, options);
+  // Validate each field
+  for (const fieldPath of spec.fieldOrder) {
+    const fieldDef = spec.fields[fieldPath];
+    if (!fieldDef) continue;
 
-  for (const field of spec.fields) {
     // Skip hidden fields if onlyVisible is true
-    if (visibility && !visibility[field.id]) {
+    if (onlyVisible && visibility[fieldPath] === false) {
       continue;
     }
 
-    const fieldErrors = validateField(field, data[field.id], context, required[field.id]);
+    // Get schema property for type validation
+    const schemaProperty = spec.schema.properties[fieldPath];
+
+    // Validate this field
+    const fieldErrors = validateField(
+      fieldPath,
+      data[fieldPath],
+      fieldDef,
+      schemaProperty,
+      spec,
+      data,
+      computed,
+      visibility,
+      onlyVisible
+    );
+
     errors.push(...fieldErrors);
   }
 
   return {
-    valid: errors.length === 0,
+    valid: errors.filter((e) => e.severity === "error").length === 0,
     errors,
   };
 }
 
-/**
- * Validate a single field
- */
-export function validateSingleField(
-  fieldId: string,
-  value: unknown,
-  data: Record<string, unknown>,
-  spec: Forma,
-  options: ValidateOptions = {}
-): FieldError[] {
-  const field = spec.fields.find((f) => f.id === fieldId);
-  if (!field) return [];
-
-  const context: EvaluationContext = {
-    data,
-    computed: options.computed,
-    ref: options.ref,
-  };
-
-  const required = getRequired(data, spec, options);
-  return validateField(field, value, context, required[fieldId]);
-}
+// ============================================================================
+// Field Validation
+// ============================================================================
 
 /**
- * Validate a single field value
+ * Validate a single field and its nested fields
  */
 function validateField(
-  field: FieldDefinition,
+  path: string,
   value: unknown,
-  context: EvaluationContext,
-  isRequired: boolean
+  fieldDef: FieldDefinition,
+  schemaProperty: JSONSchemaProperty | undefined,
+  spec: Forma,
+  data: Record<string, unknown>,
+  computed: Record<string, unknown>,
+  visibility: Record<string, boolean>,
+  onlyVisible: boolean
 ): FieldError[] {
   const errors: FieldError[] = [];
+  const context: EvaluationContext = {
+    data,
+    computed,
+    referenceData: spec.referenceData,
+    value,
+  };
 
-  // Required validation
+  // 1. Required validation
+  const isRequired = checkIfRequired(fieldDef, spec, path, context);
   if (isRequired && isEmpty(value)) {
     errors.push({
-      field: field.id,
-      message: `${field.label} is required`,
-      rule: "required",
+      field: path,
+      message: fieldDef.label
+        ? `${fieldDef.label} is required`
+        : "This field is required",
+      severity: "error",
     });
-    return errors; // Don't continue validation if required field is empty
   }
 
-  // Skip further validation if value is empty and not required
-  if (isEmpty(value)) {
-    return errors;
-  }
-
-  // Type-specific validation
-  const typeErrors = validateType(field, value);
-  errors.push(...typeErrors);
-
-  // Custom validation rules (FEEL expressions)
-  if (field.validation) {
-    const validationContext: EvaluationContext = {
-      ...context,
-      value,
-    };
-
-    for (const rule of field.validation) {
-      const isValid = evaluateBoolean(rule.rule, validationContext);
-      if (!isValid) {
-        errors.push({
-          field: field.id,
-          message: rule.message,
-          rule: rule.rule,
-        });
-      }
+  // 2. Type validation (only if value is present)
+  if (!isEmpty(value) && schemaProperty) {
+    const typeError = validateType(path, value, schemaProperty, fieldDef);
+    if (typeError) {
+      errors.push(typeError);
     }
   }
 
-  return errors;
-}
+  // 3. Custom FEEL validation rules
+  if (fieldDef.validations && !isEmpty(value)) {
+    const customErrors = validateCustomRules(path, fieldDef.validations, context);
+    errors.push(...customErrors);
+  }
 
-/**
- * Validate field value against its type
- */
-function validateType(field: FieldDefinition, value: unknown): FieldError[] {
-  const errors: FieldError[] = [];
-
-  switch (field.type) {
-    case "number":
-    case "integer":
-      if (typeof value !== "number" || isNaN(value)) {
-        errors.push({
-          field: field.id,
-          message: `${field.label} must be a valid number`,
-          rule: "type",
-        });
-      } else {
-        if (field.min !== undefined && value < field.min) {
-          errors.push({
-            field: field.id,
-            message: `${field.label} must be at least ${field.min}`,
-            rule: "min",
-          });
-        }
-        if (field.max !== undefined && value > field.max) {
-          errors.push({
-            field: field.id,
-            message: `${field.label} must be at most ${field.max}`,
-            rule: "max",
-          });
-        }
-        if (field.type === "integer" && !Number.isInteger(value)) {
-          errors.push({
-            field: field.id,
-            message: `${field.label} must be a whole number`,
-            rule: "integer",
-          });
-        }
-      }
-      break;
-
-    case "email":
-      if (typeof value !== "string" || !isValidEmail(value)) {
-        errors.push({
-          field: field.id,
-          message: `${field.label} must be a valid email address`,
-          rule: "email",
-        });
-      }
-      break;
-
-    case "url":
-      if (typeof value !== "string" || !isValidUrl(value)) {
-        errors.push({
-          field: field.id,
-          message: `${field.label} must be a valid URL`,
-          rule: "url",
-        });
-      }
-      break;
-
-    case "array":
-      if (!Array.isArray(value)) {
-        errors.push({
-          field: field.id,
-          message: `${field.label} must be an array`,
-          rule: "type",
-        });
-      } else {
-        if (field.minItems !== undefined && value.length < field.minItems) {
-          errors.push({
-            field: field.id,
-            message: `${field.label} must have at least ${field.minItems} items`,
-            rule: "minItems",
-          });
-        }
-        if (field.maxItems !== undefined && value.length > field.maxItems) {
-          errors.push({
-            field: field.id,
-            message: `${field.label} must have at most ${field.maxItems} items`,
-            rule: "maxItems",
-          });
-        }
-      }
-      break;
+  // 4. Array validation
+  if (Array.isArray(value) && fieldDef.itemFields) {
+    const arrayErrors = validateArray(
+      path,
+      value,
+      fieldDef,
+      spec,
+      data,
+      computed,
+      visibility,
+      onlyVisible
+    );
+    errors.push(...arrayErrors);
   }
 
   return errors;
+}
+
+// ============================================================================
+// Required Check
+// ============================================================================
+
+/**
+ * Determine if a field is currently required
+ */
+function checkIfRequired(
+  fieldDef: FieldDefinition,
+  spec: Forma,
+  fieldPath: string,
+  context: EvaluationContext
+): boolean {
+  // If field has requiredWhen, evaluate it
+  if (fieldDef.requiredWhen) {
+    return evaluateBoolean(fieldDef.requiredWhen, context);
+  }
+
+  // Otherwise, check schema required array
+  return spec.schema.required?.includes(fieldPath) ?? false;
 }
 
 /**
  * Check if a value is empty
  */
 function isEmpty(value: unknown): boolean {
-  if (value === undefined || value === null) return true;
+  if (value === null || value === undefined) return true;
   if (typeof value === "string" && value.trim() === "") return true;
   if (Array.isArray(value) && value.length === 0) return true;
   return false;
 }
 
+// ============================================================================
+// Type Validation
+// ============================================================================
+
 /**
- * Basic email validation
+ * Validate value against JSON Schema type
  */
-function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+function validateType(
+  path: string,
+  value: unknown,
+  schema: JSONSchemaProperty,
+  fieldDef: FieldDefinition
+): FieldError | null {
+  const label = fieldDef.label ?? path;
+
+  switch (schema.type) {
+    case "string": {
+      if (typeof value !== "string") {
+        return {
+          field: path,
+          message: `${label} must be a string`,
+          severity: "error",
+        };
+      }
+
+      // String-specific validations
+      if ("minLength" in schema && schema.minLength !== undefined) {
+        if (value.length < schema.minLength) {
+          return {
+            field: path,
+            message: `${label} must be at least ${schema.minLength} characters`,
+            severity: "error",
+          };
+        }
+      }
+
+      if ("maxLength" in schema && schema.maxLength !== undefined) {
+        if (value.length > schema.maxLength) {
+          return {
+            field: path,
+            message: `${label} must be no more than ${schema.maxLength} characters`,
+            severity: "error",
+          };
+        }
+      }
+
+      if ("pattern" in schema && schema.pattern) {
+        const regex = new RegExp(schema.pattern);
+        if (!regex.test(value)) {
+          return {
+            field: path,
+            message: `${label} format is invalid`,
+            severity: "error",
+          };
+        }
+      }
+
+      if ("enum" in schema && schema.enum) {
+        if (!schema.enum.includes(value)) {
+          return {
+            field: path,
+            message: `${label} must be one of: ${schema.enum.join(", ")}`,
+            severity: "error",
+          };
+        }
+      }
+
+      if ("format" in schema && schema.format) {
+        const formatError = validateFormat(path, value, schema.format, label);
+        if (formatError) return formatError;
+      }
+
+      return null;
+    }
+
+    case "number":
+    case "integer": {
+      if (typeof value !== "number") {
+        return {
+          field: path,
+          message: `${label} must be a number`,
+          severity: "error",
+        };
+      }
+
+      if (schema.type === "integer" && !Number.isInteger(value)) {
+        return {
+          field: path,
+          message: `${label} must be a whole number`,
+          severity: "error",
+        };
+      }
+
+      if ("minimum" in schema && schema.minimum !== undefined) {
+        if (value < schema.minimum) {
+          return {
+            field: path,
+            message: `${label} must be at least ${schema.minimum}`,
+            severity: "error",
+          };
+        }
+      }
+
+      if ("maximum" in schema && schema.maximum !== undefined) {
+        if (value > schema.maximum) {
+          return {
+            field: path,
+            message: `${label} must be no more than ${schema.maximum}`,
+            severity: "error",
+          };
+        }
+      }
+
+      if ("exclusiveMinimum" in schema && schema.exclusiveMinimum !== undefined) {
+        if (value <= schema.exclusiveMinimum) {
+          return {
+            field: path,
+            message: `${label} must be greater than ${schema.exclusiveMinimum}`,
+            severity: "error",
+          };
+        }
+      }
+
+      if ("exclusiveMaximum" in schema && schema.exclusiveMaximum !== undefined) {
+        if (value >= schema.exclusiveMaximum) {
+          return {
+            field: path,
+            message: `${label} must be less than ${schema.exclusiveMaximum}`,
+            severity: "error",
+          };
+        }
+      }
+
+      return null;
+    }
+
+    case "boolean": {
+      if (typeof value !== "boolean") {
+        return {
+          field: path,
+          message: `${label} must be true or false`,
+          severity: "error",
+        };
+      }
+      return null;
+    }
+
+    case "array": {
+      if (!Array.isArray(value)) {
+        return {
+          field: path,
+          message: `${label} must be a list`,
+          severity: "error",
+        };
+      }
+      return null;
+    }
+
+    case "object": {
+      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        return {
+          field: path,
+          message: `${label} must be an object`,
+          severity: "error",
+        };
+      }
+      return null;
+    }
+
+    default:
+      return null;
+  }
 }
 
 /**
- * Basic URL validation
+ * Validate string format
  */
-function isValidUrl(url: string): boolean {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
+function validateFormat(
+  path: string,
+  value: string,
+  format: string,
+  label: string
+): FieldError | null {
+  switch (format) {
+    case "email": {
+      // Simple email regex
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) {
+        return {
+          field: path,
+          message: `${label} must be a valid email address`,
+          severity: "error",
+        };
+      }
+      return null;
+    }
+
+    case "date": {
+      // ISO date format YYYY-MM-DD
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(value) || isNaN(Date.parse(value))) {
+        return {
+          field: path,
+          message: `${label} must be a valid date`,
+          severity: "error",
+        };
+      }
+      return null;
+    }
+
+    case "date-time": {
+      if (isNaN(Date.parse(value))) {
+        return {
+          field: path,
+          message: `${label} must be a valid date and time`,
+          severity: "error",
+        };
+      }
+      return null;
+    }
+
+    case "uri": {
+      try {
+        new URL(value);
+        return null;
+      } catch {
+        return {
+          field: path,
+          message: `${label} must be a valid URL`,
+          severity: "error",
+        };
+      }
+    }
+
+    case "uuid": {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(value)) {
+        return {
+          field: path,
+          message: `${label} must be a valid UUID`,
+          severity: "error",
+        };
+      }
+      return null;
+    }
+
+    default:
+      return null;
   }
+}
+
+// ============================================================================
+// Custom Rule Validation
+// ============================================================================
+
+/**
+ * Validate custom FEEL validation rules
+ */
+function validateCustomRules(
+  path: string,
+  rules: ValidationRule[],
+  context: EvaluationContext
+): FieldError[] {
+  const errors: FieldError[] = [];
+
+  for (const rule of rules) {
+    const isValid = evaluateBoolean(rule.rule, context);
+
+    if (!isValid) {
+      errors.push({
+        field: path,
+        message: rule.message,
+        severity: rule.severity ?? "error",
+      });
+    }
+  }
+
+  return errors;
+}
+
+// ============================================================================
+// Array Validation
+// ============================================================================
+
+/**
+ * Validate array field including items
+ */
+function validateArray(
+  path: string,
+  value: unknown[],
+  fieldDef: FieldDefinition,
+  spec: Forma,
+  data: Record<string, unknown>,
+  computed: Record<string, unknown>,
+  visibility: Record<string, boolean>,
+  onlyVisible: boolean
+): FieldError[] {
+  const errors: FieldError[] = [];
+  const label = fieldDef.label ?? path;
+
+  // Check min/max items
+  if (fieldDef.minItems !== undefined && value.length < fieldDef.minItems) {
+    errors.push({
+      field: path,
+      message: `${label} must have at least ${fieldDef.minItems} items`,
+      severity: "error",
+    });
+  }
+
+  if (fieldDef.maxItems !== undefined && value.length > fieldDef.maxItems) {
+    errors.push({
+      field: path,
+      message: `${label} must have no more than ${fieldDef.maxItems} items`,
+      severity: "error",
+    });
+  }
+
+  // Validate each item's fields
+  if (fieldDef.itemFields) {
+    for (let i = 0; i < value.length; i++) {
+      const item = value[i] as Record<string, unknown>;
+      const itemErrors = validateArrayItem(
+        path,
+        i,
+        item,
+        fieldDef.itemFields,
+        spec,
+        data,
+        computed,
+        visibility,
+        onlyVisible
+      );
+      errors.push(...itemErrors);
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Validate fields within a single array item
+ */
+function validateArrayItem(
+  arrayPath: string,
+  index: number,
+  item: Record<string, unknown>,
+  itemFields: Record<string, FieldDefinition>,
+  spec: Forma,
+  data: Record<string, unknown>,
+  computed: Record<string, unknown>,
+  visibility: Record<string, boolean>,
+  onlyVisible: boolean
+): FieldError[] {
+  const errors: FieldError[] = [];
+
+  for (const [fieldName, fieldDef] of Object.entries(itemFields)) {
+    const itemFieldPath = `${arrayPath}[${index}].${fieldName}`;
+
+    // Skip hidden fields
+    if (onlyVisible && visibility[itemFieldPath] === false) {
+      continue;
+    }
+
+    const value = item[fieldName];
+    const context: EvaluationContext = {
+      data,
+      computed,
+      referenceData: spec.referenceData,
+      item,
+      itemIndex: index,
+      value,
+    };
+
+    // Required check
+    const isRequired = fieldDef.requiredWhen
+      ? evaluateBoolean(fieldDef.requiredWhen, context)
+      : false;
+
+    if (isRequired && isEmpty(value)) {
+      errors.push({
+        field: itemFieldPath,
+        message: fieldDef.label
+          ? `${fieldDef.label} is required`
+          : "This field is required",
+        severity: "error",
+      });
+    }
+
+    // Custom validations
+    if (fieldDef.validations && !isEmpty(value)) {
+      const customErrors = validateCustomRules(itemFieldPath, fieldDef.validations, context);
+      errors.push(...customErrors);
+    }
+  }
+
+  return errors;
+}
+
+// ============================================================================
+// Single Field Validation
+// ============================================================================
+
+/**
+ * Validate a single field
+ *
+ * @param fieldPath - Path to the field
+ * @param data - Current form data
+ * @param spec - Form specification
+ * @returns Array of errors for this field
+ */
+export function validateSingleField(
+  fieldPath: string,
+  data: Record<string, unknown>,
+  spec: Forma
+): FieldError[] {
+  const fieldDef = spec.fields[fieldPath];
+  if (!fieldDef) {
+    return [];
+  }
+
+  const computed = calculate(data, spec);
+  const visibility = getVisibility(data, spec, { computed });
+  const schemaProperty = spec.schema.properties[fieldPath];
+
+  return validateField(
+    fieldPath,
+    data[fieldPath],
+    fieldDef,
+    schemaProperty,
+    spec,
+    data,
+    computed,
+    visibility,
+    true
+  );
 }

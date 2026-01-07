@@ -1,77 +1,150 @@
 /**
- * Required Engine
+ * Required Fields Engine
  *
- * Evaluates which fields are required based on static values or FEEL expressions.
+ * Determines which fields are currently required based on
+ * conditional requiredWhen expressions and schema required array.
  */
 
-import type { Forma, FieldDefinition } from "../types.js";
-import { evaluateBoolean, type EvaluationContext } from "../feel/index.js";
+import { evaluateBoolean } from "../feel/index.js";
+import type {
+  Forma,
+  FieldDefinition,
+  EvaluationContext,
+  RequiredFieldsResult,
+} from "../types.js";
+import { calculate } from "./calculate.js";
+
+// ============================================================================
+// Types
+// ============================================================================
 
 export interface RequiredOptions {
-  /** Computed values to include in context */
+  /** Pre-calculated computed values */
   computed?: Record<string, unknown>;
-  /** Reference data to include in context */
-  ref?: Record<string, unknown>;
 }
 
+// ============================================================================
+// Main Function
+// ============================================================================
+
 /**
- * Get required state for all fields in a Forma spec
+ * Determine which fields are currently required
+ *
+ * Returns a map of field paths to boolean required states.
+ * Evaluates requiredWhen expressions for conditional requirements.
+ *
+ * @param data - Current form data
+ * @param spec - Form specification
+ * @param options - Optional pre-calculated computed values
+ * @returns Map of field paths to required states
+ *
+ * @example
+ * const required = getRequired(
+ *   { hasInsurance: true },
+ *   forma
+ * );
+ * // => { hasInsurance: true, insuranceProvider: true, policyNumber: true }
  */
 export function getRequired(
   data: Record<string, unknown>,
   spec: Forma,
   options: RequiredOptions = {}
-): Record<string, boolean> {
-  const required: Record<string, boolean> = {};
+): RequiredFieldsResult {
+  const computed = options.computed ?? calculate(data, spec);
   const context: EvaluationContext = {
     data,
-    computed: options.computed,
-    ref: options.ref,
+    computed,
+    referenceData: spec.referenceData,
   };
 
-  for (const field of spec.fields) {
-    required[field.id] = evaluateFieldRequired(field, context);
+  const result: RequiredFieldsResult = {};
+
+  // Evaluate each field's required status
+  for (const fieldPath of spec.fieldOrder) {
+    const fieldDef = spec.fields[fieldPath];
+    if (fieldDef) {
+      result[fieldPath] = isFieldRequired(fieldPath, fieldDef, spec, context);
+    }
   }
 
-  return required;
+  // Also check array item fields
+  for (const [fieldPath, fieldDef] of Object.entries(spec.fields)) {
+    if (fieldDef.itemFields) {
+      const arrayData = data[fieldPath];
+      if (Array.isArray(arrayData)) {
+        for (let i = 0; i < arrayData.length; i++) {
+          const item = arrayData[i] as Record<string, unknown>;
+          const itemContext: EvaluationContext = {
+            data,
+            computed,
+            referenceData: spec.referenceData,
+            item,
+            itemIndex: i,
+          };
+
+          for (const [itemFieldName, itemFieldDef] of Object.entries(fieldDef.itemFields)) {
+            const itemFieldPath = `${fieldPath}[${i}].${itemFieldName}`;
+            result[itemFieldPath] = isFieldRequired(
+              itemFieldName,
+              itemFieldDef,
+              spec,
+              itemContext
+            );
+          }
+        }
+      }
+    }
+  }
+
+  return result;
 }
 
+// ============================================================================
+// Field Required Check
+// ============================================================================
+
 /**
- * Check if a specific field is required
+ * Check if a single field is required
  */
-export function isRequired(
-  fieldId: string,
-  data: Record<string, unknown>,
+function isFieldRequired(
+  fieldPath: string,
+  fieldDef: FieldDefinition,
   spec: Forma,
-  options: RequiredOptions = {}
-): boolean {
-  const field = spec.fields.find((f) => f.id === fieldId);
-  if (!field) return false;
-
-  const context: EvaluationContext = {
-    data,
-    computed: options.computed,
-    ref: options.ref,
-  };
-
-  return evaluateFieldRequired(field, context);
-}
-
-/**
- * Evaluate required state for a single field
- */
-function evaluateFieldRequired(
-  field: FieldDefinition,
   context: EvaluationContext
 ): boolean {
-  if (field.required === undefined) {
-    return false;
+  // If field has requiredWhen, evaluate it
+  if (fieldDef.requiredWhen) {
+    return evaluateBoolean(fieldDef.requiredWhen, context);
   }
 
-  if (typeof field.required === "boolean") {
-    return field.required;
+  // Otherwise, check schema required array
+  return spec.schema.required?.includes(fieldPath) ?? false;
+}
+
+/**
+ * Check if a single field is currently required
+ *
+ * @param fieldPath - Path to the field
+ * @param data - Current form data
+ * @param spec - Form specification
+ * @returns True if the field is required
+ */
+export function isRequired(
+  fieldPath: string,
+  data: Record<string, unknown>,
+  spec: Forma
+): boolean {
+  const fieldDef = spec.fields[fieldPath];
+  if (!fieldDef) {
+    return spec.schema.required?.includes(fieldPath) ?? false;
   }
 
-  // It's a FEEL expression
-  return evaluateBoolean(field.required, context);
+  const computed = calculate(data, spec);
+  const context: EvaluationContext = {
+    data,
+    computed,
+    referenceData: spec.referenceData,
+  };
+
+  return isFieldRequired(fieldPath, fieldDef, spec, context);
 }

@@ -2,14 +2,14 @@
  * FormRenderer Component
  *
  * Renders a complete form from a Forma specification.
- * This is a placeholder - the full implementation will be migrated from formidable.
+ * Supports single-page and multi-page (wizard) forms.
  */
 
-import React, { forwardRef, useImperativeHandle, useRef } from "react";
-import type { Forma, ValidationResult } from "@fogpipe/forma-core";
+import React, { forwardRef, useImperativeHandle, useRef, useMemo, useCallback } from "react";
+import type { Forma, FieldDefinition, ValidationResult, JSONSchemaProperty } from "@fogpipe/forma-core";
 import { useForma } from "./useForma.js";
 import { FormaContext } from "./context.js";
-import type { ComponentMap, LayoutProps, FieldWrapperProps, PageWrapperProps } from "./types.js";
+import type { ComponentMap, LayoutProps, FieldWrapperProps, PageWrapperProps, BaseFieldProps, TextFieldProps, NumberFieldProps, SelectFieldProps, ArrayFieldProps, ArrayHelpers } from "./types.js";
 
 /**
  * Props for FormRenderer component
@@ -74,13 +74,17 @@ function DefaultLayout({ children, onSubmit, isSubmitting }: LayoutProps) {
 /**
  * Default field wrapper component
  */
-function DefaultFieldWrapper({ field, children, errors, required }: FieldWrapperProps) {
+function DefaultFieldWrapper({ field, children, errors, required, visible }: FieldWrapperProps) {
+  if (!visible) return null;
+
   return (
     <div className="field-wrapper">
-      <label>
-        {field.label}
-        {required && <span className="required">*</span>}
-      </label>
+      {field.label && (
+        <label>
+          {field.label}
+          {required && <span className="required">*</span>}
+        </label>
+      )}
       {children}
       {errors.length > 0 && (
         <div className="field-errors">
@@ -97,6 +101,33 @@ function DefaultFieldWrapper({ field, children, errors, required }: FieldWrapper
 }
 
 /**
+ * Default page wrapper component
+ */
+function DefaultPageWrapper({ title, description, children }: PageWrapperProps) {
+  return (
+    <div className="page-wrapper">
+      <h2>{title}</h2>
+      {description && <p>{description}</p>}
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Extract numeric constraints from JSON Schema property
+ */
+function getNumberConstraints(schema?: JSONSchemaProperty): { min?: number; max?: number; step?: number } {
+  if (!schema) return {};
+  if (schema.type !== "number" && schema.type !== "integer") return {};
+
+  return {
+    min: "minimum" in schema ? schema.minimum : undefined,
+    max: "maximum" in schema ? schema.maximum : undefined,
+    step: schema.type === "integer" ? 1 : undefined,
+  };
+}
+
+/**
  * FormRenderer component
  */
 export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
@@ -109,6 +140,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       components,
       layout: Layout = DefaultLayout,
       fieldWrapper: FieldWrapper = DefaultFieldWrapper,
+      pageWrapper: PageWrapper = DefaultPageWrapper,
       validateOn,
     } = props;
 
@@ -122,6 +154,20 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
 
     const fieldRefs = useRef<Map<string, HTMLElement>>(new Map());
 
+    // Focus a specific field by path
+    const focusField = useCallback((path: string) => {
+      const element = fieldRefs.current.get(path);
+      element?.focus();
+    }, []);
+
+    // Focus the first field with an error
+    const focusFirstError = useCallback(() => {
+      const firstError = forma.errors[0];
+      if (firstError) {
+        focusField(firstError.field);
+      }
+    }, [forma.errors, focusField]);
+
     // Expose imperative handle
     useImperativeHandle(
       ref,
@@ -129,71 +175,174 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
         submitForm: forma.submitForm,
         resetForm: forma.resetForm,
         validateForm: forma.validateForm,
-        focusField: (path: string) => {
-          const field = fieldRefs.current.get(path);
-          field?.focus();
-        },
-        focusFirstError: () => {
-          const firstError = forma.errors[0];
-          if (firstError) {
-            const field = fieldRefs.current.get(firstError.field);
-            field?.focus();
-          }
-        },
+        focusField,
+        focusFirstError,
         getValues: () => forma.data,
         setValues: forma.setValues,
         isValid: forma.isValid,
         isDirty: forma.isDirty,
       }),
-      [forma]
+      [forma, focusField, focusFirstError]
     );
 
-    // Render fields
-    const renderField = (fieldDef: typeof spec.fields[0]) => {
-      if (!forma.visibility[fieldDef.id]) {
-        return null;
+    // Determine which fields to render based on pages or fieldOrder
+    const fieldsToRender = useMemo(() => {
+      if (spec.pages && spec.pages.length > 0 && forma.wizard) {
+        // Wizard mode - render fields for the active page
+        const currentPage = forma.wizard.currentPage;
+        if (currentPage) {
+          return currentPage.fields;
+        }
+        // Fallback to first page
+        return spec.pages[0]?.fields ?? [];
       }
+      // Single page mode - render all fields in order
+      return spec.fieldOrder;
+    }, [spec.pages, spec.fieldOrder, forma.wizard]);
 
-      const componentKey = fieldDef.type as keyof ComponentMap;
+    // Render a single field
+    const renderField = (fieldPath: string) => {
+      const fieldDef = spec.fields[fieldPath];
+      if (!fieldDef) return null;
+
+      const isVisible = forma.visibility[fieldPath] !== false;
+      if (!isVisible) return null;
+
+      // Infer field type
+      const fieldType = fieldDef.type || (fieldDef.itemFields ? "array" : "text");
+      const componentKey = fieldType as keyof ComponentMap;
       const Component = components[componentKey] || components.fallback;
+
       if (!Component) {
-        console.warn(`No component found for field type: ${fieldDef.type}`);
+        console.warn(`No component found for field type: ${fieldType}`);
         return null;
       }
 
-      const errors = forma.errors.filter((e) => e.field === fieldDef.id);
-      const touched = Boolean(forma.data[fieldDef.id]);
-      const required = forma.required[fieldDef.id] || false;
-      const disabled = !forma.enabled[fieldDef.id];
+      const errors = forma.errors.filter((e) => e.field === fieldPath);
+      const touched = fieldPath in forma.data;
+      const required = forma.required[fieldPath] ?? false;
+      const disabled = forma.enabled[fieldPath] === false;
 
-      const fieldProps = {
+      // Get schema property for additional constraints
+      const schemaProperty = spec.schema.properties[fieldPath];
+
+      // Base field props
+      const baseProps: BaseFieldProps = {
         field: fieldDef,
-        value: forma.data[fieldDef.id],
+        value: forma.data[fieldPath],
         touched,
         required,
         disabled,
         errors,
-        onChange: (value: unknown) => forma.setFieldValue(fieldDef.id, value),
-        onBlur: () => forma.setFieldTouched(fieldDef.id),
-        fieldType: fieldDef.type,
-        options: fieldDef.options,
-        min: fieldDef.min,
-        max: fieldDef.max,
-        step: fieldDef.step,
+        onChange: (value: unknown) => forma.setFieldValue(fieldPath, value),
+        onBlur: () => forma.setFieldTouched(fieldPath),
       };
+
+      // Build type-specific props
+      let fieldProps: BaseFieldProps | TextFieldProps | NumberFieldProps | SelectFieldProps | ArrayFieldProps = baseProps;
+
+      if (fieldType === "number" || fieldType === "integer") {
+        const constraints = getNumberConstraints(schemaProperty);
+        fieldProps = {
+          ...baseProps,
+          fieldType,
+          value: baseProps.value as number | null,
+          onChange: baseProps.onChange as (value: number | null) => void,
+          ...constraints,
+        } as NumberFieldProps;
+      } else if (fieldType === "select" || fieldType === "multiselect") {
+        fieldProps = {
+          ...baseProps,
+          fieldType,
+          value: baseProps.value as string | string[] | null,
+          onChange: baseProps.onChange as (value: string | string[] | null) => void,
+          options: fieldDef.options ?? [],
+        } as SelectFieldProps;
+      } else if (fieldType === "array" && fieldDef.itemFields) {
+        const arrayValue = (baseProps.value as unknown[] | undefined) ?? [];
+        const helpers: ArrayHelpers = {
+          push: (item: unknown) => forma.setFieldValue(fieldPath, [...arrayValue, item]),
+          insert: (index: number, item: unknown) => {
+            const newArray = [...arrayValue];
+            newArray.splice(index, 0, item);
+            forma.setFieldValue(fieldPath, newArray);
+          },
+          remove: (index: number) => {
+            const newArray = [...arrayValue];
+            newArray.splice(index, 1);
+            forma.setFieldValue(fieldPath, newArray);
+          },
+          move: (from: number, to: number) => {
+            const newArray = [...arrayValue];
+            const [item] = newArray.splice(from, 1);
+            newArray.splice(to, 0, item);
+            forma.setFieldValue(fieldPath, newArray);
+          },
+          swap: (indexA: number, indexB: number) => {
+            const newArray = [...arrayValue];
+            [newArray[indexA], newArray[indexB]] = [newArray[indexB], newArray[indexA]];
+            forma.setFieldValue(fieldPath, newArray);
+          },
+        };
+        fieldProps = {
+          ...baseProps,
+          fieldType: "array",
+          value: arrayValue,
+          onChange: baseProps.onChange as (value: unknown[]) => void,
+          helpers,
+          itemFields: Object.entries(fieldDef.itemFields).map(([name, def]) => ({
+            ...def,
+            // Add name to item field for identification
+            label: def.label ?? name,
+          } as FieldDefinition)),
+        } as ArrayFieldProps;
+      } else {
+        // Text-based fields
+        fieldProps = {
+          ...baseProps,
+          fieldType: fieldType as "text" | "email" | "password" | "url" | "textarea",
+          value: (baseProps.value as string) ?? "",
+          onChange: baseProps.onChange as (value: string) => void,
+        };
+      }
 
       return (
         <FieldWrapper
-          key={fieldDef.id}
+          key={fieldPath}
           field={fieldDef}
           errors={errors}
           touched={touched}
           required={required}
+          visible={isVisible}
         >
-          {React.createElement(Component as unknown as React.ComponentType<typeof fieldProps>, fieldProps)}
+          {React.createElement(Component as React.ComponentType<typeof fieldProps>, fieldProps)}
         </FieldWrapper>
       );
     };
+
+    // Render fields
+    const renderedFields = fieldsToRender.map(renderField);
+
+    // Render with page wrapper if using pages
+    const content = useMemo(() => {
+      if (spec.pages && spec.pages.length > 0 && forma.wizard) {
+        const currentPage = forma.wizard.currentPage;
+        if (!currentPage) return null;
+
+        return (
+          <PageWrapper
+            title={currentPage.title}
+            description={currentPage.description}
+            pageIndex={forma.wizard.currentPageIndex}
+            totalPages={forma.wizard.pages.length}
+          >
+            {renderedFields}
+          </PageWrapper>
+        );
+      }
+
+      return <>{renderedFields}</>;
+    }, [spec.pages, forma.wizard, PageWrapper, renderedFields]);
 
     return (
       <FormaContext.Provider value={forma}>
@@ -202,7 +351,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
           isSubmitting={forma.isSubmitting}
           isValid={forma.isValid}
         >
-          {spec.fields.map(renderField)}
+          {content}
         </Layout>
       </FormaContext.Provider>
     );
