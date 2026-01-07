@@ -319,7 +319,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
         return pageErrors.length === 0;
       },
     };
-  }, [spec.pages, state.data, state.currentPage, computed, validation]);
+  }, [spec, state.data, state.currentPage, computed, validation]);
 
   return {
     data: state.data,

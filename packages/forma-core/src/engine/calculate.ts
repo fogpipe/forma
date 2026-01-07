@@ -4,7 +4,7 @@
  * Evaluates computed fields based on FEEL expressions.
  */
 
-import type { Forma, ComputedField } from "../types.js";
+import type { Forma } from "../types.js";
 import { evaluate, type EvaluationContext } from "../feel/index.js";
 
 export interface CalculateOptions {
