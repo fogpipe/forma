@@ -1,0 +1,82 @@
+{
+  "name": "@formidable/forma-core",
+  "version": "0.1.0",
+  "description": "Forma core runtime: Types and evaluation engines for dynamic forms with FEEL expressions",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./engine": {
+      "import": {
+        "types": "./dist/engine/index.d.ts",
+        "default": "./dist/engine/index.js"
+      },
+      "require": {
+        "types": "./dist/engine/index.d.ts",
+        "default": "./dist/engine/index.cjs"
+      }
+    },
+    "./feel": {
+      "import": {
+        "types": "./dist/feel/index.d.ts",
+        "default": "./dist/feel/index.js"
+      },
+      "require": {
+        "types": "./dist/feel/index.d.ts",
+        "default": "./dist/feel/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint .",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "feelin": "^5.1.0"
+  },
+  "devDependencies": {
+    "@formidable/eslint-config": "*",
+    "@formidable/typescript-config": "*",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "keywords": [
+    "form",
+    "feel",
+    "validation",
+    "conditional-logic",
+    "dynamic-forms"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fogpipe/forma.git",
+    "directory": "packages/forma-core"
+  },
+  "bugs": {
+    "url": "https://github.com/fogpipe/forma/issues"
+  },
+  "homepage": "https://github.com/fogpipe/forma#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}

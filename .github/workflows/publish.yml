@@ -1,0 +1,72 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run quality checks
+        run: npx turbo run lint check-types build test
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Update package versions
+        run: |
+          # Update forma-core version
+          cd packages/forma-core
+          npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
+          cd ../..
+
+          # Update forma-react version
+          cd packages/forma-react
+          npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
+          # Update forma-core dependency
+          npm pkg set "dependencies.@formidable/forma-core=^${{ steps.version.outputs.VERSION }}"
+          cd ../..
+
+      - name: Publish forma-core
+        run: |
+          cd packages/forma-core
+          npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish forma-react
+        run: |
+          cd packages/forma-react
+          npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "## Published Packages :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- [@formidable/forma-core](https://www.npmjs.com/package/@formidable/forma-core)" >> $GITHUB_STEP_SUMMARY
+          echo "- [@formidable/forma-react](https://www.npmjs.com/package/@formidable/forma-react)" >> $GITHUB_STEP_SUMMARY

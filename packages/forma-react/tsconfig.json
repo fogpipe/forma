@@ -1,0 +1,9 @@
+{
+  "extends": "@formidable/typescript-config/react-library.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.test.tsx", "src/__tests__/**/*"]
+}
