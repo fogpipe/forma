@@ -1,4 +1,4 @@
-import { config as eslintConfig } from "@formidable/eslint-config/base";
+import { config as eslintConfig } from "@fogpipe/eslint-config/base";
 
 export default [
   ...eslintConfig,
