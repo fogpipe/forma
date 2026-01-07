@@ -1,5 +1,5 @@
 {
-  "extends": "@formidable/typescript-config/base.json",
+  "extends": "@fogpipe/typescript-config/base.json",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src"

@@ -6,7 +6,7 @@
  */
 
 import React, { forwardRef, useImperativeHandle, useRef } from "react";
-import type { Forma, ValidationResult } from "@formidable/forma-core";
+import type { Forma, ValidationResult } from "@fogpipe/forma-core";
 import { useForma, type UseFormaReturn } from "./useForma.js";
 import { FormaContext } from "./context.js";
 import type { ComponentMap, LayoutProps, FieldWrapperProps, PageWrapperProps } from "./types.js";

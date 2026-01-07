@@ -1,11 +1,11 @@
-# @formidable/forma-core
+# @fogpipe/forma-core
 
 Core runtime for Forma - a declarative form specification with FEEL expressions for dynamic behavior.
 
 ## Installation
 
 ```bash
-npm install @formidable/forma-core
+npm install @fogpipe/forma-core
 ```
 
 ## Features
@@ -23,7 +23,7 @@ npm install @formidable/forma-core
 ### Define a Forma Specification
 
 ```typescript
-import type { Forma } from '@formidable/forma-core';
+import type { Forma } from '@fogpipe/forma-core';
 
 const form: Forma = {
   meta: {
@@ -62,7 +62,7 @@ import {
   getEnabled,
   validate,
   calculate
-} from '@formidable/forma-core';
+} from '@fogpipe/forma-core';
 
 const data = { name: "John", email: "john@example.com" };
 
@@ -88,7 +88,7 @@ const computed = calculate(data, form);
 ### FEEL Expression Evaluation
 
 ```typescript
-import { evaluate, evaluateBoolean } from '@formidable/forma-core/feel';
+import { evaluate, evaluateBoolean } from '@fogpipe/forma-core/feel';
 
 const context = {
   data: { age: 25, country: "US" }

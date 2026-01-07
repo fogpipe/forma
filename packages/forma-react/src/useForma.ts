@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useMemo, useReducer } from "react";
-import type { Forma, FieldError, ValidationResult } from "@formidable/forma-core";
+import type { Forma, FieldError, ValidationResult } from "@fogpipe/forma-core";
 import {
   getVisibility,
   getRequired,
@@ -14,7 +14,7 @@ import {
   validate,
   calculate,
   getPageVisibility,
-} from "@formidable/forma-core";
+} from "@fogpipe/forma-core";
 
 /**
  * Options for useForma hook

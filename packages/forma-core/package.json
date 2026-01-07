@@ -1,5 +1,5 @@
 {
-  "name": "@formidable/forma-core",
+  "name": "@fogpipe/forma-core",
   "version": "0.1.0",
   "description": "Forma core runtime: Types and evaluation engines for dynamic forms with FEEL expressions",
   "type": "module",
@@ -53,8 +53,8 @@
     "feelin": "^5.1.0"
   },
   "devDependencies": {
-    "@formidable/eslint-config": "*",
-    "@formidable/typescript-config": "*",
+    "@fogpipe/eslint-config": "*",
+    "@fogpipe/typescript-config": "*",
     "tsup": "^8.5.1",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
@@ -77,6 +77,6 @@
   },
   "homepage": "https://github.com/fogpipe/forma#readme",
   "publishConfig": {
-    "access": "public"
+    "registry": "https://npm.pkg.github.com"
   }
 }

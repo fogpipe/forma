@@ -1,5 +1,5 @@
 {
-  "extends": "@formidable/typescript-config/react-library.json",
+  "extends": "@fogpipe/typescript-config/react-library.json",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src"

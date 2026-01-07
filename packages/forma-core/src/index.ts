@@ -1,5 +1,5 @@
 /**
- * @formidable/forma-core
+ * @fogpipe/forma-core
  *
  * Core runtime for Forma dynamic forms.
  * Provides types, FEEL expression evaluation, and form state engines.

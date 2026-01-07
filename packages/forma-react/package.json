@@ -1,5 +1,5 @@
 {
-  "name": "@formidable/forma-react",
+  "name": "@fogpipe/forma-react",
   "version": "0.1.0",
   "description": "Headless React form renderer for Forma specifications",
   "type": "module",
@@ -30,14 +30,14 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@formidable/forma-core": "*"
+    "@fogpipe/forma-core": "*"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
-    "@formidable/eslint-config": "*",
-    "@formidable/typescript-config": "*",
+    "@fogpipe/eslint-config": "*",
+    "@fogpipe/typescript-config": "*",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^14.5.2",
@@ -69,6 +69,6 @@
   },
   "homepage": "https://github.com/fogpipe/forma#readme",
   "publishConfig": {
-    "access": "public"
+    "registry": "https://npm.pkg.github.com"
   }
 }

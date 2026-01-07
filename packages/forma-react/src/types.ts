@@ -2,7 +2,7 @@
  * Type definitions for forma-react components
  */
 
-import type { FieldDefinition, FieldError, SelectOption } from "@formidable/forma-core";
+import type { FieldDefinition, FieldError, SelectOption } from "@fogpipe/forma-core";
 
 /**
  * Base props shared by all field components

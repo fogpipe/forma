@@ -8,8 +8,8 @@ Forma is a specification language for defining dynamic forms that combines JSON 
 
 | Package | Description | npm |
 |---------|-------------|-----|
-| [@formidable/forma-core](./packages/forma-core) | Core runtime: types, FEEL evaluation, form state engines | [![npm](https://img.shields.io/npm/v/@formidable/forma-core)](https://www.npmjs.com/package/@formidable/forma-core) |
-| [@formidable/forma-react](./packages/forma-react) | Headless React form renderer | [![npm](https://img.shields.io/npm/v/@formidable/forma-react)](https://www.npmjs.com/package/@formidable/forma-react) |
+| [@fogpipe/forma-core](./packages/forma-core) | Core runtime: types, FEEL evaluation, form state engines | [![npm](https://img.shields.io/npm/v/@fogpipe/forma-core)](https://www.npmjs.com/package/@fogpipe/forma-core) |
+| [@fogpipe/forma-react](./packages/forma-react) | Headless React form renderer | [![npm](https://img.shields.io/npm/v/@fogpipe/forma-react)](https://www.npmjs.com/package/@fogpipe/forma-react) |
 
 ## Features
 
@@ -26,16 +26,16 @@ Forma is a specification language for defining dynamic forms that combines JSON 
 
 ```bash
 # Core runtime (required)
-npm install @formidable/forma-core
+npm install @fogpipe/forma-core
 
 # React integration (optional)
-npm install @formidable/forma-react
+npm install @fogpipe/forma-react
 ```
 
 ### Define a Form
 
 ```typescript
-import type { Forma } from '@formidable/forma-core';
+import type { Forma } from '@fogpipe/forma-core';
 
 const registrationForm: Forma = {
   meta: {
@@ -87,7 +87,7 @@ const registrationForm: Forma = {
 ### Render with React
 
 ```tsx
-import { FormRenderer } from '@formidable/forma-react';
+import { FormRenderer } from '@fogpipe/forma-react';
 import { myComponents } from './components';
 
 function App() {
@@ -109,7 +109,7 @@ import {
   getRequired,
   validate,
   calculate
-} from '@formidable/forma-core';
+} from '@fogpipe/forma-core';
 
 const formData = {
   email: "user@example.com",

@@ -1,11 +1,11 @@
-# @formidable/forma-react
+# @fogpipe/forma-react
 
 Headless React form renderer for Forma specifications.
 
 ## Installation
 
 ```bash
-npm install @formidable/forma-core @formidable/forma-react
+npm install @fogpipe/forma-core @fogpipe/forma-react
 ```
 
 ## Features
@@ -21,7 +21,7 @@ npm install @formidable/forma-core @formidable/forma-react
 ### 1. Define Your Components
 
 ```tsx
-import type { ComponentMap, TextFieldProps, BooleanFieldProps } from '@formidable/forma-react';
+import type { ComponentMap, TextFieldProps, BooleanFieldProps } from '@fogpipe/forma-react';
 
 const TextInput = ({ field, value, onChange, onBlur, errors }: TextFieldProps) => (
   <div>
@@ -58,8 +58,8 @@ const components: ComponentMap = {
 ### 2. Render the Form
 
 ```tsx
-import { FormRenderer } from '@formidable/forma-react';
-import type { Forma } from '@formidable/forma-core';
+import { FormRenderer } from '@fogpipe/forma-react';
+import type { Forma } from '@fogpipe/forma-core';
 
 const myForm: Forma = {
   meta: { title: "Contact Us" },
@@ -90,7 +90,7 @@ function App() {
 For custom rendering, use the `useForma` hook directly:
 
 ```tsx
-import { useForma } from '@formidable/forma-react';
+import { useForma } from '@fogpipe/forma-react';
 
 function CustomForm({ spec }: { spec: Forma }) {
   const {

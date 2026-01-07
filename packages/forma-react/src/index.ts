@@ -1,5 +1,5 @@
 /**
- * @formidable/forma-react
+ * @fogpipe/forma-react
  *
  * Headless React form renderer for Forma specifications.
  * Provides hooks and components for building dynamic forms.
@@ -16,7 +16,7 @@ export type {
   PageDefinition,
   SelectOption,
   ValidationRule,
-} from "@formidable/forma-core";
+} from "@fogpipe/forma-core";
 
 // Hook
 export { useForma } from "./useForma.js";
