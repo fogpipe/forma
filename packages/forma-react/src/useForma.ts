@@ -5,7 +5,7 @@
  * This is a placeholder - the full implementation will be migrated from formidable.
  */
 
-import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { Forma, FieldError, ValidationResult } from "@fogpipe/forma-core";
 import type { GetFieldPropsResult, GetSelectFieldPropsResult, GetArrayHelpersResult } from "./types.js";
 import {
@@ -33,6 +33,12 @@ export interface UseFormaOptions {
   validateOn?: "change" | "blur" | "submit";
   /** Additional reference data to merge with spec.referenceData */
   referenceData?: Record<string, unknown>;
+  /**
+   * Debounce validation by this many milliseconds.
+   * Useful for large forms to improve performance.
+   * Set to 0 (default) for immediate validation.
+   */
+  validationDebounceMs?: number;
 }
 
 /**
@@ -43,6 +49,7 @@ interface FormState {
   touched: Record<string, boolean>;
   isSubmitting: boolean;
   isSubmitted: boolean;
+  isDirty: boolean;
   currentPage: number;
 }
 
@@ -151,6 +158,7 @@ function formReducer(state: FormState, action: FormAction): FormState {
       return {
         ...state,
         data: { ...state.data, [action.field]: action.value },
+        isDirty: true,
         isSubmitted: false, // Clear on data change
       };
     case "SET_FIELD_TOUCHED":
@@ -162,6 +170,7 @@ function formReducer(state: FormState, action: FormAction): FormState {
       return {
         ...state,
         data: { ...state.data, ...action.values },
+        isDirty: true,
         isSubmitted: false, // Clear on data change
       };
     case "SET_SUBMITTING":
@@ -176,6 +185,7 @@ function formReducer(state: FormState, action: FormAction): FormState {
         touched: {},
         isSubmitting: false,
         isSubmitted: false,
+        isDirty: false,
         currentPage: 0,
       };
     default:
@@ -187,7 +197,7 @@ function formReducer(state: FormState, action: FormAction): FormState {
  * Main Forma hook
  */
 export function useForma(options: UseFormaOptions): UseFormaReturn {
-  const { spec: inputSpec, initialData = {}, onSubmit, onChange, validateOn = "blur", referenceData } = options;
+  const { spec: inputSpec, initialData = {}, onSubmit, onChange, validateOn = "blur", referenceData, validationDebounceMs = 0 } = options;
 
   // Merge referenceData from options with spec.referenceData
   const spec = useMemo((): Forma => {
@@ -206,6 +216,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     touched: {},
     isSubmitting: false,
     isSubmitted: false,
+    isDirty: false,
     currentPage: 0,
   });
 
@@ -236,17 +247,35 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     [state.data, spec, computed]
   );
 
-  // Validate form
-  const validation = useMemo(
+  // Validate form - compute immediate result
+  const immediateValidation = useMemo(
     () => validate(state.data, spec, { computed, onlyVisible: true }),
     [state.data, spec, computed]
   );
 
-  // Check if form is dirty (data differs from initial)
-  const isDirty = useMemo(
-    () => JSON.stringify(state.data) !== JSON.stringify(initialData),
-    [state.data, initialData]
-  );
+  // Debounced validation state (only used when validationDebounceMs > 0)
+  const [debouncedValidation, setDebouncedValidation] = useState<ValidationResult>(immediateValidation);
+
+  // Apply debouncing if configured
+  useEffect(() => {
+    if (validationDebounceMs <= 0) {
+      // No debouncing - use immediate validation
+      setDebouncedValidation(immediateValidation);
+      return;
+    }
+
+    // Debounce validation updates
+    const timeoutId = setTimeout(() => {
+      setDebouncedValidation(immediateValidation);
+    }, validationDebounceMs);
+
+    return () => clearTimeout(timeoutId);
+  }, [immediateValidation, validationDebounceMs]);
+
+  // Use debounced validation for display, but immediate for submit
+  const validation = validationDebounceMs > 0 ? debouncedValidation : immediateValidation;
+
+  // isDirty is tracked via reducer state for O(1) performance
 
   // Call onChange when data changes (not on initial render)
   useEffect(() => {
@@ -328,14 +357,15 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   const submitForm = useCallback(async () => {
     dispatch({ type: "SET_SUBMITTING", isSubmitting: true });
     try {
-      if (validation.valid && onSubmit) {
+      // Always use immediate validation on submit to ensure accurate result
+      if (immediateValidation.valid && onSubmit) {
         await onSubmit(state.data);
       }
       dispatch({ type: "SET_SUBMITTED", isSubmitted: true });
     } finally {
       dispatch({ type: "SET_SUBMITTING", isSubmitting: false });
     }
-  }, [validation, onSubmit, state.data]);
+  }, [immediateValidation, onSubmit, state.data]);
 
   const resetForm = useCallback(() => {
     dispatch({ type: "RESET", initialData });
@@ -446,6 +476,29 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   // Memoized onChange/onBlur handlers for fields
   const fieldHandlers = useRef<Map<string, { onChange: (value: unknown) => void; onBlur: () => void }>>(new Map());
 
+  // Clean up stale field handlers when spec changes to prevent memory leaks
+  useEffect(() => {
+    const validFields = new Set(spec.fieldOrder);
+    // Also include array item field patterns
+    for (const fieldId of spec.fieldOrder) {
+      const fieldDef = spec.fields[fieldId];
+      if (fieldDef?.itemFields) {
+        for (const key of fieldHandlers.current.keys()) {
+          if (key.startsWith(`${fieldId}[`)) {
+            validFields.add(key);
+          }
+        }
+      }
+    }
+    // Remove handlers for fields that no longer exist
+    for (const key of fieldHandlers.current.keys()) {
+      const baseField = key.split('[')[0];
+      if (!validFields.has(key) && !validFields.has(baseField)) {
+        fieldHandlers.current.delete(key);
+      }
+    }
+  }, [spec]);
+
   const getFieldHandlers = useCallback((path: string) => {
     if (!fieldHandlers.current.has(path)) {
       fieldHandlers.current.set(path, {
@@ -484,6 +537,9 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     const fieldErrors = validation.errors.filter((e) => e.field === path);
     const isTouched = state.touched[path] ?? false;
     const showErrors = validateOn === "change" || (validateOn === "blur" && isTouched) || state.isSubmitted;
+    const displayedErrors = showErrors ? fieldErrors : [];
+    const hasErrors = displayedErrors.length > 0;
+    const isRequired = required[path] ?? false;
 
     return {
       name: path,
@@ -494,11 +550,15 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       placeholder: fieldDef?.placeholder,
       visible: visibility[path] !== false,
       enabled: enabled[path] !== false,
-      required: required[path] ?? false,
+      required: isRequired,
       touched: isTouched,
-      errors: showErrors ? fieldErrors : [],
+      errors: displayedErrors,
       onChange: handlers.onChange,
       onBlur: handlers.onBlur,
+      // ARIA accessibility attributes
+      "aria-invalid": hasErrors || undefined,
+      "aria-describedby": hasErrors ? `${path}-error` : undefined,
+      "aria-required": isRequired || undefined,
     };
   }, [spec, state.touched, state.isSubmitted, visibility, enabled, required, validation.errors, validateOn, getValueAtPath, getFieldHandlers]);
 
@@ -604,7 +664,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     isValid: validation.valid,
     isSubmitting: state.isSubmitting,
     isSubmitted: state.isSubmitted,
-    isDirty,
+    isDirty: state.isDirty,
     spec,
     wizard,
     setFieldValue,

@@ -291,6 +291,9 @@ export interface LayoutProps {
  * Props for custom field wrapper components
  */
 export interface FieldWrapperProps {
+  /** Field path/identifier */
+  fieldPath: string;
+  /** Field definition from the Forma spec */
   field: FieldDefinition;
   children: React.ReactNode;
   errors: FieldError[];
@@ -428,6 +431,13 @@ export interface GetFieldPropsResult {
   onChange: (value: unknown) => void;
   /** Handler for blur events */
   onBlur: () => void;
+  // ARIA accessibility attributes
+  /** ARIA: Indicates the field has validation errors */
+  "aria-invalid"?: boolean;
+  /** ARIA: ID of element(s) describing validation errors */
+  "aria-describedby"?: string;
+  /** ARIA: Indicates the field is required */
+  "aria-required"?: boolean;
 }
 
 /**

@@ -15,33 +15,42 @@ npm install @fogpipe/forma-core @fogpipe/forma-react
 - **FormRenderer Component** - Declarative form rendering
 - **Multi-Page Support** - Built-in wizard navigation
 - **Type Safety** - Full TypeScript support
+- **Accessibility** - Built-in ARIA attribute support
+- **Error Boundary** - Graceful error handling for form components
 
 ## Quick Start
 
 ### 1. Define Your Components
 
-```tsx
-import type { ComponentMap, TextFieldProps, BooleanFieldProps } from '@fogpipe/forma-react';
+Components receive `{ field, spec }` props. The `field` object contains all field state and handlers:
 
-const TextInput = ({ field, value, onChange, onBlur, errors }: TextFieldProps) => (
+```tsx
+import type { ComponentMap, TextComponentProps, BooleanComponentProps } from '@fogpipe/forma-react';
+
+const TextInput = ({ field }: TextComponentProps) => (
   <div>
     <input
       type="text"
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      onBlur={onBlur}
+      value={field.value || ''}
+      onChange={(e) => field.onChange(e.target.value)}
+      onBlur={field.onBlur}
       placeholder={field.placeholder}
+      aria-invalid={field['aria-invalid']}
+      aria-describedby={field['aria-describedby']}
+      aria-required={field['aria-required']}
     />
-    {errors.map((e, i) => <span key={i} className="error">{e.message}</span>)}
+    {field.errors.map((e, i) => (
+      <span key={i} className="error">{e.message}</span>
+    ))}
   </div>
 );
 
-const Checkbox = ({ field, value, onChange }: BooleanFieldProps) => (
+const Checkbox = ({ field }: BooleanComponentProps) => (
   <label>
     <input
       type="checkbox"
-      checked={value || false}
-      onChange={(e) => onChange(e.target.checked)}
+      checked={field.value || false}
+      onChange={(e) => field.onChange(e.target.checked)}
     />
     {field.label}
   </label>
@@ -226,6 +235,42 @@ formRef.current?.setValues({ name: "John" });
 | `validateForm()` | Validate entire form |
 | `submitForm()` | Submit the form |
 | `resetForm()` | Reset to initial values |
+
+### useForma Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `spec` | `Forma` | required | The Forma specification |
+| `initialData` | `Record<string, unknown>` | `{}` | Initial form values |
+| `onSubmit` | `(data) => void` | - | Submit handler |
+| `onChange` | `(data, computed) => void` | - | Change handler |
+| `validateOn` | `"change" \| "blur" \| "submit"` | `"blur"` | When to validate |
+| `referenceData` | `Record<string, unknown>` | - | Additional reference data |
+| `validationDebounceMs` | `number` | `0` | Debounce validation (ms) |
+
+## Error Boundary
+
+Wrap forms with `FormaErrorBoundary` to catch render errors gracefully:
+
+```tsx
+import { FormRenderer, FormaErrorBoundary } from '@fogpipe/forma-react';
+
+function App() {
+  return (
+    <FormaErrorBoundary
+      fallback={<div>Something went wrong with the form</div>}
+      onError={(error) => console.error('Form error:', error)}
+    >
+      <FormRenderer spec={myForm} components={components} />
+    </FormaErrorBoundary>
+  );
+}
+```
+
+The error boundary supports:
+- Custom fallback UI (static or function)
+- `onError` callback for logging
+- `resetKey` prop to reset error state
 
 ## License
 

@@ -27,6 +27,8 @@ export { FormRenderer } from "./FormRenderer.js";
 export type { FormRendererProps, FormRendererHandle } from "./FormRenderer.js";
 export { FieldRenderer } from "./FieldRenderer.js";
 export type { FieldRendererProps } from "./FieldRenderer.js";
+export { FormaErrorBoundary } from "./ErrorBoundary.js";
+export type { FormaErrorBoundaryProps } from "./ErrorBoundary.js";
 
 // Context
 export { FormaContext, useFormaContext } from "./context.js";

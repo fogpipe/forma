@@ -72,22 +72,32 @@ function DefaultLayout({ children, onSubmit, isSubmitting }: LayoutProps) {
 }
 
 /**
- * Default field wrapper component
+ * Default field wrapper component with accessibility support
  */
-function DefaultFieldWrapper({ field, children, errors, required, visible }: FieldWrapperProps) {
+function DefaultFieldWrapper({ fieldPath, field, children, errors, required, visible }: FieldWrapperProps) {
   if (!visible) return null;
 
+  const errorId = `${fieldPath}-error`;
+  const descriptionId = field.description ? `${fieldPath}-description` : undefined;
+  const hasErrors = errors.length > 0;
+
   return (
-    <div className="field-wrapper">
+    <div className="field-wrapper" data-field-path={fieldPath}>
       {field.label && (
-        <label>
+        <label htmlFor={fieldPath}>
           {field.label}
-          {required && <span className="required">*</span>}
+          {required && <span className="required" aria-hidden="true">*</span>}
+          {required && <span className="sr-only"> (required)</span>}
         </label>
       )}
       {children}
-      {errors.length > 0 && (
-        <div className="field-errors">
+      {hasErrors && (
+        <div
+          id={errorId}
+          className="field-errors"
+          role="alert"
+          aria-live="polite"
+        >
           {errors.map((error, i) => (
             <span key={i} className="error">
               {error.message}
@@ -95,7 +105,11 @@ function DefaultFieldWrapper({ field, children, errors, required, visible }: Fie
           ))}
         </div>
       )}
-      {field.description && <p className="field-description">{field.description}</p>}
+      {field.description && (
+        <p id={descriptionId} className="field-description">
+          {field.description}
+        </p>
+      )}
     </div>
   );
 }
@@ -170,6 +184,15 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
     });
 
     const fieldRefs = useRef<Map<string, HTMLElement>>(new Map());
+
+    // Cache for array helper functions to prevent recreation on every render
+    const arrayHelpersCache = useRef<Map<string, {
+      push: (item?: unknown) => void;
+      insert: (index: number, item: unknown) => void;
+      remove: (index: number) => void;
+      move: (from: number, to: number) => void;
+      swap: (indexA: number, indexB: number) => void;
+    }>>(new Map());
 
     // Focus a specific field by path
     const focusField = useCallback((path: string) => {
@@ -288,33 +311,51 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
         const maxItems = fieldDef.maxItems ?? Infinity;
         const itemFieldDefs = fieldDef.itemFields;
 
+        // Get or create cached helper functions for this array field
+        // These functions read current values when called, not when created
+        if (!arrayHelpersCache.current.has(fieldPath)) {
+          arrayHelpersCache.current.set(fieldPath, {
+            push: (item?: unknown) => {
+              const currentArray = (forma.data[fieldPath] as unknown[] | undefined) ?? [];
+              const newItem = item ?? createDefaultItem(itemFieldDefs);
+              forma.setFieldValue(fieldPath, [...currentArray, newItem]);
+            },
+            insert: (index: number, item: unknown) => {
+              const currentArray = (forma.data[fieldPath] as unknown[] | undefined) ?? [];
+              const newArray = [...currentArray];
+              newArray.splice(index, 0, item);
+              forma.setFieldValue(fieldPath, newArray);
+            },
+            remove: (index: number) => {
+              const currentArray = (forma.data[fieldPath] as unknown[] | undefined) ?? [];
+              const newArray = [...currentArray];
+              newArray.splice(index, 1);
+              forma.setFieldValue(fieldPath, newArray);
+            },
+            move: (from: number, to: number) => {
+              const currentArray = (forma.data[fieldPath] as unknown[] | undefined) ?? [];
+              const newArray = [...currentArray];
+              const [item] = newArray.splice(from, 1);
+              newArray.splice(to, 0, item);
+              forma.setFieldValue(fieldPath, newArray);
+            },
+            swap: (indexA: number, indexB: number) => {
+              const currentArray = (forma.data[fieldPath] as unknown[] | undefined) ?? [];
+              const newArray = [...currentArray];
+              [newArray[indexA], newArray[indexB]] = [newArray[indexB], newArray[indexA]];
+              forma.setFieldValue(fieldPath, newArray);
+            },
+          });
+        }
+        const cachedHelpers = arrayHelpersCache.current.get(fieldPath)!;
+
         const helpers: ArrayHelpers = {
           items: arrayValue,
-          push: (item?: unknown) => {
-            const newItem = item ?? createDefaultItem(itemFieldDefs);
-            forma.setFieldValue(fieldPath, [...arrayValue, newItem]);
-          },
-          insert: (index: number, item: unknown) => {
-            const newArray = [...arrayValue];
-            newArray.splice(index, 0, item);
-            forma.setFieldValue(fieldPath, newArray);
-          },
-          remove: (index: number) => {
-            const newArray = [...arrayValue];
-            newArray.splice(index, 1);
-            forma.setFieldValue(fieldPath, newArray);
-          },
-          move: (from: number, to: number) => {
-            const newArray = [...arrayValue];
-            const [item] = newArray.splice(from, 1);
-            newArray.splice(to, 0, item);
-            forma.setFieldValue(fieldPath, newArray);
-          },
-          swap: (indexA: number, indexB: number) => {
-            const newArray = [...arrayValue];
-            [newArray[indexA], newArray[indexB]] = [newArray[indexB], newArray[indexA]];
-            forma.setFieldValue(fieldPath, newArray);
-          },
+          push: cachedHelpers.push,
+          insert: cachedHelpers.insert,
+          remove: cachedHelpers.remove,
+          move: cachedHelpers.move,
+          swap: cachedHelpers.swap,
           getItemFieldProps: (index: number, fieldName: string) => {
             const itemFieldDef = itemFieldDefs[fieldName];
             const itemPath = `${fieldPath}[${index}].${fieldName}`;
@@ -332,7 +373,8 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
               touched: forma.touched[itemPath] ?? false,
               errors: forma.errors.filter((e) => e.field === itemPath),
               onChange: (value: unknown) => {
-                const newArray = [...arrayValue];
+                const currentArray = (forma.data[fieldPath] as unknown[] | undefined) ?? [];
+                const newArray = [...currentArray];
                 const item = (newArray[index] ?? {}) as Record<string, unknown>;
                 newArray[index] = { ...item, [fieldName]: value };
                 forma.setFieldValue(fieldPath, newArray);
@@ -374,6 +416,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       return (
         <FieldWrapper
           key={fieldPath}
+          fieldPath={fieldPath}
           field={fieldDef}
           errors={errors}
           touched={touched}
