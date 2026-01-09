@@ -7,7 +7,8 @@ export default defineConfig({
     "src/feel/index.ts",
   ],
   format: ["esm", "cjs"],
-  dts: true,
+  // Skip tsup's DTS bundling - we'll use tsc separately to preserve export type syntax
+  dts: false,
   clean: true,
   sourcemap: true,
 });

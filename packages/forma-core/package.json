@@ -42,7 +42,7 @@
     "src"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && tsc --emitDeclarationOnly --declaration --declarationDir dist",
     "dev": "tsup --watch",
     "lint": "eslint .",
     "check-types": "tsc --noEmit",
