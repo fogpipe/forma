@@ -69,6 +69,6 @@
   },
   "homepage": "https://github.com/fogpipe/forma#readme",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public"
   }
 }

@@ -7,11 +7,11 @@ on:
 
 jobs:
   publish:
-    name: Publish to GitHub Packages
+    name: Publish to npm
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+      id-token: write
 
     steps:
       - name: Checkout
@@ -20,10 +20,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@fogpipe'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: npm ci
@@ -39,9 +38,7 @@ jobs:
         run: |
           cd packages/forma-core
           npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version --allow-same-version
-          npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm publish --provenance --access public
 
       - name: Update and publish forma-react
         run: |
@@ -49,9 +46,7 @@ jobs:
           npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version --allow-same-version
           # Update forma-core dependency - use sed to avoid npm pkg set validation
           sed -i 's/"@fogpipe\/forma-core": "[^"]*"/"@fogpipe\/forma-core": "^${{ steps.version.outputs.VERSION }}"/' package.json
-          npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm publish --provenance --access public
 
       - name: Summary
         run: |
@@ -59,5 +54,5 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- [@fogpipe/forma-core](https://github.com/fogpipe/forma/pkgs/npm/forma-core)" >> $GITHUB_STEP_SUMMARY
-          echo "- [@fogpipe/forma-react](https://github.com/fogpipe/forma/pkgs/npm/forma-react)" >> $GITHUB_STEP_SUMMARY
+          echo "- [@fogpipe/forma-core](https://www.npmjs.com/package/@fogpipe/forma-core)" >> $GITHUB_STEP_SUMMARY
+          echo "- [@fogpipe/forma-react](https://www.npmjs.com/package/@fogpipe/forma-react)" >> $GITHUB_STEP_SUMMARY

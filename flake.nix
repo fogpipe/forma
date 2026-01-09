@@ -15,7 +15,7 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             # Node.js
-            nodejs_22
+            nodejs_24
 
             # CLI tools
             fzf
