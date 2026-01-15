@@ -39,11 +39,19 @@ function getNumberConstraints(schema?: JSONSchemaProperty): { min?: number; max?
   if (!schema) return {};
   if (schema.type !== "number" && schema.type !== "integer") return {};
 
-  return {
-    min: "minimum" in schema ? schema.minimum : undefined,
-    max: "maximum" in schema ? schema.maximum : undefined,
-    step: schema.type === "integer" ? 1 : undefined,
-  };
+  // Extract min/max from schema
+  const min = "minimum" in schema && typeof schema.minimum === "number" ? schema.minimum : undefined;
+  const max = "maximum" in schema && typeof schema.maximum === "number" ? schema.maximum : undefined;
+
+  // Use multipleOf for step if defined, otherwise default to 1 for integers
+  let step: number | undefined;
+  if ("multipleOf" in schema && typeof schema.multipleOf === "number") {
+    step = schema.multipleOf;
+  } else if (schema.type === "integer") {
+    step = 1;
+  }
+
+  return { min, max, step };
 }
 
 /**

@@ -71,12 +71,14 @@ export interface JSONSchemaNumber extends JSONSchemaBase {
   maximum?: number;
   exclusiveMinimum?: number;
   exclusiveMaximum?: number;
+  multipleOf?: number;
 }
 
 export interface JSONSchemaInteger extends JSONSchemaBase {
   type: "integer";
   minimum?: number;
   maximum?: number;
+  multipleOf?: number;
 }
 
 export interface JSONSchemaBoolean extends JSONSchemaBase {

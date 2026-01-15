@@ -333,6 +333,20 @@ function validateType(
         }
       }
 
+      if ("multipleOf" in schema && schema.multipleOf !== undefined) {
+        const multipleOf = schema.multipleOf;
+        // Use epsilon comparison to handle floating point precision issues
+        const remainder = Math.abs(value % multipleOf);
+        const isValid = remainder < 1e-10 || Math.abs(remainder - multipleOf) < 1e-10;
+        if (!isValid) {
+          return {
+            field: path,
+            message: `${label} must be a multiple of ${multipleOf}`,
+            severity: "error",
+          };
+        }
+      }
+
       return null;
     }
 
