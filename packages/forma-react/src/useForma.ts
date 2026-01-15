@@ -388,29 +388,57 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
 
     // For navigation, only count visible pages
     const visiblePages = pages.filter((p) => p.visible);
-    const currentPage = visiblePages[state.currentPage] || null;
-    const hasNextPage = state.currentPage < visiblePages.length - 1;
-    const hasPreviousPage = state.currentPage > 0;
-    const isLastPage = state.currentPage === visiblePages.length - 1;
+
+    // Clamp currentPage to valid range (handles case where current page becomes hidden)
+    const maxPageIndex = Math.max(0, visiblePages.length - 1);
+    const clampedPageIndex = Math.min(Math.max(0, state.currentPage), maxPageIndex);
+
+    // Auto-correct page index if it's out of bounds
+    if (clampedPageIndex !== state.currentPage && visiblePages.length > 0) {
+      dispatch({ type: "SET_PAGE", page: clampedPageIndex });
+    }
+
+    const currentPage = visiblePages[clampedPageIndex] || null;
+    const hasNextPage = clampedPageIndex < visiblePages.length - 1;
+    const hasPreviousPage = clampedPageIndex > 0;
+    const isLastPage = clampedPageIndex === visiblePages.length - 1;
 
     return {
       pages,
-      currentPageIndex: state.currentPage,
+      currentPageIndex: clampedPageIndex,
       currentPage,
-      goToPage: (index: number) => dispatch({ type: "SET_PAGE", page: index }),
+      goToPage: (index: number) => {
+        // Clamp to valid range
+        const validIndex = Math.min(Math.max(0, index), maxPageIndex);
+        dispatch({ type: "SET_PAGE", page: validIndex });
+      },
       nextPage: () => {
         if (hasNextPage) {
-          dispatch({ type: "SET_PAGE", page: state.currentPage + 1 });
+          dispatch({ type: "SET_PAGE", page: clampedPageIndex + 1 });
         }
       },
       previousPage: () => {
         if (hasPreviousPage) {
-          dispatch({ type: "SET_PAGE", page: state.currentPage - 1 });
+          dispatch({ type: "SET_PAGE", page: clampedPageIndex - 1 });
         }
       },
       hasNextPage,
       hasPreviousPage,
-      canProceed: true, // TODO: Validate current page
+      canProceed: (() => {
+        if (!currentPage) return true;
+        // Get errors only for visible fields on the current page
+        const pageErrors = validation.errors.filter((e) => {
+          // Check if field is on current page (including array items like "items[0].name")
+          const isOnCurrentPage = currentPage.fields.includes(e.field) ||
+            currentPage.fields.some(f => e.field.startsWith(`${f}[`));
+          // Only count errors for visible fields
+          const isVisible = visibility[e.field] !== false;
+          // Only count actual errors, not warnings
+          const isError = e.severity === 'error';
+          return isOnCurrentPage && isVisible && isError;
+        });
+        return pageErrors.length === 0;
+      })(),
       isLastPage,
       touchCurrentPageFields: () => {
         if (currentPage) {
@@ -427,7 +455,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
         return pageErrors.length === 0;
       },
     };
-  }, [spec, state.data, state.currentPage, computed, validation]);
+  }, [spec, state.data, state.currentPage, computed, validation, visibility]);
 
   // Helper to get value at nested path
   const getValueAtPath = useCallback((path: string): unknown => {

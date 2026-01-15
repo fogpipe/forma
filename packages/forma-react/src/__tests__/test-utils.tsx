@@ -47,6 +47,7 @@ export function createTestSpec(
           enum: (fieldOptions as Array<{ value: string }>).map((o) => o.value),
           ...rest,
         };
+        if (required) schemaRequired.push(name);
         continue;
       }
     }

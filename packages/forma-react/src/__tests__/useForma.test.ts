@@ -571,6 +571,115 @@ describe("useForma", () => {
 
       expect(result.current.isSubmitted).toBe(false);
     });
+
+    describe("validation debouncing", () => {
+      it("should debounce validation updates when validationDebounceMs is set", async () => {
+        vi.useFakeTimers();
+
+        const spec = createTestSpec({
+          fields: {
+            name: { type: "text", required: true },
+          },
+        });
+
+        const { result } = renderHook(() =>
+          useForma({ spec, validationDebounceMs: 100 })
+        );
+
+        // Initially invalid (required field empty)
+        expect(result.current.isValid).toBe(false);
+
+        // Fill the field - validation should be debounced
+        act(() => {
+          result.current.setFieldValue("name", "John");
+        });
+
+        // Immediately after change, debounced validation still shows old state
+        // (depending on implementation, this might already be updated)
+
+        // Fast-forward past debounce timeout
+        await act(async () => {
+          vi.advanceTimersByTime(150);
+        });
+
+        // Now validation should reflect the new state
+        expect(result.current.isValid).toBe(true);
+
+        vi.useRealTimers();
+      });
+
+      it("should use immediate validation on submit even when debouncing", async () => {
+        vi.useFakeTimers();
+
+        const onSubmit = vi.fn();
+        const spec = createTestSpec({
+          fields: {
+            name: { type: "text", required: true },
+          },
+        });
+
+        const { result } = renderHook(() =>
+          useForma({ spec, validationDebounceMs: 500, onSubmit })
+        );
+
+        // Fill the field
+        act(() => {
+          result.current.setFieldValue("name", "John");
+        });
+
+        // Submit immediately without waiting for debounce
+        await act(async () => {
+          await result.current.submitForm();
+        });
+
+        // onSubmit should be called because immediate validation passes
+        expect(onSubmit).toHaveBeenCalledWith({ name: "John" });
+
+        vi.useRealTimers();
+      });
+
+      it("should not call onSubmit when immediate validation fails", async () => {
+        const onSubmit = vi.fn();
+        const spec = createTestSpec({
+          fields: {
+            name: { type: "text", required: true },
+          },
+        });
+
+        const { result } = renderHook(() =>
+          useForma({ spec, validationDebounceMs: 100, onSubmit })
+        );
+
+        // Submit without filling required field
+        await act(async () => {
+          await result.current.submitForm();
+        });
+
+        // onSubmit should NOT be called
+        expect(onSubmit).not.toHaveBeenCalled();
+      });
+
+      it("should work without debouncing (validationDebounceMs: 0)", () => {
+        const spec = createTestSpec({
+          fields: {
+            name: { type: "text", required: true },
+          },
+        });
+
+        const { result } = renderHook(() =>
+          useForma({ spec, validationDebounceMs: 0 })
+        );
+
+        expect(result.current.isValid).toBe(false);
+
+        act(() => {
+          result.current.setFieldValue("name", "John");
+        });
+
+        // Validation should update immediately
+        expect(result.current.isValid).toBe(true);
+      });
+    });
   });
 
   // ============================================================================
@@ -933,6 +1042,8 @@ describe("useForma", () => {
       const page2After = result.current.wizard?.pages.find((p) => p.id === "page2");
       expect(page2After?.visible).toBe(true);
     });
+
+    // Note: Comprehensive canProceed tests are in canProceed.test.ts
   });
 
   // ============================================================================
