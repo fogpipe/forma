@@ -69,6 +69,7 @@ export interface IntegerFieldProps extends Omit<BaseFieldProps, "value" | "onCha
   onChange: (value: number | null) => void;
   min?: number;
   max?: number;
+  step?: number;
 }
 
 /**
