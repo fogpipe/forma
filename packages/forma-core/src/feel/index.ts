@@ -153,7 +153,21 @@ export function evaluateBoolean(
 
   // FEEL uses three-valued logic where comparisons with null return null.
   // For form visibility/required/enabled conditions, we treat null as false.
+  //
+  // Common causes of null results:
+  // - "fieldName = true" when fieldName is undefined → null (not false!)
+  // - "fieldName != null" when fieldName is undefined → null (not true!)
+  // - "computed.x = true" when x is null → null
+  //
+  // Null-safe alternatives:
+  // - Check if boolean answered: "fieldName = true or fieldName = false"
+  // - Check if explicitly false: "fieldName != true" (true when undefined OR false)
+  // - String length: "fieldName != null and string length(fieldName) > 0"
   if (result.value === null || result.value === undefined) {
+    console.warn(
+      `[forma] FEEL expression returned null (treating as false): "${expression}"\n` +
+        `This often means a referenced field is undefined. See docs for null-safe patterns.`
+    );
     return false;
   }
 
