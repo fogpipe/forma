@@ -249,10 +249,12 @@ describe("canProceed", () => {
       expect(result.current.wizard?.canProceed).toBe(true);
     });
 
-    it("required boolean fields - undefined vs false", () => {
-      // Note: For boolean fields, "required" means "must have a value" (true or false),
-      // NOT "must be true". This is consistent with other field types where required
-      // means "not empty". For checkboxes that must be checked (like "Accept Terms"),
+    it("required boolean fields - auto-initialized to false", () => {
+      // Boolean fields are auto-initialized to false, which is a valid value.
+      // This provides better UX - the form is valid from the start since
+      // false is a valid answer to "Do you have pets?"
+      //
+      // For checkboxes that must be checked (like "Accept Terms"),
       // use a validation rule: { rule: "value = true", message: "Must accept terms" }
       const spec = createTestSpec({
         fields: {
@@ -263,13 +265,14 @@ describe("canProceed", () => {
         ],
       });
 
-      // undefined should be invalid (user hasn't answered)
-      const { result: resultUndefined } = renderHook(() =>
+      // With auto-initialization, boolean defaults to false (a valid value)
+      const { result: resultDefault } = renderHook(() =>
         useForma({ spec, initialData: {} })
       );
-      expect(resultUndefined.current.wizard?.canProceed).toBe(false);
+      expect(resultDefault.current.data.hasPets).toBe(false);
+      expect(resultDefault.current.wizard?.canProceed).toBe(true); // false is valid
 
-      // false should be valid (user answered "no")
+      // explicit false should be valid (user answered "no")
       const { result: resultFalse } = renderHook(() =>
         useForma({ spec, initialData: { hasPets: false } })
       );

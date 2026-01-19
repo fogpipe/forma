@@ -300,6 +300,11 @@ export interface FieldWrapperProps {
   errors: FieldError[];
   touched: boolean;
   required: boolean;
+  /**
+   * Whether to show the required indicator in the UI.
+   * False for boolean fields since false is a valid answer.
+   */
+  showRequiredIndicator: boolean;
   visible: boolean;
 }
 
@@ -422,8 +427,13 @@ export interface GetFieldPropsResult {
   visible: boolean;
   /** Whether field is enabled (not disabled) */
   enabled: boolean;
-  /** Whether field is required */
+  /** Whether field is required (for validation) */
   required: boolean;
+  /**
+   * Whether to show the required indicator in the UI.
+   * False for boolean fields since false is a valid answer.
+   */
+  showRequiredIndicator: boolean;
   /** Whether field has been touched */
   touched: boolean;
   /** Validation errors for this field */

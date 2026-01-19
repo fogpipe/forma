@@ -313,16 +313,23 @@ describe("diabetes trial enrollment wizard", () => {
       expect(pages?.[3].visible).toBe(true);
     });
 
-    it("should hide conditional pages initially", () => {
+    it("should show conditional pages based on auto-initialized boolean state", () => {
+      // With boolean auto-initialization to false:
+      // - All inclusion criteria (booleans) start as false → allInclusionMet = false
+      // - All exclusion criteria (booleans) start as false → anyExclusionMet = false
+      // - eligibilityDetermined = true (all fields have values)
+      // - ineligible = true (eligibilityDetermined AND NOT allInclusionMet)
+      // - eligible = false (allInclusionMet is false)
       const spec = createDiabetesTrialSpec();
       const { result } = renderHook(() => useForma({ spec }));
 
       const pages = result.current.wizard?.pages;
 
-      // Conditional pages hidden initially
+      // Ineligibility page is now visible (ineligible = true due to false inclusion criteria)
       expect(pages?.[4].id).toBe("ineligibility-documentation");
-      expect(pages?.[4].visible).toBe(false);
+      expect(pages?.[4].visible).toBe(true); // Changed: now visible
 
+      // Eligible-flow pages still hidden (eligible = false)
       expect(pages?.[5].id).toBe("main-consents");
       expect(pages?.[5].visible).toBe(false);
 
@@ -341,12 +348,21 @@ describe("diabetes trial enrollment wizard", () => {
   });
 
   describe("eligibility determination", () => {
-    it("should determine eligibility only after all criteria answered", () => {
+    it("should determine eligibility immediately with auto-initialized booleans", () => {
+      // With boolean auto-initialization, all criteria have values from the start,
+      // so eligibilityDetermined is true immediately.
+      // The user flow is now:
+      // 1. Initially ineligible (all inclusion criteria are false)
+      // 2. User must explicitly set inclusion criteria to true to become eligible
       const spec = createDiabetesTrialSpec();
       const { result } = renderHook(() => useForma({ spec }));
 
-      // Initially not determined
-      expect(result.current.computed?.eligibilityDetermined).toBeFalsy();
+      // Immediately determined (all booleans have values due to auto-init)
+      expect(result.current.computed?.eligibilityDetermined).toBe(true);
+
+      // Initially ineligible (all inclusion criteria are false)
+      expect(result.current.computed?.eligible).toBe(false);
+      expect(result.current.computed?.ineligible).toBe(true);
 
       // Fill inclusion criteria
       act(() => {
@@ -356,20 +372,10 @@ describe("diabetes trial enrollment wizard", () => {
         result.current.setFieldValue("inclusionConsent", true);
       });
 
-      // Still not determined - exclusion not answered
-      expect(result.current.computed?.eligibilityDetermined).toBeFalsy();
-
-      // Fill exclusion criteria
-      act(() => {
-        result.current.setFieldValue("exclusionPregnant", false);
-        result.current.setFieldValue("exclusionAllergy", false);
-        result.current.setFieldValue("exclusionRecentStudy", false);
-        result.current.setFieldValue("exclusionKidney", false);
-        result.current.setFieldValue("exclusionSglt2", false);
-      });
-
-      // Now determined
+      // Still determined, now eligible (exclusions already false via auto-init)
       expect(result.current.computed?.eligibilityDetermined).toBe(true);
+      expect(result.current.computed?.eligible).toBe(true);
+      expect(result.current.computed?.ineligible).toBe(false);
     });
 
     it("should mark eligible when all inclusion met and no exclusion met", () => {
@@ -754,6 +760,10 @@ describe("diabetes trial enrollment wizard", () => {
     });
 
     it("should skip hidden pages during navigation", () => {
+      // With auto-initialization, booleans default to false:
+      // - eligibilityDetermined = true (all fields have values)
+      // - ineligible = true (inclusion criteria all false)
+      // So the ineligibility-documentation page is visible
       const spec = createDiabetesTrialSpec();
       const { result } = renderHook(() => useForma({ spec }));
 
@@ -763,13 +773,20 @@ describe("diabetes trial enrollment wizard", () => {
       });
       expect(result.current.wizard?.currentPage?.id).toBe("exclusion-criteria");
 
-      // Without eligibility determined, next visible page count is limited
-      // The visible pages should be: study-info (0), participant-info (1), inclusion (2), exclusion (3)
-      // Pages 4-9 are conditional and hidden
+      // With auto-initialized booleans, visible pages are:
+      // study-info (0), participant-info (1), inclusion (2), exclusion (3), ineligibility-documentation (4)
+      // Pages 5-9 are for eligible flow and still hidden
       const visiblePages = result.current.wizard?.pages.filter(p => p.visible);
-      expect(visiblePages?.length).toBe(4);
+      expect(visiblePages?.length).toBe(5);
 
-      // Should be on last visible page
+      // Not on last visible page anymore (ineligibility page is visible)
+      expect(result.current.wizard?.isLastPage).toBe(false);
+
+      // Navigate to last visible page
+      act(() => {
+        result.current.wizard?.goToPage(4);
+      });
+      expect(result.current.wizard?.currentPage?.id).toBe("ineligibility-documentation");
       expect(result.current.wizard?.isLastPage).toBe(true);
     });
   });

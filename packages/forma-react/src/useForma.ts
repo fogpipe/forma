@@ -194,6 +194,23 @@ function formReducer(state: FormState, action: FormAction): FormState {
 }
 
 /**
+ * Get default initial values for boolean fields.
+ * Boolean fields default to false to avoid undefined state,
+ * which provides better UX since false is a valid answer.
+ */
+function getDefaultBooleanValues(spec: Forma): Record<string, boolean> {
+  const defaults: Record<string, boolean> = {};
+  for (const fieldPath of spec.fieldOrder) {
+    const schemaProperty = spec.schema.properties?.[fieldPath];
+    const fieldDef = spec.fields[fieldPath];
+    if (schemaProperty?.type === "boolean" || fieldDef?.type === "boolean") {
+      defaults[fieldPath] = false;
+    }
+  }
+  return defaults;
+}
+
+/**
  * Main Forma hook
  */
 export function useForma(options: UseFormaOptions): UseFormaReturn {
@@ -212,7 +229,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   }, [inputSpec, referenceData]);
 
   const [state, dispatch] = useReducer(formReducer, {
-    data: initialData,
+    data: { ...getDefaultBooleanValues(spec), ...initialData }, // Boolean defaults merged UNDER initialData
     touched: {},
     isSubmitting: false,
     isSubmitted: false,
@@ -569,6 +586,14 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     const hasErrors = displayedErrors.length > 0;
     const isRequired = required[path] ?? false;
 
+    // Boolean fields: hide asterisk unless they have validation rules (consent pattern)
+    // - Binary question ("Do you smoke?"): no validation → false is valid → hide asterisk
+    // - Consent checkbox ("I accept terms"): has validation rule → show asterisk
+    const schemaProperty = spec.schema.properties[path];
+    const isBooleanField = schemaProperty?.type === "boolean" || fieldDef?.type === "boolean";
+    const hasValidationRules = (fieldDef?.validations?.length ?? 0) > 0;
+    const showRequiredIndicator = isRequired && (!isBooleanField || hasValidationRules);
+
     return {
       name: path,
       value: getValueAtPath(path),
@@ -579,6 +604,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       visible: visibility[path] !== false,
       enabled: enabled[path] !== false,
       required: isRequired,
+      showRequiredIndicator,
       touched: isTouched,
       errors: displayedErrors,
       onChange: handlers.onChange,
@@ -634,6 +660,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
         visible: true,
         enabled: enabled[path] !== false,
         required: false, // TODO: Evaluate item field required
+        showRequiredIndicator: false, // Item fields don't show required indicator
         touched: isTouched,
         errors: showErrors ? fieldErrors : [],
         onChange: handlers.onChange,

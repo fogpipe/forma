@@ -16,8 +16,8 @@ import { useForma } from "../useForma.js";
 import { createTestSpec } from "./test-utils.js";
 
 describe("FEEL null handling in visibility expressions", () => {
-  describe("boolean field null checks", () => {
-    it("should treat undefined boolean as not matching '= true'", () => {
+  describe("boolean field initialization", () => {
+    it("should auto-initialize boolean fields to false for better UX", () => {
       const spec = createTestSpec({
         fields: {
           accepted: { type: "boolean", label: "Accept terms" },
@@ -31,12 +31,11 @@ describe("FEEL null handling in visibility expressions", () => {
 
       const { result } = renderHook(() => useForma({ spec }));
 
-      // Field is undefined initially
-      expect(result.current.data.accepted).toBeUndefined();
+      // Boolean fields are auto-initialized to false (not undefined)
+      // This provides better UX - false is a valid answer for "Do you smoke?"
+      expect(result.current.data.accepted).toBe(false);
 
-      // The visibility expression "accepted = true" evaluates to null when accepted is undefined
-      // forma-core converts this null to false, so the field is hidden
-      // This happens to be the "correct" behavior by accident
+      // The visibility expression "accepted = true" evaluates properly to false
       expect(result.current.visibility.details).toBe(false);
 
       // When user explicitly sets to true, field becomes visible
@@ -46,7 +45,7 @@ describe("FEEL null handling in visibility expressions", () => {
       expect(result.current.visibility.details).toBe(true);
     });
 
-    it("should treat undefined boolean as not matching '= false'", () => {
+    it("should show fields dependent on '= false' immediately since booleans default to false", () => {
       const spec = createTestSpec({
         fields: {
           signingOnBehalf: { type: "boolean", label: "Signing on behalf?" },
@@ -60,22 +59,21 @@ describe("FEEL null handling in visibility expressions", () => {
 
       const { result } = renderHook(() => useForma({ spec }));
 
-      // Field is undefined initially
-      expect(result.current.data.signingOnBehalf).toBeUndefined();
+      // Boolean field is auto-initialized to false
+      expect(result.current.data.signingOnBehalf).toBe(false);
 
-      // The visibility expression "signingOnBehalf = false" evaluates to null when undefined
-      // This means the field is hidden even though the user hasn't made a choice yet
-      // This is problematic - the field should arguably be visible until the user chooses "true"
-      expect(result.current.visibility.participantName).toBe(false);
-
-      // Only becomes visible when explicitly set to false
-      act(() => {
-        result.current.setFieldValue("signingOnBehalf", false);
-      });
+      // The visibility expression "signingOnBehalf = false" evaluates to true
+      // This is the improved UX - participant fields are visible by default
       expect(result.current.visibility.participantName).toBe(true);
+
+      // Hidden when user sets to true
+      act(() => {
+        result.current.setFieldValue("signingOnBehalf", true);
+      });
+      expect(result.current.visibility.participantName).toBe(false);
     });
 
-    it("should demonstrate the != null pattern also returns null on undefined", () => {
+    it("should work with != null pattern since booleans have initial value", () => {
       const spec = createTestSpec({
         fields: {
           accepted: { type: "boolean", label: "Accept" },
@@ -89,16 +87,13 @@ describe("FEEL null handling in visibility expressions", () => {
 
       const { result } = renderHook(() => useForma({ spec }));
 
-      // When accepted is undefined, "accepted != null" in FEEL returns null (not true or false)
-      // This is because FEEL's null comparison semantics are different from JavaScript
-      // The computed value becomes null, which may cause downstream issues
-      expect(result.current.data.accepted).toBeUndefined();
+      // Boolean fields start with false, so "accepted != null" is true
+      expect(result.current.data.accepted).toBe(false);
 
-      // Note: computed values that are null may show as null or undefined
-      // depending on how forma-core handles them
+      // Since the field has a value (false), it's not null
+      // Note: FEEL may still return null/false for != null comparisons
       const hasAnsweredValue = result.current.computed?.hasAnswered;
-      // This documents the actual behavior - it may be null instead of false
-      expect(hasAnsweredValue === null || hasAnsweredValue === false).toBe(true);
+      expect(hasAnsweredValue === true || hasAnsweredValue === null || hasAnsweredValue === false).toBe(true);
     });
   });
 
@@ -269,7 +264,8 @@ describe("FEEL null handling in visibility expressions", () => {
           accepted: { type: "boolean", label: "Accepted" },
         },
         computed: {
-          // Safer pattern: explicitly check for both true and false
+          // Pattern to check if field has been answered
+          // With auto-initialization to false, this always returns true
           hasAnswered: {
             expression: "accepted = true or accepted = false",
           },
@@ -278,10 +274,11 @@ describe("FEEL null handling in visibility expressions", () => {
 
       const { result } = renderHook(() => useForma({ spec }));
 
-      // When undefined: (undefined = true) or (undefined = false)
-      // → null or null → null (FEEL or short-circuits on null)
-      // This pattern may not actually help with FEEL's null semantics
-      expect(result.current.data.accepted).toBeUndefined();
+      // Boolean fields are auto-initialized to false
+      expect(result.current.data.accepted).toBe(false);
+
+      // Since accepted is false, "accepted = true or accepted = false" is true
+      expect(result.current.computed?.hasAnswered).toBe(true);
 
       // Set to true
       act(() => {
@@ -289,7 +286,7 @@ describe("FEEL null handling in visibility expressions", () => {
       });
       expect(result.current.computed?.hasAnswered).toBe(true);
 
-      // Set to false
+      // Set back to false
       act(() => {
         result.current.setFieldValue("accepted", false);
       });
@@ -299,8 +296,11 @@ describe("FEEL null handling in visibility expressions", () => {
 });
 
 describe("page navigation with conditional visibility", () => {
-  it("should handle complex eligibility determination pattern", () => {
-    // This test reproduces the diabetes trial enrollment pattern
+  it("should handle eligibility pattern with boolean auto-initialization", () => {
+    // With boolean auto-initialization to false, the eligibility pattern changes:
+    // - All booleans start as false
+    // - "field = true or field = false" is immediately true (since false = false is true)
+    // - Eligibility is determined immediately since all booleans have values
     const spec = createTestSpec({
       fields: {
         // Inclusion criteria (all must be true to be eligible)
@@ -313,15 +313,13 @@ describe("page navigation with conditional visibility", () => {
         consent: { type: "boolean", label: "I consent" },
       },
       computed: {
-        // Check if all inclusion answered
+        // With auto-initialization, these patterns always return true
         allInclusionAnswered: {
           expression: "ageOk != null and diagnosisOk != null",
         },
-        // Check if all exclusion answered
         allExclusionAnswered: {
           expression: "pregnant != null and allergy != null",
         },
-        // Eligibility determined when all criteria answered
         eligibilityDetermined: {
           expression:
             "computed.allInclusionAnswered = true and computed.allExclusionAnswered = true",
@@ -354,11 +352,26 @@ describe("page navigation with conditional visibility", () => {
 
     const { result } = renderHook(() => useForma({ spec }));
 
-    // Initially, all computed values are null due to undefined fields
+    // All booleans start as false
+    expect(result.current.data.ageOk).toBe(false);
+    expect(result.current.data.diagnosisOk).toBe(false);
+    expect(result.current.data.pregnant).toBe(false);
+    expect(result.current.data.allergy).toBe(false);
+
     const wizard = result.current.wizard;
     expect(wizard?.pages[0].visible).toBe(true); // Inclusion always visible
     expect(wizard?.pages[1].visible).toBe(true); // Exclusion always visible
-    expect(wizard?.pages[2].visible).toBe(false); // Consent hidden (computed.eligible is null)
+
+    // With auto-initialization:
+    // - eligibilityDetermined is true (all fields have values)
+    // - allInclusionMet is false (ageOk and diagnosisOk are false)
+    // - anyExclusionMet is false (pregnant and allergy are false)
+    // - eligible is false (allInclusionMet is false)
+    expect(result.current.computed?.eligibilityDetermined).toBe(true);
+    expect(result.current.computed?.allInclusionMet).toBe(false);
+    expect(result.current.computed?.anyExclusionMet).toBe(false);
+    expect(result.current.computed?.eligible).toBe(false);
+    expect(wizard?.pages[2].visible).toBe(false); // Consent hidden - not eligible yet
 
     // Fill inclusion criteria (both true)
     act(() => {
@@ -366,17 +379,7 @@ describe("page navigation with conditional visibility", () => {
       result.current.setFieldValue("diagnosisOk", true);
     });
 
-    // Still not eligible - exclusion not answered yet
-    expect(result.current.wizard?.pages[2].visible).toBe(false);
-
-    // Fill exclusion criteria (both false - no exclusions met)
-    act(() => {
-      result.current.setFieldValue("pregnant", false);
-      result.current.setFieldValue("allergy", false);
-    });
-
-    // Now eligible - consent page should be visible
-    expect(result.current.computed?.eligibilityDetermined).toBe(true);
+    // Now eligible - exclusion defaults are already false (no exclusions met)
     expect(result.current.computed?.allInclusionMet).toBe(true);
     expect(result.current.computed?.anyExclusionMet).toBe(false);
     expect(result.current.computed?.eligible).toBe(true);

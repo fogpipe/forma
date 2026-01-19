@@ -74,7 +74,7 @@ function DefaultLayout({ children, onSubmit, isSubmitting }: LayoutProps) {
 /**
  * Default field wrapper component with accessibility support
  */
-function DefaultFieldWrapper({ fieldPath, field, children, errors, required, visible }: FieldWrapperProps) {
+function DefaultFieldWrapper({ fieldPath, field, children, errors, showRequiredIndicator, visible }: FieldWrapperProps) {
   if (!visible) return null;
 
   const errorId = `${fieldPath}-error`;
@@ -86,8 +86,8 @@ function DefaultFieldWrapper({ fieldPath, field, children, errors, required, vis
       {field.label && (
         <label htmlFor={fieldPath}>
           {field.label}
-          {required && <span className="required" aria-hidden="true">*</span>}
-          {required && <span className="sr-only"> (required)</span>}
+          {showRequiredIndicator && <span className="required" aria-hidden="true">*</span>}
+          {showRequiredIndicator && <span className="sr-only"> (required)</span>}
         </label>
       )}
       {children}
@@ -274,6 +274,13 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       // Get schema property for additional constraints
       const schemaProperty = spec.schema.properties[fieldPath];
 
+      // Boolean fields: hide asterisk unless they have validation rules (consent pattern)
+      // - Binary question ("Do you smoke?"): no validation → false is valid → hide asterisk
+      // - Consent checkbox ("I accept terms"): has validation rule → show asterisk
+      const isBooleanField = schemaProperty?.type === "boolean" || fieldDef?.type === "boolean";
+      const hasValidationRules = (fieldDef?.validations?.length ?? 0) > 0;
+      const showRequiredIndicator = required && (!isBooleanField || hasValidationRules);
+
       // Base field props
       const baseProps: BaseFieldProps = {
         name: fieldPath,
@@ -429,6 +436,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
           errors={errors}
           touched={touched}
           required={required}
+          showRequiredIndicator={showRequiredIndicator}
           visible={isVisible}
         >
           {React.createElement(Component as React.ComponentType<typeof componentProps>, componentProps)}

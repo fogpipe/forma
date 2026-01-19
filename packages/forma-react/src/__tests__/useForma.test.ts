@@ -1173,6 +1173,135 @@ describe("useForma", () => {
   });
 
   // ============================================================================
+  // Boolean Field Handling
+  // ============================================================================
+
+  describe("boolean field handling", () => {
+    it("should auto-initialize boolean fields to false", () => {
+      const spec = createTestSpec({
+        fields: {
+          acceptTerms: { type: "boolean" },
+          name: { type: "text" },
+        },
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+
+      expect(result.current.data.acceptTerms).toBe(false);
+      expect(result.current.data.name).toBeUndefined();
+    });
+
+    it("should respect explicit initialData for booleans", () => {
+      const spec = createTestSpec({
+        fields: { acceptTerms: { type: "boolean" } },
+      });
+
+      const { result } = renderHook(() =>
+        useForma({ spec, initialData: { acceptTerms: true } })
+      );
+
+      expect(result.current.data.acceptTerms).toBe(true);
+    });
+
+    it("should set showRequiredIndicator=false for required boolean fields without validation (binary question)", () => {
+      // Binary question pattern: "Do you smoke?" - false is a valid answer
+      const spec = createTestSpec({
+        fields: {
+          isSmoker: { type: "boolean", label: "Do you smoke?", required: true },
+        },
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+      const props = result.current.getFieldProps("isSmoker");
+
+      expect(props.required).toBe(true);
+      expect(props.showRequiredIndicator).toBe(false); // No asterisk for binary questions
+    });
+
+    it("should set showRequiredIndicator=true for required boolean fields with validation (consent pattern)", () => {
+      // Consent pattern: "I accept terms" - must explicitly check the box
+      const spec = createTestSpec({
+        fields: {
+          acceptTerms: {
+            type: "boolean",
+            label: "I accept the terms",
+            required: true,
+            validations: [{ rule: "value = true", message: "You must accept the terms" }],
+          },
+        },
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+      const props = result.current.getFieldProps("acceptTerms");
+
+      expect(props.required).toBe(true);
+      expect(props.showRequiredIndicator).toBe(true); // Show asterisk for consent checkboxes
+    });
+
+    it("should set showRequiredIndicator=true for required non-boolean fields", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", required: true },
+        },
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+      const props = result.current.getFieldProps("name");
+
+      expect(props.required).toBe(true);
+      expect(props.showRequiredIndicator).toBe(true);
+    });
+
+    it("should set showRequiredIndicator=false for non-required fields", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text" },
+        },
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+      const props = result.current.getFieldProps("name");
+
+      expect(props.required).toBe(false);
+      expect(props.showRequiredIndicator).toBe(false);
+    });
+
+    it("should initialize multiple boolean fields to false", () => {
+      const spec = createTestSpec({
+        fields: {
+          hasInsurance: { type: "boolean" },
+          isSmoker: { type: "boolean" },
+          hasAllergies: { type: "boolean" },
+          name: { type: "text" },
+        },
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+
+      expect(result.current.data.hasInsurance).toBe(false);
+      expect(result.current.data.isSmoker).toBe(false);
+      expect(result.current.data.hasAllergies).toBe(false);
+      expect(result.current.data.name).toBeUndefined();
+    });
+
+    it("should pass validation for required boolean field with false value", () => {
+      const spec = createTestSpec({
+        fields: {
+          acceptTerms: { type: "boolean", required: true },
+        },
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+
+      // Boolean field is auto-initialized to false
+      expect(result.current.data.acceptTerms).toBe(false);
+
+      // Form should be valid since false is a valid present value
+      expect(result.current.isValid).toBe(true);
+    });
+  });
+
+  // ============================================================================
   // validateForm and validateField
   // ============================================================================
 
