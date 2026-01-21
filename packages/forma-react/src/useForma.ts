@@ -237,6 +237,10 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     currentPage: 0,
   });
 
+  // Keep a ref to current state.data to avoid stale closures in cached handlers
+  const stateDataRef = useRef(state.data);
+  stateDataRef.current = state.data;
+
   // Track if we've initialized (to avoid calling onChange on first render)
   const hasInitialized = useRef(false);
 
@@ -475,18 +479,20 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   }, [spec, state.data, state.currentPage, computed, validation, visibility]);
 
   // Helper to get value at nested path
+  // Uses stateDataRef to always access current state, avoiding stale closure issues
   const getValueAtPath = useCallback((path: string): unknown => {
     // Handle array index notation: "items[0].name" -> ["items", "0", "name"]
     const parts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
-    let value: unknown = state.data;
+    let value: unknown = stateDataRef.current;
     for (const part of parts) {
       if (value === null || value === undefined) return undefined;
       value = (value as Record<string, unknown>)[part];
     }
     return value;
-  }, [state.data]);
+  }, []); // No dependencies - uses ref for current state
 
   // Helper to set value at nested path
+  // Uses stateDataRef to always access current state, avoiding stale closure issues
   const setValueAtPath = useCallback((path: string, value: unknown): void => {
     // For nested paths, we need to build the nested structure
     const parts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
@@ -495,8 +501,8 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       return;
     }
 
-    // Build nested object
-    const newData = { ...state.data };
+    // Build nested object from CURRENT state via ref (not stale closure)
+    const newData = { ...stateDataRef.current };
     let current: Record<string, unknown> = newData;
 
     for (let i = 0; i < parts.length - 1; i++) {
@@ -516,7 +522,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
 
     current[parts[parts.length - 1]] = value;
     dispatch({ type: "SET_VALUES", values: newData });
-  }, [state.data]);
+  }, []); // No dependencies - uses ref for current state
 
   // Memoized onChange/onBlur handlers for fields
   const fieldHandlers = useRef<Map<string, { onChange: (value: unknown) => void; onBlur: () => void }>>(new Map());

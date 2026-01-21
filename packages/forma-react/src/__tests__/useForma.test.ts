@@ -1340,4 +1340,347 @@ describe("useForma", () => {
       expect(fieldErrors.some((e) => e.message === "Must be positive")).toBe(true);
     });
   });
+
+  // ============================================================================
+  // Stale Closure Regression Tests
+  // ============================================================================
+  // These tests verify that field handlers don't capture stale state,
+  // which can cause data loss when editing multiple fields in sequence.
+
+  describe("stale closure regression", () => {
+    it("should preserve root field changes when editing array item fields", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text" },
+          items: {
+            type: "array",
+            itemFields: { title: { type: "text" } },
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        useForma({ spec, initialData: { name: "", items: [{ title: "" }] } })
+      );
+
+      // Edit root field
+      act(() => {
+        result.current.setFieldValue("name", "John");
+      });
+      expect(result.current.data.name).toBe("John");
+
+      // Get array helpers and edit item field
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        const itemProps = helpers.getItemFieldProps(0, "title");
+        itemProps.onChange("First Item");
+      });
+
+      // Both values should be preserved
+      expect(result.current.data.name).toBe("John");
+      expect((result.current.data.items as Array<{ title: string }>)[0].title).toBe("First Item");
+    });
+
+    it("should preserve array item changes when editing root fields", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text" },
+          items: {
+            type: "array",
+            itemFields: { title: { type: "text" } },
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        useForma({ spec, initialData: { name: "", items: [{ title: "" }] } })
+      );
+
+      // Edit array item field first
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        const itemProps = helpers.getItemFieldProps(0, "title");
+        itemProps.onChange("First Item");
+      });
+      expect((result.current.data.items as Array<{ title: string }>)[0].title).toBe("First Item");
+
+      // Now edit root field
+      act(() => {
+        result.current.setFieldValue("name", "John");
+      });
+
+      // Both values should be preserved
+      expect(result.current.data.name).toBe("John");
+      expect((result.current.data.items as Array<{ title: string }>)[0].title).toBe("First Item");
+    });
+
+    it("should preserve data when alternating between root and array item edits", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text" },
+          email: { type: "email" },
+          items: {
+            type: "array",
+            itemFields: {
+              title: { type: "text" },
+              value: { type: "number" },
+            },
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        useForma({
+          spec,
+          initialData: {
+            name: "",
+            email: "",
+            items: [{ title: "", value: null }, { title: "", value: null }],
+          },
+        })
+      );
+
+      // Sequence of edits alternating between root and array fields
+      act(() => {
+        result.current.setFieldValue("name", "Alice");
+      });
+
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(0, "title").onChange("Item 1");
+      });
+
+      act(() => {
+        result.current.setFieldValue("email", "alice@example.com");
+      });
+
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(1, "title").onChange("Item 2");
+      });
+
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(0, "value").onChange(100);
+      });
+
+      // All values should be preserved
+      const data = result.current.data;
+      expect(data.name).toBe("Alice");
+      expect(data.email).toBe("alice@example.com");
+      expect((data.items as Array<{ title: string; value: number }>)[0].title).toBe("Item 1");
+      expect((data.items as Array<{ title: string; value: number }>)[0].value).toBe(100);
+      expect((data.items as Array<{ title: string; value: number }>)[1].title).toBe("Item 2");
+    });
+
+    it("should preserve item data when adding new items", () => {
+      const spec = createTestSpec({
+        fields: {
+          items: {
+            type: "array",
+            itemFields: { name: { type: "text" } },
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        useForma({ spec, initialData: { items: [] } })
+      );
+
+      // Add first item
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.push({ name: "" });
+      });
+
+      // Edit first item
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(0, "name").onChange("First");
+      });
+      expect((result.current.data.items as Array<{ name: string }>)[0].name).toBe("First");
+
+      // Add second item - first item should keep its value
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.push({ name: "" });
+      });
+
+      expect((result.current.data.items as Array<{ name: string }>)[0].name).toBe("First");
+      expect((result.current.data.items as Array<{ name: string }>).length).toBe(2);
+
+      // Edit second item - first item should still keep its value
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(1, "name").onChange("Second");
+      });
+
+      expect((result.current.data.items as Array<{ name: string }>)[0].name).toBe("First");
+      expect((result.current.data.items as Array<{ name: string }>)[1].name).toBe("Second");
+    });
+
+    it("should preserve data when editing different array items in sequence", () => {
+      const spec = createTestSpec({
+        fields: {
+          items: {
+            type: "array",
+            itemFields: { name: { type: "text" } },
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        useForma({
+          spec,
+          initialData: {
+            items: [{ name: "" }, { name: "" }, { name: "" }],
+          },
+        })
+      );
+
+      // Edit items in sequence: 0, 2, 1, 0 again
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(0, "name").onChange("First");
+      });
+
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(2, "name").onChange("Third");
+      });
+
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(1, "name").onChange("Second");
+      });
+
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(0, "name").onChange("First Updated");
+      });
+
+      const items = result.current.data.items as Array<{ name: string }>;
+      expect(items[0].name).toBe("First Updated");
+      expect(items[1].name).toBe("Second");
+      expect(items[2].name).toBe("Third");
+    });
+
+    it("should preserve data when removing items and editing others", () => {
+      const spec = createTestSpec({
+        fields: {
+          items: {
+            type: "array",
+            itemFields: { name: { type: "text" } },
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        useForma({
+          spec,
+          initialData: {
+            items: [{ name: "First" }, { name: "Second" }, { name: "Third" }],
+          },
+        })
+      );
+
+      // Remove middle item
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.remove(1);
+      });
+
+      // Edit remaining items
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(0, "name").onChange("First Updated");
+      });
+
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(1, "name").onChange("Third Updated");
+      });
+
+      const items = result.current.data.items as Array<{ name: string }>;
+      expect(items.length).toBe(2);
+      expect(items[0].name).toBe("First Updated");
+      expect(items[1].name).toBe("Third Updated");
+    });
+
+    it("should handle rapid sequential edits to the same field", () => {
+      const spec = createTestSpec({
+        fields: {
+          items: {
+            type: "array",
+            itemFields: { name: { type: "text" } },
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        useForma({ spec, initialData: { items: [{ name: "" }] } })
+      );
+
+      // Rapidly edit the same field multiple times
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(0, "name").onChange("a");
+      });
+
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(0, "name").onChange("ab");
+      });
+
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(0, "name").onChange("abc");
+      });
+
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(0, "name").onChange("abcd");
+      });
+
+      expect((result.current.data.items as Array<{ name: string }>)[0].name).toBe("abcd");
+    });
+
+    it("should preserve multiple root fields when editing array items", () => {
+      const spec = createTestSpec({
+        fields: {
+          firstName: { type: "text" },
+          lastName: { type: "text" },
+          email: { type: "email" },
+          items: {
+            type: "array",
+            itemFields: { name: { type: "text" } },
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        useForma({
+          spec,
+          initialData: {
+            firstName: "John",
+            lastName: "Doe",
+            email: "john@example.com",
+            items: [{ name: "" }],
+          },
+        })
+      );
+
+      // Edit array item
+      act(() => {
+        const helpers = result.current.getArrayHelpers("items");
+        helpers.getItemFieldProps(0, "name").onChange("Item Name");
+      });
+
+      // All root fields should be preserved
+      expect(result.current.data.firstName).toBe("John");
+      expect(result.current.data.lastName).toBe("Doe");
+      expect(result.current.data.email).toBe("john@example.com");
+      expect((result.current.data.items as Array<{ name: string }>)[0].name).toBe("Item Name");
+    });
+  });
 });
