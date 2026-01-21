@@ -193,15 +193,6 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
 
     const fieldRefs = useRef<Map<string, HTMLElement>>(new Map());
 
-    // Cache for array helper functions to prevent recreation on every render
-    const arrayHelpersCache = useRef<Map<string, {
-      push: (item?: unknown) => void;
-      insert: (index: number, item: unknown) => void;
-      remove: (index: number) => void;
-      move: (from: number, to: number) => void;
-      swap: (indexA: number, indexB: number) => void;
-    }>>(new Map());
-
     // Focus a specific field by path
     const focusField = useCallback((path: string) => {
       const element = fieldRefs.current.get(path);
@@ -321,85 +312,40 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
           options: fieldDef.options ?? [],
         } as SelectFieldProps;
       } else if (fieldType === "array" && fieldDef.itemFields) {
-        const arrayValue = (baseProps.value as unknown[] | undefined) ?? [];
+        const arrayValue = Array.isArray(baseProps.value) ? baseProps.value : [];
         const minItems = fieldDef.minItems ?? 0;
         const maxItems = fieldDef.maxItems ?? Infinity;
         const itemFieldDefs = fieldDef.itemFields;
 
-        // Get or create cached helper functions for this array field
-        // These functions read current values when called, not when created
-        if (!arrayHelpersCache.current.has(fieldPath)) {
-          arrayHelpersCache.current.set(fieldPath, {
-            push: (item?: unknown) => {
-              const currentArray = (forma.data[fieldPath] as unknown[] | undefined) ?? [];
-              const newItem = item ?? createDefaultItem(itemFieldDefs);
-              forma.setFieldValue(fieldPath, [...currentArray, newItem]);
-            },
-            insert: (index: number, item: unknown) => {
-              const currentArray = (forma.data[fieldPath] as unknown[] | undefined) ?? [];
-              const newArray = [...currentArray];
-              newArray.splice(index, 0, item);
-              forma.setFieldValue(fieldPath, newArray);
-            },
-            remove: (index: number) => {
-              const currentArray = (forma.data[fieldPath] as unknown[] | undefined) ?? [];
-              const newArray = [...currentArray];
-              newArray.splice(index, 1);
-              forma.setFieldValue(fieldPath, newArray);
-            },
-            move: (from: number, to: number) => {
-              const currentArray = (forma.data[fieldPath] as unknown[] | undefined) ?? [];
-              const newArray = [...currentArray];
-              const [item] = newArray.splice(from, 1);
-              newArray.splice(to, 0, item);
-              forma.setFieldValue(fieldPath, newArray);
-            },
-            swap: (indexA: number, indexB: number) => {
-              const currentArray = (forma.data[fieldPath] as unknown[] | undefined) ?? [];
-              const newArray = [...currentArray];
-              [newArray[indexA], newArray[indexB]] = [newArray[indexB], newArray[indexA]];
-              forma.setFieldValue(fieldPath, newArray);
-            },
-          });
-        }
-        const cachedHelpers = arrayHelpersCache.current.get(fieldPath)!;
+        // Get helpers from useForma - these are fresh on each render, avoiding stale closures
+        const baseHelpers = forma.getArrayHelpers(fieldPath);
+
+        // Wrap push to add default item creation when called without arguments
+        const pushWithDefault = (item?: unknown): void => {
+          const newItem = item ?? createDefaultItem(itemFieldDefs);
+          baseHelpers.push(newItem);
+        };
+
+        // Extend getItemFieldProps to include additional metadata (itemIndex, fieldName, options)
+        const getItemFieldPropsExtended = (index: number, fieldName: string) => {
+          const baseProps = baseHelpers.getItemFieldProps(index, fieldName);
+          const itemFieldDef = itemFieldDefs[fieldName];
+          return {
+            ...baseProps,
+            itemIndex: index,
+            fieldName,
+            options: itemFieldDef?.options,
+          };
+        };
 
         const helpers: ArrayHelpers = {
           items: arrayValue,
-          push: cachedHelpers.push,
-          insert: cachedHelpers.insert,
-          remove: cachedHelpers.remove,
-          move: cachedHelpers.move,
-          swap: cachedHelpers.swap,
-          getItemFieldProps: (index: number, fieldName: string) => {
-            const itemFieldDef = itemFieldDefs[fieldName];
-            const itemPath = `${fieldPath}[${index}].${fieldName}`;
-            const itemValue = (arrayValue[index] as Record<string, unknown>)?.[fieldName];
-            return {
-              name: itemPath,
-              value: itemValue,
-              type: itemFieldDef?.type ?? "text",
-              label: itemFieldDef?.label ?? fieldName,
-              description: itemFieldDef?.description,
-              placeholder: itemFieldDef?.placeholder,
-              visible: true,
-              enabled: !disabled,
-              required: itemFieldDef?.requiredWhen === "true",
-              touched: forma.touched[itemPath] ?? false,
-              errors: forma.errors.filter((e) => e.field === itemPath),
-              onChange: (value: unknown) => {
-                const currentArray = (forma.data[fieldPath] as unknown[] | undefined) ?? [];
-                const newArray = [...currentArray];
-                const item = (newArray[index] ?? {}) as Record<string, unknown>;
-                newArray[index] = { ...item, [fieldName]: value };
-                forma.setFieldValue(fieldPath, newArray);
-              },
-              onBlur: () => forma.setFieldTouched(itemPath),
-              itemIndex: index,
-              fieldName,
-              options: itemFieldDef?.options,
-            };
-          },
+          push: pushWithDefault,
+          insert: baseHelpers.insert,
+          remove: baseHelpers.remove,
+          move: baseHelpers.move,
+          swap: baseHelpers.swap,
+          getItemFieldProps: getItemFieldPropsExtended,
           minItems,
           maxItems,
           canAdd: arrayValue.length < maxItems,

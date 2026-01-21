@@ -799,5 +799,172 @@ describe("FormRenderer", () => {
         expect(screen.queryByTestId("array-item-items-1")).not.toBeInTheDocument();
       });
     });
+
+    // Stale closure regression tests - these verify the fix for the bug where
+    // cached array helper functions captured stale forma state
+    describe("stale closure regression", () => {
+      it("should add multiple items consecutively without losing items", async () => {
+        const user = userEvent.setup();
+        const spec = createTestSpec({
+          fields: {
+            items: {
+              type: "array",
+              label: "Items",
+              itemFields: { name: { type: "text" } },
+            },
+          },
+        });
+
+        render(
+          <FormRenderer
+            spec={spec}
+            initialData={{ items: [] }}
+            components={createTestComponentMap()}
+          />
+        );
+
+        const addButton = screen.getByTestId("add-items");
+
+        // Add first item
+        await user.click(addButton);
+        await waitFor(() => {
+          expect(screen.getByTestId("array-item-items-0")).toBeInTheDocument();
+        });
+
+        // Add second item - this would fail with stale closure bug
+        await user.click(addButton);
+        await waitFor(() => {
+          expect(screen.getByTestId("array-item-items-0")).toBeInTheDocument();
+          expect(screen.getByTestId("array-item-items-1")).toBeInTheDocument();
+        });
+
+        // Add third item - verifies the fix works across multiple operations
+        await user.click(addButton);
+        await waitFor(() => {
+          expect(screen.getByTestId("array-item-items-0")).toBeInTheDocument();
+          expect(screen.getByTestId("array-item-items-1")).toBeInTheDocument();
+          expect(screen.getByTestId("array-item-items-2")).toBeInTheDocument();
+        });
+      });
+
+      it("should remove items correctly after adding multiple items", async () => {
+        const user = userEvent.setup();
+        const spec = createTestSpec({
+          fields: {
+            items: {
+              type: "array",
+              label: "Items",
+              itemFields: { name: { type: "text" } },
+            },
+          },
+        });
+
+        render(
+          <FormRenderer
+            spec={spec}
+            initialData={{ items: [] }}
+            components={createTestComponentMap()}
+          />
+        );
+
+        const addButton = screen.getByTestId("add-items");
+
+        // Add three items
+        await user.click(addButton);
+        await user.click(addButton);
+        await user.click(addButton);
+
+        await waitFor(() => {
+          expect(screen.getByTestId("array-item-items-2")).toBeInTheDocument();
+        });
+
+        // Remove middle item - this would fail with stale closure bug
+        const removeMiddle = screen.getByTestId("remove-items-1");
+        await user.click(removeMiddle);
+
+        await waitFor(() => {
+          // Should have 2 items remaining (indices 0 and 1)
+          expect(screen.getByTestId("array-item-items-0")).toBeInTheDocument();
+          expect(screen.getByTestId("array-item-items-1")).toBeInTheDocument();
+          expect(screen.queryByTestId("array-item-items-2")).not.toBeInTheDocument();
+        });
+      });
+
+      it("should preserve existing items when adding to non-empty array", async () => {
+        const user = userEvent.setup();
+        const onChange = vi.fn();
+        const spec = createTestSpec({
+          fields: {
+            items: {
+              type: "array",
+              label: "Items",
+              itemFields: { name: { type: "text" } },
+            },
+          },
+        });
+
+        render(
+          <FormRenderer
+            spec={spec}
+            initialData={{ items: [{ name: "Existing Item" }] }}
+            components={createTestComponentMap()}
+            onChange={onChange}
+          />
+        );
+
+        // Verify initial state
+        expect(screen.getByTestId("array-item-items-0")).toBeInTheDocument();
+
+        // Add new item
+        const addButton = screen.getByTestId("add-items");
+        await user.click(addButton);
+
+        await waitFor(() => {
+          expect(screen.getByTestId("array-item-items-0")).toBeInTheDocument();
+          expect(screen.getByTestId("array-item-items-1")).toBeInTheDocument();
+        });
+
+        // Verify onChange was called with both items
+        const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1];
+        const data = lastCall[0];
+        expect(data.items).toHaveLength(2);
+        expect(data.items[0]).toEqual({ name: "Existing Item" });
+      });
+
+      it("should handle rapid consecutive add operations", async () => {
+        const user = userEvent.setup();
+        const spec = createTestSpec({
+          fields: {
+            items: {
+              type: "array",
+              label: "Items",
+              itemFields: { name: { type: "text" } },
+            },
+          },
+        });
+
+        render(
+          <FormRenderer
+            spec={spec}
+            initialData={{ items: [] }}
+            components={createTestComponentMap()}
+          />
+        );
+
+        const addButton = screen.getByTestId("add-items");
+
+        // Rapidly add 5 items
+        for (let i = 0; i < 5; i++) {
+          await user.click(addButton);
+        }
+
+        // All 5 items should be present
+        await waitFor(() => {
+          for (let i = 0; i < 5; i++) {
+            expect(screen.getByTestId(`array-item-items-${i}`)).toBeInTheDocument();
+          }
+        });
+      });
+    });
   });
 });
