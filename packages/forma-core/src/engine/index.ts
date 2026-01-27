@@ -12,6 +12,17 @@ export {
   getFormattedValue,
 } from "./calculate.js";
 
+// Format
+export {
+  formatValue,
+  isValidFormat,
+  parseDecimalFormat,
+  SUPPORTED_FORMATS,
+  DECIMAL_FORMAT_PATTERN,
+} from "../format/index.js";
+
+export type { FormatOptions, SupportedFormat } from "../format/index.js";
+
 // Visibility
 export {
   getVisibility,

@@ -6,6 +6,7 @@
  */
 
 import { evaluate } from "../feel/index.js";
+import { formatValue, type FormatOptions } from "../format/index.js";
 import type {
   Forma,
   ComputedField,
@@ -275,12 +276,14 @@ function findComputedDependencies(
  * @param fieldName - Name of the computed field
  * @param data - Current form data
  * @param spec - Form specification
- * @returns Formatted string or null if not displayable
+ * @param options - Formatting options (locale, currency, nullDisplay)
+ * @returns Formatted string or null if field not found or value is null/undefined
  */
 export function getFormattedValue(
   fieldName: string,
   data: Record<string, unknown>,
-  spec: Forma
+  spec: Forma,
+  options?: FormatOptions
 ): string | null {
   if (!spec.computed?.[fieldName]) {
     return null;
@@ -291,54 +294,14 @@ export function getFormattedValue(
   const value = computed[fieldName];
 
   if (value === null || value === undefined) {
+    // If nullDisplay is specified, use formatValue to get it
+    if (options?.nullDisplay !== undefined) {
+      return formatValue(value, fieldDef.format, options);
+    }
     return null;
   }
 
-  return formatValue(value, fieldDef.format);
-}
-
-/**
- * Format a value according to a format specification
- *
- * Supported formats:
- * - decimal(n) - Number with n decimal places
- * - currency - Number formatted as currency
- * - percent - Number formatted as percentage
- * - (none) - Default string conversion
- */
-function formatValue(value: unknown, format?: string): string {
-  if (!format) {
-    return String(value);
-  }
-
-  // Handle decimal(n) format
-  const decimalMatch = format.match(/^decimal\((\d+)\)$/);
-  if (decimalMatch) {
-    const decimals = parseInt(decimalMatch[1], 10);
-    return typeof value === "number" ? value.toFixed(decimals) : String(value);
-  }
-
-  // Handle currency format
-  if (format === "currency") {
-    return typeof value === "number"
-      ? new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(value)
-      : String(value);
-  }
-
-  // Handle percent format
-  if (format === "percent") {
-    return typeof value === "number"
-      ? new Intl.NumberFormat("en-US", {
-          style: "percent",
-          minimumFractionDigits: 1,
-        }).format(value)
-      : String(value);
-  }
-
-  return String(value);
+  return formatValue(value, fieldDef.format, options);
 }
 
 // ============================================================================
