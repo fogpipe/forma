@@ -173,11 +173,12 @@ function validateField(
   }
 
   // 4. Array validation
-  if (Array.isArray(value) && fieldDef.itemFields) {
+  if (Array.isArray(value)) {
     const arrayErrors = validateArray(
       path,
       value,
       fieldDef,
+      schemaProperty,
       spec,
       data,
       computed,
@@ -514,6 +515,7 @@ function validateArray(
   path: string,
   value: unknown[],
   fieldDef: FieldDefinition,
+  schemaProperty: JSONSchemaProperty | undefined,
   spec: Forma,
   data: Record<string, unknown>,
   computed: Record<string, unknown>,
@@ -523,25 +525,34 @@ function validateArray(
   const errors: FieldError[] = [];
   const label = fieldDef.label ?? path;
 
-  // Check min/max items
-  if (fieldDef.minItems !== undefined && value.length < fieldDef.minItems) {
+  // Get array schema for minItems/maxItems fallback
+  const arraySchema = schemaProperty?.type === "array" ? schemaProperty : undefined;
+
+  // Check min/max items - fieldDef overrides schema
+  const minItems = fieldDef.minItems ?? arraySchema?.minItems;
+  const maxItems = fieldDef.maxItems ?? arraySchema?.maxItems;
+
+  if (minItems !== undefined && value.length < minItems) {
     errors.push({
       field: path,
-      message: `${label} must have at least ${fieldDef.minItems} items`,
+      message: `${label} must have at least ${minItems} items`,
       severity: "error",
     });
   }
 
-  if (fieldDef.maxItems !== undefined && value.length > fieldDef.maxItems) {
+  if (maxItems !== undefined && value.length > maxItems) {
     errors.push({
       field: path,
-      message: `${label} must have no more than ${fieldDef.maxItems} items`,
+      message: `${label} must have no more than ${maxItems} items`,
       severity: "error",
     });
   }
+
+  // Get item schema for nested validation
+  const itemSchema = arraySchema?.items;
 
   // Validate each item's fields
-  if (fieldDef.itemFields) {
+  if (fieldDef.itemFields || itemSchema) {
     for (let i = 0; i < value.length; i++) {
       const item = value[i] as Record<string, unknown>;
       const itemErrors = validateArrayItem(
@@ -549,6 +560,7 @@ function validateArray(
         i,
         item,
         fieldDef.itemFields,
+        itemSchema,
         spec,
         data,
         computed,
@@ -569,7 +581,8 @@ function validateArrayItem(
   arrayPath: string,
   index: number,
   item: Record<string, unknown>,
-  itemFields: Record<string, FieldDefinition>,
+  itemFields: Record<string, FieldDefinition> | undefined,
+  itemSchema: JSONSchemaProperty | undefined,
   spec: Forma,
   data: Record<string, unknown>,
   computed: Record<string, unknown>,
@@ -578,7 +591,20 @@ function validateArrayItem(
 ): FieldError[] {
   const errors: FieldError[] = [];
 
-  for (const [fieldName, fieldDef] of Object.entries(itemFields)) {
+  // Get object schema for item if available
+  const objectSchema = itemSchema?.type === "object" ? itemSchema : undefined;
+  const schemaProperties = objectSchema?.properties ?? {};
+  const schemaRequired = new Set(objectSchema?.required ?? []);
+
+  // Determine which fields to validate - union of itemFields and schema properties
+  const allFieldNames = new Set([
+    ...Object.keys(itemFields ?? {}),
+    ...Object.keys(schemaProperties),
+  ]);
+
+  for (const fieldName of allFieldNames) {
+    const fieldDef = itemFields?.[fieldName];
+    const fieldSchema = schemaProperties[fieldName];
     const itemFieldPath = `${arrayPath}[${index}].${fieldName}`;
 
     // Skip hidden fields
@@ -596,23 +622,36 @@ function validateArrayItem(
       value,
     };
 
-    // Required check
-    const isRequired = fieldDef.requiredWhen
+    // Required check - fieldDef.requiredWhen overrides schema.required
+    const isRequired = fieldDef?.requiredWhen
       ? evaluateBoolean(fieldDef.requiredWhen, context)
-      : false;
+      : schemaRequired.has(fieldName);
 
     if (isRequired && isEmpty(value)) {
       errors.push({
         field: itemFieldPath,
-        message: fieldDef.label
+        message: fieldDef?.label
           ? `${fieldDef.label} is required`
           : "This field is required",
         severity: "error",
       });
     }
 
-    // Custom validations
-    if (fieldDef.validations && !isEmpty(value)) {
+    // Type validation from schema (only if value is present)
+    if (!isEmpty(value) && fieldSchema) {
+      const typeError = validateType(
+        itemFieldPath,
+        value,
+        fieldSchema,
+        fieldDef ?? { label: fieldName }
+      );
+      if (typeError) {
+        errors.push(typeError);
+      }
+    }
+
+    // Custom validations from fieldDef
+    if (fieldDef?.validations && !isEmpty(value)) {
       const customErrors = validateCustomRules(itemFieldPath, fieldDef.validations, context);
       errors.push(...customErrors);
     }

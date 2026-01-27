@@ -275,4 +275,349 @@ describe("validate", () => {
       expect(result.errors[0].message).toBe("Name must be at least 2 characters");
     });
   });
+
+  // ============================================================================
+  // Array validation
+  // ============================================================================
+
+  describe("array validation", () => {
+    describe("minItems/maxItems from schema", () => {
+      it("should validate minItems from schema when fieldDef does not specify it", () => {
+        const spec: Forma = {
+          version: "1.0",
+          meta: { id: "test", title: "Test" },
+          schema: {
+            type: "object",
+            properties: {
+              items: {
+                type: "array",
+                items: { type: "string" },
+                minItems: 2,
+              },
+            },
+          },
+          fields: {
+            items: { label: "Items", type: "array" },
+          },
+          fieldOrder: ["items"],
+        };
+
+        // Valid - has minimum 2 items
+        expect(validate({ items: ["a", "b"] }, spec).valid).toBe(true);
+        expect(validate({ items: ["a", "b", "c"] }, spec).valid).toBe(true);
+
+        // Invalid - less than minItems
+        const result = validate({ items: ["a"] }, spec);
+        expect(result.valid).toBe(false);
+        expect(result.errors[0].field).toBe("items");
+        expect(result.errors[0].message).toBe("Items must have at least 2 items");
+      });
+
+      it("should validate maxItems from schema when fieldDef does not specify it", () => {
+        const spec: Forma = {
+          version: "1.0",
+          meta: { id: "test", title: "Test" },
+          schema: {
+            type: "object",
+            properties: {
+              tags: {
+                type: "array",
+                items: { type: "string" },
+                maxItems: 3,
+              },
+            },
+          },
+          fields: {
+            tags: { label: "Tags", type: "array" },
+          },
+          fieldOrder: ["tags"],
+        };
+
+        // Valid - has maximum 3 items
+        expect(validate({ tags: ["a", "b", "c"] }, spec).valid).toBe(true);
+        expect(validate({ tags: ["a"] }, spec).valid).toBe(true);
+
+        // Invalid - more than maxItems
+        const result = validate({ tags: ["a", "b", "c", "d"] }, spec);
+        expect(result.valid).toBe(false);
+        expect(result.errors[0].field).toBe("tags");
+        expect(result.errors[0].message).toBe("Tags must have no more than 3 items");
+      });
+
+      it("should allow fieldDef.minItems to override schema.minItems", () => {
+        const spec: Forma = {
+          version: "1.0",
+          meta: { id: "test", title: "Test" },
+          schema: {
+            type: "object",
+            properties: {
+              items: {
+                type: "array",
+                items: { type: "string" },
+                minItems: 5, // schema says 5
+              },
+            },
+          },
+          fields: {
+            items: {
+              label: "Items",
+              type: "array",
+              minItems: 2, // fieldDef overrides to 2
+            },
+          },
+          fieldOrder: ["items"],
+        };
+
+        // fieldDef.minItems (2) should take precedence over schema.minItems (5)
+        expect(validate({ items: ["a", "b"] }, spec).valid).toBe(true);
+        expect(validate({ items: ["a"] }, spec).valid).toBe(false);
+      });
+    });
+
+    describe("array item validation from schema", () => {
+      it("should validate array item type constraints from schema", () => {
+        const spec: Forma = {
+          version: "1.0",
+          meta: { id: "test", title: "Test" },
+          schema: {
+            type: "object",
+            properties: {
+              scores: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    score: { type: "number", minimum: 0, maximum: 100 },
+                  },
+                  required: ["name", "score"],
+                },
+              },
+            },
+          },
+          fields: {
+            scores: { label: "Scores", type: "array" },
+          },
+          fieldOrder: ["scores"],
+        };
+
+        // Valid data
+        const validResult = validate(
+          {
+            scores: [
+              { name: "Alice", score: 95 },
+              { name: "Bob", score: 87 },
+            ],
+          },
+          spec
+        );
+        expect(validResult.valid).toBe(true);
+
+        // Invalid - score above maximum
+        const maxResult = validate(
+          {
+            scores: [
+              { name: "Alice", score: 105 },
+              { name: "Bob", score: 87 },
+            ],
+          },
+          spec
+        );
+        expect(maxResult.valid).toBe(false);
+        expect(maxResult.errors[0].field).toBe("scores[0].score");
+        expect(maxResult.errors[0].message).toContain("no more than 100");
+
+        // Invalid - score below minimum
+        const minResult = validate(
+          {
+            scores: [
+              { name: "Alice", score: -5 },
+              { name: "Bob", score: 87 },
+            ],
+          },
+          spec
+        );
+        expect(minResult.valid).toBe(false);
+        expect(minResult.errors[0].field).toBe("scores[0].score");
+        expect(minResult.errors[0].message).toContain("at least 0");
+      });
+
+      it("should validate required fields in array items from schema", () => {
+        const spec: Forma = {
+          version: "1.0",
+          meta: { id: "test", title: "Test" },
+          schema: {
+            type: "object",
+            properties: {
+              people: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    age: { type: "integer" },
+                  },
+                  required: ["name"],
+                },
+              },
+            },
+          },
+          fields: {
+            people: { label: "People", type: "array" },
+          },
+          fieldOrder: ["people"],
+        };
+
+        // Valid - name is present (age is optional)
+        expect(
+          validate({ people: [{ name: "Alice" }, { name: "Bob", age: 30 }] }, spec).valid
+        ).toBe(true);
+
+        // Invalid - missing required name
+        const result = validate({ people: [{ age: 25 }] }, spec);
+        expect(result.valid).toBe(false);
+        expect(result.errors[0].field).toBe("people[0].name");
+        expect(result.errors[0].message).toContain("required");
+      });
+
+      it("should validate nested string constraints in array items", () => {
+        const spec: Forma = {
+          version: "1.0",
+          meta: { id: "test", title: "Test" },
+          schema: {
+            type: "object",
+            properties: {
+              emails: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    address: { type: "string", format: "email" },
+                    label: { type: "string", minLength: 1, maxLength: 20 },
+                  },
+                  required: ["address"],
+                },
+              },
+            },
+          },
+          fields: {
+            emails: { label: "Emails", type: "array" },
+          },
+          fieldOrder: ["emails"],
+        };
+
+        // Valid
+        expect(
+          validate({ emails: [{ address: "test@example.com", label: "Work" }] }, spec).valid
+        ).toBe(true);
+
+        // Invalid email format
+        const emailResult = validate({ emails: [{ address: "not-an-email" }] }, spec);
+        expect(emailResult.valid).toBe(false);
+        expect(emailResult.errors[0].field).toBe("emails[0].address");
+        expect(emailResult.errors[0].message).toContain("valid email");
+
+        // Invalid label (too long)
+        const labelResult = validate(
+          { emails: [{ address: "test@example.com", label: "This label is way too long for the constraint" }] },
+          spec
+        );
+        expect(labelResult.valid).toBe(false);
+        expect(labelResult.errors[0].field).toBe("emails[0].label");
+        expect(labelResult.errors[0].message).toContain("no more than 20");
+      });
+
+      it("should validate multipleOf in array item fields", () => {
+        const spec: Forma = {
+          version: "1.0",
+          meta: { id: "test", title: "Test" },
+          schema: {
+            type: "object",
+            properties: {
+              prices: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    amount: { type: "number", multipleOf: 0.01 },
+                  },
+                },
+              },
+            },
+          },
+          fields: {
+            prices: { label: "Prices", type: "array" },
+          },
+          fieldOrder: ["prices"],
+        };
+
+        // Valid - correct precision
+        expect(validate({ prices: [{ amount: 10.99 }, { amount: 5.0 }] }, spec).valid).toBe(true);
+
+        // Invalid - wrong precision
+        const result = validate({ prices: [{ amount: 10.999 }] }, spec);
+        expect(result.valid).toBe(false);
+        expect(result.errors[0].field).toBe("prices[0].amount");
+        expect(result.errors[0].message).toContain("multiple of 0.01");
+      });
+    });
+
+    describe("combined fieldDef and schema validation", () => {
+      it("should use itemFields for custom validations while using schema for type constraints", () => {
+        const spec: Forma = {
+          version: "1.0",
+          meta: { id: "test", title: "Test" },
+          schema: {
+            type: "object",
+            properties: {
+              orders: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    quantity: { type: "integer", minimum: 1 },
+                    price: { type: "number", minimum: 0 },
+                  },
+                },
+                minItems: 1,
+              },
+            },
+          },
+          fields: {
+            orders: {
+              label: "Orders",
+              type: "array",
+              itemFields: {
+                quantity: {
+                  label: "Quantity",
+                  validations: [
+                    { rule: "value <= 100", message: "Cannot order more than 100 items" },
+                  ],
+                },
+              },
+            },
+          },
+          fieldOrder: ["orders"],
+        };
+
+        // Valid
+        expect(validate({ orders: [{ quantity: 5, price: 10.0 }] }, spec).valid).toBe(true);
+
+        // Invalid - schema minimum violated
+        const minResult = validate({ orders: [{ quantity: 0, price: 10.0 }] }, spec);
+        expect(minResult.valid).toBe(false);
+        expect(minResult.errors[0].message).toContain("at least 1");
+
+        // Invalid - custom FEEL validation violated
+        const customResult = validate({ orders: [{ quantity: 150, price: 10.0 }] }, spec);
+        expect(customResult.valid).toBe(false);
+        expect(customResult.errors.some((e) => e.message.includes("more than 100"))).toBe(true);
+
+        // Invalid - empty array (minItems from schema)
+        const emptyResult = validate({ orders: [] }, spec);
+        expect(emptyResult.valid).toBe(false);
+        expect(emptyResult.errors[0].message).toContain("at least 1 items");
+      });
+    });
+  });
 });
