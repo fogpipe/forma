@@ -449,6 +449,8 @@ export interface GetFieldPropsResult {
   "aria-describedby"?: string;
   /** ARIA: Indicates the field is required */
   "aria-required"?: boolean;
+  /** Options for select/multiselect fields (filtered by visibleWhen) */
+  options?: SelectOption[];
 }
 
 /**

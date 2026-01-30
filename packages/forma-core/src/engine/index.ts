@@ -28,10 +28,13 @@ export {
   getVisibility,
   isFieldVisible,
   getPageVisibility,
+  getOptionsVisibility,
+  getVisibleOptions,
 } from "./visibility.js";
 
 export type {
   VisibilityOptions,
+  OptionsVisibilityResult,
 } from "./visibility.js";
 
 // Required

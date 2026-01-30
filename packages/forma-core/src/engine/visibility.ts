@@ -11,6 +11,7 @@ import type {
   FieldDefinition,
   EvaluationContext,
   VisibilityResult,
+  SelectOption,
 } from "../types.js";
 import { calculate } from "./calculate.js";
 
@@ -23,8 +24,70 @@ export interface VisibilityOptions {
   computed?: Record<string, unknown>;
 }
 
+/**
+ * Result of option visibility computation.
+ * Maps field paths to their visible options.
+ *
+ * For array items, paths are like "items[0].category", "items[1].category", etc.
+ */
+export interface OptionsVisibilityResult {
+  readonly [fieldPath: string]: readonly SelectOption[];
+}
+
 // ============================================================================
-// Main Function
+// Internal Helpers
+// ============================================================================
+
+/**
+ * Filter options by evaluating visibleWhen expressions against a context.
+ * This is the core filtering logic used by both batch and individual computation.
+ */
+function filterOptionsByContext(
+  options: readonly SelectOption[],
+  context: EvaluationContext
+): SelectOption[] {
+  return options.filter((option) => {
+    if (!option.visibleWhen) return true;
+    try {
+      return evaluateBoolean(option.visibleWhen, context);
+    } catch {
+      // Invalid expression - hide the option (fail closed)
+      return false;
+    }
+  });
+}
+
+/**
+ * Process array item fields and compute their option visibility.
+ */
+function processArrayItemOptions(
+  arrayPath: string,
+  fieldDef: FieldDefinition,
+  arrayData: readonly unknown[],
+  baseContext: EvaluationContext,
+  result: Record<string, SelectOption[]>
+): void {
+  if (!fieldDef.itemFields) return;
+
+  for (let i = 0; i < arrayData.length; i++) {
+    const item = (arrayData[i] ?? {}) as Record<string, unknown>;
+    const itemContext: EvaluationContext = {
+      ...baseContext,
+      item,
+      itemIndex: i,
+    };
+
+    for (const [itemFieldName, itemFieldDef] of Object.entries(fieldDef.itemFields)) {
+      if (itemFieldDef.options && itemFieldDef.options.length > 0) {
+        const itemFieldPath = `${arrayPath}[${i}].${itemFieldName}`;
+        result[itemFieldPath] = filterOptionsByContext(itemFieldDef.options, itemContext);
+      }
+    }
+  }
+}
+
+// ============================================================================
+// Field Visibility
 // ============================================================================
 
 /**
@@ -50,10 +113,8 @@ export function getVisibility(
   spec: Forma,
   options: VisibilityOptions = {}
 ): VisibilityResult {
-  // Calculate computed values if not provided
   const computed = options.computed ?? calculate(data, spec);
 
-  // Build base evaluation context
   const baseContext: EvaluationContext = {
     data,
     computed,
@@ -62,7 +123,6 @@ export function getVisibility(
 
   const result: VisibilityResult = {};
 
-  // Process all fields in field order
   for (const fieldPath of spec.fieldOrder) {
     const fieldDef = spec.fields[fieldPath];
     if (fieldDef) {
@@ -72,10 +132,6 @@ export function getVisibility(
 
   return result;
 }
-
-// ============================================================================
-// Field Evaluation
-// ============================================================================
 
 /**
  * Evaluate visibility for a single field and its nested fields
@@ -87,19 +143,16 @@ function evaluateFieldVisibility(
   context: EvaluationContext,
   result: VisibilityResult
 ): void {
-  // Evaluate the field's own visibility
   if (fieldDef.visibleWhen) {
     result[path] = evaluateBoolean(fieldDef.visibleWhen, context);
   } else {
-    result[path] = true; // No condition = always visible
+    result[path] = true;
   }
 
-  // If not visible, children are implicitly not visible
   if (!result[path]) {
     return;
   }
 
-  // Handle array fields with item visibility
   if (fieldDef.itemFields) {
     const arrayData = data[path];
     if (Array.isArray(arrayData)) {
@@ -110,9 +163,6 @@ function evaluateFieldVisibility(
 
 /**
  * Evaluate visibility for array item fields
- *
- * For each item in the array, evaluates the visibility of each
- * item field using the $item context.
  */
 function evaluateArrayItemVisibility(
   arrayPath: string,
@@ -125,15 +175,12 @@ function evaluateArrayItemVisibility(
 
   for (let i = 0; i < arrayData.length; i++) {
     const item = arrayData[i] as Record<string, unknown>;
-
-    // Create item-specific context
     const itemContext: EvaluationContext = {
       ...baseContext,
       item,
       itemIndex: i,
     };
 
-    // Evaluate each item field's visibility
     for (const [fieldName, itemFieldDef] of Object.entries(fieldDef.itemFields)) {
       const itemFieldPath = `${arrayPath}[${i}].${fieldName}`;
 
@@ -146,20 +193,10 @@ function evaluateArrayItemVisibility(
   }
 }
 
-// ============================================================================
-// Individual Field Visibility
-// ============================================================================
-
 /**
  * Check if a single field is visible
  *
  * Useful for checking visibility of one field without computing all.
- *
- * @param fieldPath - Field path to check
- * @param data - Current form data
- * @param spec - Form specification
- * @param options - Optional pre-calculated computed values
- * @returns True if the field is visible
  */
 export function isFieldVisible(
   fieldPath: string,
@@ -169,11 +206,11 @@ export function isFieldVisible(
 ): boolean {
   const fieldDef = spec.fields[fieldPath];
   if (!fieldDef) {
-    return true; // Unknown fields are visible by default
+    return true;
   }
 
   if (!fieldDef.visibleWhen) {
-    return true; // No condition = always visible
+    return true;
   }
 
   const computed = options.computed ?? calculate(data, spec);
@@ -192,11 +229,6 @@ export function isFieldVisible(
 
 /**
  * Determine which pages are visible in a wizard form
- *
- * @param data - Current form data
- * @param spec - Form specification with pages
- * @param options - Optional pre-calculated computed values
- * @returns Map of page IDs to visibility states
  */
 export function getPageVisibility(
   data: Record<string, unknown>,
@@ -225,4 +257,120 @@ export function getPageVisibility(
   }
 
   return result;
+}
+
+// ============================================================================
+// Option Visibility - Batch Computation
+// ============================================================================
+
+/**
+ * Compute visible options for ALL select/multiselect fields in a form.
+ *
+ * This is the primary API for option visibility - designed to be called once
+ * and memoized (e.g., in a useMemo hook). Returns a map of field paths to
+ * their visible options.
+ *
+ * Handles both top-level fields and array item fields. For array items,
+ * paths include the index: "items[0].category", "items[1].category", etc.
+ *
+ * @param data - Current form data
+ * @param spec - Form specification
+ * @param options - Optional pre-calculated computed values
+ * @returns Map of field paths to visible SelectOption arrays
+ *
+ * @example
+ * // In a React component:
+ * const optionsVisibility = useMemo(
+ *   () => getOptionsVisibility(data, spec, { computed }),
+ *   [data, spec, computed]
+ * );
+ *
+ * // Access visible options for a field:
+ * const departmentOptions = optionsVisibility["department"] ?? [];
+ * const itemCategoryOptions = optionsVisibility["items[0].category"] ?? [];
+ */
+export function getOptionsVisibility(
+  data: Record<string, unknown>,
+  spec: Forma,
+  options: VisibilityOptions = {}
+): OptionsVisibilityResult {
+  const computed = options.computed ?? calculate(data, spec);
+  const result: Record<string, SelectOption[]> = {};
+
+  const baseContext: EvaluationContext = {
+    data,
+    computed,
+    referenceData: spec.referenceData,
+  };
+
+  for (const fieldPath of spec.fieldOrder) {
+    const fieldDef = spec.fields[fieldPath];
+    if (!fieldDef) continue;
+
+    // Top-level fields with options
+    if (fieldDef.options && fieldDef.options.length > 0) {
+      result[fieldPath] = filterOptionsByContext(fieldDef.options, baseContext);
+    }
+
+    // Array item fields with options
+    if (fieldDef.itemFields) {
+      const arrayData = data[fieldPath];
+      if (Array.isArray(arrayData)) {
+        processArrayItemOptions(fieldPath, fieldDef, arrayData, baseContext, result);
+      }
+    }
+  }
+
+  return result;
+}
+
+// ============================================================================
+// Option Visibility - Individual Computation (Utility)
+// ============================================================================
+
+/**
+ * Filter select options for a single field.
+ *
+ * This is a utility function for ad-hoc option filtering. For form rendering,
+ * prefer using `getOptionsVisibility()` which computes all options at once
+ * and can be memoized.
+ *
+ * @param options - Select options to filter
+ * @param data - Current form data
+ * @param spec - Form specification (for referenceData)
+ * @param context - Optional computed values and array item context
+ * @returns Filtered array of visible options
+ *
+ * @example
+ * // Ad-hoc filtering for a single field
+ * const visibleOptions = getVisibleOptions(
+ *   fieldDef.options,
+ *   formData,
+ *   spec,
+ *   { computed, item: arrayItem, itemIndex: 0 }
+ * );
+ */
+export function getVisibleOptions(
+  options: SelectOption[] | undefined,
+  data: Record<string, unknown>,
+  spec: Forma,
+  context: {
+    computed?: Record<string, unknown>;
+    item?: Record<string, unknown>;
+    itemIndex?: number;
+  } = {}
+): SelectOption[] {
+  if (!options || options.length === 0) return [];
+
+  const computed = context.computed ?? calculate(data, spec);
+
+  const evalContext: EvaluationContext = {
+    data,
+    computed,
+    referenceData: spec.referenceData,
+    item: context.item,
+    itemIndex: context.itemIndex,
+  };
+
+  return filterOptionsByContext(options, evalContext);
 }

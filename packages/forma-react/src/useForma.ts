@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import type { Forma, FieldError, ValidationResult } from "@fogpipe/forma-core";
+import type { Forma, FieldError, ValidationResult, SelectOption } from "@fogpipe/forma-core";
 import type { GetFieldPropsResult, GetSelectFieldPropsResult, GetArrayHelpersResult } from "./types.js";
 import {
   getVisibility,
@@ -15,7 +15,9 @@ import {
   validate,
   calculate,
   getPageVisibility,
+  getOptionsVisibility,
 } from "@fogpipe/forma-core";
+import type { OptionsVisibilityResult } from "@fogpipe/forma-core";
 
 /**
  * Options for useForma hook
@@ -108,6 +110,8 @@ export interface UseFormaReturn {
   required: Record<string, boolean>;
   /** Field enabled state map */
   enabled: Record<string, boolean>;
+  /** Visible options for select/multiselect fields, keyed by field path */
+  optionsVisibility: OptionsVisibilityResult;
   /** Field touched state map */
   touched: Record<string, boolean>;
   /** Validation errors */
@@ -265,6 +269,12 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   // Calculate enabled state
   const enabled = useMemo(
     () => getEnabled(state.data, spec, { computed }),
+    [state.data, spec, computed]
+  );
+
+  // Calculate visible options for all select/multiselect fields (memoized)
+  const optionsVisibility = useMemo(
+    () => getOptionsVisibility(state.data, spec, { computed }),
     [state.data, spec, computed]
   );
 
@@ -622,16 +632,18 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     };
   }, [spec, state.touched, state.isSubmitted, visibility, enabled, required, validation.errors, validateOn, getValueAtPath, getFieldHandlers]);
 
-  // Get select field props
+  // Get select field props - uses pre-computed optionsVisibility map
   const getSelectFieldProps = useCallback((path: string): GetSelectFieldPropsResult => {
     const baseProps = getFieldProps(path);
-    const fieldDef = spec.fields[path];
+
+    // Look up pre-computed visible options from memoized map
+    const visibleOptions = optionsVisibility[path] ?? [];
 
     return {
       ...baseProps,
-      options: fieldDef?.options ?? [],
+      options: visibleOptions as SelectOption[],
     };
-  }, [getFieldProps, spec.fields]);
+  }, [getFieldProps, optionsVisibility]);
 
   // Get array helpers
   const getArrayHelpers = useCallback((path: string): GetArrayHelpersResult => {
@@ -649,12 +661,15 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       const handlers = getFieldHandlers(itemPath);
 
       // Get item value
-      const item = currentValue[index] as Record<string, unknown> | undefined;
-      const itemValue = item?.[fieldName];
+      const item = (currentValue[index] as Record<string, unknown>) ?? {};
+      const itemValue = item[fieldName];
 
       const fieldErrors = validation.errors.filter((e) => e.field === itemPath);
       const isTouched = state.touched[itemPath] ?? false;
       const showErrors = validateOn === "change" || (validateOn === "blur" && isTouched) || state.isSubmitted;
+
+      // Look up pre-computed visible options from memoized map
+      const visibleOptions = optionsVisibility[itemPath] as SelectOption[] | undefined;
 
       return {
         name: itemPath,
@@ -671,6 +686,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
         errors: showErrors ? fieldErrors : [],
         onChange: handlers.onChange,
         onBlur: handlers.onBlur,
+        options: visibleOptions,
       };
     };
 
@@ -712,7 +728,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       canAdd,
       canRemove,
     };
-  }, [spec.fields, getValueAtPath, setValueAtPath, getFieldHandlers, enabled, state.touched, state.isSubmitted, validation.errors, validateOn]);
+  }, [spec.fields, getValueAtPath, setValueAtPath, getFieldHandlers, enabled, state.touched, state.isSubmitted, validation.errors, validateOn, optionsVisibility]);
 
   return {
     data: state.data,
@@ -720,6 +736,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     visibility,
     required,
     enabled,
+    optionsVisibility,
     touched: state.touched,
     errors: validation.errors,
     isValid: validation.valid,

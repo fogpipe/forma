@@ -6,7 +6,7 @@
  */
 
 import React from "react";
-import type { FieldDefinition, JSONSchemaProperty } from "@fogpipe/forma-core";
+import type { FieldDefinition, JSONSchemaProperty, SelectOption } from "@fogpipe/forma-core";
 import { useFormaContext } from "./context.js";
 import type {
   ComponentMap,
@@ -153,20 +153,24 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
       max: constraints.max,
     } as IntegerFieldProps;
   } else if (fieldType === "select") {
+    // Use pre-computed visible options from memoized map
+    const visibleOptions = (forma.optionsVisibility[fieldPath] ?? []) as SelectOption[];
     fieldProps = {
       ...baseProps,
       fieldType: "select",
       value: baseProps.value as string | null,
       onChange: baseProps.onChange as (value: string | null) => void,
-      options: fieldDef.options ?? [],
+      options: visibleOptions,
     } as SelectFieldProps;
   } else if (fieldType === "multiselect") {
+    // Use pre-computed visible options from memoized map
+    const visibleOptions = (forma.optionsVisibility[fieldPath] ?? []) as SelectOption[];
     fieldProps = {
       ...baseProps,
       fieldType: "multiselect",
       value: (baseProps.value as string[] | undefined) ?? [],
       onChange: baseProps.onChange as (value: string[]) => void,
-      options: fieldDef.options ?? [],
+      options: visibleOptions,
     } as MultiSelectFieldProps;
   } else if (fieldType === "array" && fieldDef.itemFields) {
     const arrayValue = (baseProps.value as unknown[] | undefined) ?? [];
@@ -204,7 +208,12 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
       getItemFieldProps: (index: number, fieldName: string) => {
         const itemFieldDef = itemFieldDefs[fieldName];
         const itemPath = `${fieldPath}[${index}].${fieldName}`;
-        const itemValue = (arrayValue[index] as Record<string, unknown>)?.[fieldName];
+        const item = (arrayValue[index] as Record<string, unknown>) ?? {};
+        const itemValue = item[fieldName];
+
+        // Use pre-computed visible options from memoized map
+        const visibleOptions = forma.optionsVisibility[itemPath] as SelectOption[] | undefined;
+
         return {
           name: itemPath,
           value: itemValue,
@@ -219,14 +228,14 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
           errors: forma.errors.filter((e) => e.field === itemPath),
           onChange: (value: unknown) => {
             const newArray = [...arrayValue];
-            const item = (newArray[index] ?? {}) as Record<string, unknown>;
-            newArray[index] = { ...item, [fieldName]: value };
+            const existingItem = (newArray[index] ?? {}) as Record<string, unknown>;
+            newArray[index] = { ...existingItem, [fieldName]: value };
             forma.setFieldValue(fieldPath, newArray);
           },
           onBlur: () => forma.setFieldTouched(itemPath),
           itemIndex: index,
           fieldName,
-          options: itemFieldDef?.options,
+          options: visibleOptions,
         };
       },
       minItems,
