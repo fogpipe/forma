@@ -1,6 +1,6 @@
 {
   "name": "@fogpipe/forma-react",
-  "version": "0.10.4",
+  "version": "0.11.0",
   "description": "Headless React form renderer for Forma specifications",
   "type": "module",
   "main": "./dist/index.js",
@@ -30,7 +30,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@fogpipe/forma-core": "^0.10.4"
+    "@fogpipe/forma-core": "^0.11.0"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0"
