@@ -736,6 +736,192 @@ describe("FormRenderer", () => {
   });
 
   // ============================================================================
+  // Option Visibility (visibleWhen on select options)
+  // ============================================================================
+
+  describe("option visibility in FormRenderer", () => {
+    it("should filter select options based on visibleWhen expressions", async () => {
+      const user = userEvent.setup();
+      const spec = createTestSpec({
+        fields: {
+          department: {
+            type: "select",
+            label: "Department",
+            options: [
+              { value: "engineering", label: "Engineering" },
+              { value: "sales", label: "Sales" },
+            ],
+          },
+          position: {
+            type: "select",
+            label: "Position",
+            options: [
+              { value: "dev", label: "Developer", visibleWhen: 'department = "engineering"' },
+              { value: "qa", label: "QA Engineer", visibleWhen: 'department = "engineering"' },
+              { value: "rep", label: "Sales Rep", visibleWhen: 'department = "sales"' },
+              { value: "mgr", label: "Sales Manager", visibleWhen: 'department = "sales"' },
+            ],
+          },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+        />
+      );
+
+      // Initially no department selected - no position options should show
+      const positionSelect = screen.getByTestId("field-position").querySelector("select")!;
+      // Only the placeholder "Select..." option should be present
+      expect(positionSelect.querySelectorAll("option")).toHaveLength(1);
+
+      // Select Engineering department
+      const departmentSelect = screen.getByTestId("field-department").querySelector("select")!;
+      await user.selectOptions(departmentSelect, "engineering");
+
+      // Now only engineering positions should show
+      await waitFor(() => {
+        const options = positionSelect.querySelectorAll("option");
+        // placeholder + 2 engineering options
+        expect(options).toHaveLength(3);
+        expect(screen.getByText("Developer")).toBeInTheDocument();
+        expect(screen.getByText("QA Engineer")).toBeInTheDocument();
+        expect(screen.queryByText("Sales Rep")).not.toBeInTheDocument();
+        expect(screen.queryByText("Sales Manager")).not.toBeInTheDocument();
+      });
+
+      // Switch to Sales department
+      await user.selectOptions(departmentSelect, "sales");
+
+      // Now only sales positions should show
+      await waitFor(() => {
+        const options = positionSelect.querySelectorAll("option");
+        // placeholder + 2 sales options
+        expect(options).toHaveLength(3);
+        expect(screen.getByText("Sales Rep")).toBeInTheDocument();
+        expect(screen.getByText("Sales Manager")).toBeInTheDocument();
+        expect(screen.queryByText("Developer")).not.toBeInTheDocument();
+        expect(screen.queryByText("QA Engineer")).not.toBeInTheDocument();
+      });
+    });
+
+    it("should show all options when none have visibleWhen", () => {
+      const spec = createTestSpec({
+        fields: {
+          color: {
+            type: "select",
+            label: "Color",
+            options: [
+              { value: "red", label: "Red" },
+              { value: "blue", label: "Blue" },
+              { value: "green", label: "Green" },
+            ],
+          },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+        />
+      );
+
+      expect(screen.getByText("Red")).toBeInTheDocument();
+      expect(screen.getByText("Blue")).toBeInTheDocument();
+      expect(screen.getByText("Green")).toBeInTheDocument();
+    });
+
+    it("should filter multiselect options based on visibleWhen expressions", async () => {
+      const user = userEvent.setup();
+      const spec = createTestSpec({
+        fields: {
+          tier: {
+            type: "select",
+            label: "Tier",
+            options: [
+              { value: "basic", label: "Basic" },
+              { value: "premium", label: "Premium" },
+            ],
+          },
+          features: {
+            type: "multiselect",
+            label: "Features",
+            options: [
+              { value: "email", label: "Email Support" },
+              { value: "phone", label: "Phone Support", visibleWhen: 'tier = "premium"' },
+              { value: "priority", label: "Priority Queue", visibleWhen: 'tier = "premium"' },
+            ],
+          },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+        />
+      );
+
+      // Initially no tier selected - only non-conditional option visible
+      const featuresSelect = screen.getByTestId("field-features").querySelector("select")!;
+      await waitFor(() => {
+        // placeholder + 1 option without visibleWhen
+        expect(featuresSelect.querySelectorAll("option")).toHaveLength(2);
+        expect(screen.getByText("Email Support")).toBeInTheDocument();
+        expect(screen.queryByText("Phone Support")).not.toBeInTheDocument();
+      });
+
+      // Select Premium tier
+      const tierSelect = screen.getByTestId("field-tier").querySelector("select")!;
+      await user.selectOptions(tierSelect, "premium");
+
+      // All options should now show
+      await waitFor(() => {
+        // placeholder + 3 options
+        expect(featuresSelect.querySelectorAll("option")).toHaveLength(4);
+        expect(screen.getByText("Email Support")).toBeInTheDocument();
+        expect(screen.getByText("Phone Support")).toBeInTheDocument();
+        expect(screen.getByText("Priority Queue")).toBeInTheDocument();
+      });
+    });
+
+    it("should return empty options when all are filtered out", async () => {
+      const spec = createTestSpec({
+        fields: {
+          category: {
+            type: "select",
+            label: "Category",
+            options: [
+              { value: "a", label: "Option A", visibleWhen: 'toggle = true' },
+              { value: "b", label: "Option B", visibleWhen: 'toggle = true' },
+            ],
+          },
+          toggle: {
+            type: "boolean",
+            label: "Toggle",
+          },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ toggle: false }}
+          components={createTestComponentMap()}
+        />
+      );
+
+      // All options have visibleWhen that evaluates to false
+      const categorySelect = screen.getByTestId("field-category").querySelector("select")!;
+      // Only placeholder
+      expect(categorySelect.querySelectorAll("option")).toHaveLength(1);
+    });
+  });
+
+  // ============================================================================
   // Array Field Interactions
   // ============================================================================
 

@@ -6,7 +6,7 @@
  */
 
 import React, { forwardRef, useImperativeHandle, useRef, useMemo, useCallback } from "react";
-import type { Forma, FieldDefinition, ValidationResult, JSONSchemaProperty } from "@fogpipe/forma-core";
+import type { Forma, FieldDefinition, ValidationResult, JSONSchemaProperty, SelectOption } from "@fogpipe/forma-core";
 import { useForma } from "./useForma.js";
 import { FormaContext } from "./context.js";
 import type { ComponentMap, LayoutProps, FieldWrapperProps, PageWrapperProps, BaseFieldProps, TextFieldProps, NumberFieldProps, SelectFieldProps, ArrayFieldProps, ArrayHelpers } from "./types.js";
@@ -309,7 +309,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
           fieldType,
           value: baseProps.value as string | string[] | null,
           onChange: baseProps.onChange as (value: string | string[] | null) => void,
-          options: fieldDef.options ?? [],
+          options: forma.optionsVisibility[fieldPath] ?? fieldDef.options ?? [],
         } as SelectFieldProps;
       } else if (fieldType === "array" && fieldDef.itemFields) {
         const arrayValue = Array.isArray(baseProps.value) ? baseProps.value : [];
@@ -330,11 +330,12 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
         const getItemFieldPropsExtended = (index: number, fieldName: string) => {
           const baseProps = baseHelpers.getItemFieldProps(index, fieldName);
           const itemFieldDef = itemFieldDefs[fieldName];
+          const itemPath = `${fieldPath}[${index}].${fieldName}`;
           return {
             ...baseProps,
             itemIndex: index,
             fieldName,
-            options: itemFieldDef?.options,
+            options: (forma.optionsVisibility[itemPath] as SelectOption[] | undefined) ?? itemFieldDef?.options,
           };
         };
 
