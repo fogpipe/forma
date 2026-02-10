@@ -57,6 +57,16 @@ export type {
   EnabledOptions,
 } from "./enabled.js";
 
+// Readonly
+export {
+  getReadonly,
+  isReadonly,
+} from "./readonly.js";
+
+export type {
+  ReadonlyOptions,
+} from "./readonly.js";
+
 // Validate
 export {
   validate,

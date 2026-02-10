@@ -9,10 +9,12 @@ import { evaluateBoolean } from "../feel/index.js";
 import type {
   Forma,
   FieldDefinition,
+  ArrayFieldDefinition,
   EvaluationContext,
   VisibilityResult,
   SelectOption,
 } from "../types.js";
+import { isArrayField, isSelectionField } from "../types.js";
 import { calculate } from "./calculate.js";
 
 // ============================================================================
@@ -62,7 +64,7 @@ function filterOptionsByContext(
  */
 function processArrayItemOptions(
   arrayPath: string,
-  fieldDef: FieldDefinition,
+  fieldDef: ArrayFieldDefinition,
   arrayData: readonly unknown[],
   baseContext: EvaluationContext,
   result: Record<string, SelectOption[]>
@@ -78,7 +80,7 @@ function processArrayItemOptions(
     };
 
     for (const [itemFieldName, itemFieldDef] of Object.entries(fieldDef.itemFields)) {
-      if (itemFieldDef.options && itemFieldDef.options.length > 0) {
+      if (isSelectionField(itemFieldDef) && itemFieldDef.options && itemFieldDef.options.length > 0) {
         const itemFieldPath = `${arrayPath}[${i}].${itemFieldName}`;
         result[itemFieldPath] = filterOptionsByContext(itemFieldDef.options, itemContext);
       }
@@ -153,7 +155,7 @@ function evaluateFieldVisibility(
     return;
   }
 
-  if (fieldDef.itemFields) {
+  if (isArrayField(fieldDef) && fieldDef.itemFields) {
     const arrayData = data[path];
     if (Array.isArray(arrayData)) {
       evaluateArrayItemVisibility(path, fieldDef, arrayData, context, result);
@@ -166,7 +168,7 @@ function evaluateFieldVisibility(
  */
 function evaluateArrayItemVisibility(
   arrayPath: string,
-  fieldDef: FieldDefinition,
+  fieldDef: ArrayFieldDefinition,
   arrayData: unknown[],
   baseContext: EvaluationContext,
   result: VisibilityResult
@@ -308,12 +310,12 @@ export function getOptionsVisibility(
     if (!fieldDef) continue;
 
     // Top-level fields with options
-    if (fieldDef.options && fieldDef.options.length > 0) {
+    if (isSelectionField(fieldDef) && fieldDef.options && fieldDef.options.length > 0) {
       result[fieldPath] = filterOptionsByContext(fieldDef.options, baseContext);
     }
 
     // Array item fields with options
-    if (fieldDef.itemFields) {
+    if (isArrayField(fieldDef) && fieldDef.itemFields) {
       const arrayData = data[fieldPath];
       if (Array.isArray(arrayData)) {
         processArrayItemOptions(fieldPath, fieldDef, arrayData, baseContext, result);

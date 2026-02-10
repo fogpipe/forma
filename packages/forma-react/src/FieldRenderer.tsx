@@ -7,6 +7,7 @@
 
 import React from "react";
 import type { FieldDefinition, JSONSchemaProperty, SelectOption } from "@fogpipe/forma-core";
+import { isAdornableField } from "@fogpipe/forma-core";
 import { useFormaContext } from "./context.js";
 import type {
   ComponentMap,
@@ -18,6 +19,7 @@ import type {
   MultiSelectFieldProps,
   ArrayFieldProps,
   ArrayHelpers,
+  DisplayFieldProps,
 } from "./types.js";
 
 /**
@@ -93,8 +95,8 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
   const isVisible = forma.visibility[fieldPath] !== false;
   if (!isVisible) return null;
 
-  // Infer field type
-  const fieldType = fieldDef.type || (fieldDef.itemFields ? "array" : "text");
+  // Get field type (type is required on all field definitions)
+  const fieldType = fieldDef.type;
   const componentKey = fieldType as keyof ComponentMap;
   const Component = components[componentKey] || components.fallback;
 
@@ -112,6 +114,7 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
   const schemaProperty = spec.schema.properties[fieldPath];
 
   // Base field props
+  const isReadonly = forma.readonly[fieldPath] ?? false;
   const baseProps: BaseFieldProps = {
     name: fieldPath,
     field: fieldDef,
@@ -125,13 +128,22 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
     // Convenience properties
     visible: true, // Always true since we already filtered for visibility
     enabled: !disabled,
+    readonly: isReadonly,
     label: fieldDef.label ?? fieldPath,
     description: fieldDef.description,
     placeholder: fieldDef.placeholder,
+    // Adorner properties (only for adornable field types)
+    ...(isAdornableField(fieldDef) && {
+      prefix: fieldDef.prefix,
+      suffix: fieldDef.suffix,
+    }),
+    // Presentation variant
+    variant: fieldDef.variant,
+    variantConfig: fieldDef.variantConfig,
   };
 
   // Build type-specific props
-  let fieldProps: BaseFieldProps | TextFieldProps | NumberFieldProps | IntegerFieldProps | SelectFieldProps | MultiSelectFieldProps | ArrayFieldProps = baseProps;
+  let fieldProps: BaseFieldProps | TextFieldProps | NumberFieldProps | IntegerFieldProps | SelectFieldProps | MultiSelectFieldProps | ArrayFieldProps | DisplayFieldProps = baseProps;
 
   if (fieldType === "number") {
     const constraints = getNumberConstraints(schemaProperty);
@@ -172,7 +184,7 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
       onChange: baseProps.onChange as (value: string[]) => void,
       options: visibleOptions,
     } as MultiSelectFieldProps;
-  } else if (fieldType === "array" && fieldDef.itemFields) {
+  } else if (fieldType === "array" && fieldDef.type === "array" && fieldDef.itemFields) {
     const arrayValue = (baseProps.value as unknown[] | undefined) ?? [];
     const minItems = fieldDef.minItems ?? 0;
     const maxItems = fieldDef.maxItems ?? Infinity;
@@ -223,6 +235,7 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
           placeholder: itemFieldDef?.placeholder,
           visible: true,
           enabled: !disabled,
+          readonly: forma.readonly[itemPath] ?? false,
           required: itemFieldDef?.requiredWhen === "true",
           touched: forma.touched[itemPath] ?? false,
           errors: forma.errors.filter((e) => e.field === itemPath),
@@ -253,6 +266,18 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
       minItems,
       maxItems,
     } as ArrayFieldProps;
+  } else if (fieldType === "display" && fieldDef.type === "display") {
+    // Display fields (read-only presentation content)
+    const sourceValue = fieldDef.source ? forma.data[fieldDef.source] ?? forma.computed[fieldDef.source] : undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { onChange: _onChange, value: _value, ...displayBaseProps } = baseProps;
+    fieldProps = {
+      ...displayBaseProps,
+      fieldType: "display",
+      content: fieldDef.content,
+      sourceValue,
+      format: fieldDef.format,
+    } as DisplayFieldProps;
   } else {
     // Text-based fields
     fieldProps = {

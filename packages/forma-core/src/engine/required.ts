@@ -69,7 +69,7 @@ export function getRequired(
 
   // Also check array item fields
   for (const [fieldPath, fieldDef] of Object.entries(spec.fields)) {
-    if (fieldDef.itemFields) {
+    if (fieldDef.type === "array" && fieldDef.itemFields) {
       const arrayData = data[fieldPath];
       if (Array.isArray(arrayData)) {
         for (let i = 0; i < arrayData.length; i++) {

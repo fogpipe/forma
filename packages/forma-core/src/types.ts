@@ -3,6 +3,16 @@
  *
  * This module defines the complete type system for Forma specifications.
  * All conditional logic uses FEEL (Friendly Enough Expression Language).
+ *
+ * FieldDefinition is a discriminated union on the required `type` property,
+ * grouped by shared capabilities:
+ * - AdornableFieldDefinition: text-like and numeric inputs with prefix/suffix
+ * - SelectionFieldDefinition: select/multiselect with options
+ * - SimpleFieldDefinition: boolean, date, datetime (no type-specific props)
+ * - ArrayFieldDefinition: array with itemFields, minItems, maxItems
+ * - ObjectFieldDefinition: nested object grouping
+ * - DisplayFieldDefinition: presentation content and computed output (no data)
+ * - ComputedFieldDefinition: computed field reference in fields map
  */
 
 // ============================================================================
@@ -125,7 +135,8 @@ export type FieldType =
   | "textarea"
   | "array"
   | "object"
-  | "computed";
+  | "computed"
+  | "display";
 
 /**
  * Validation rule with FEEL expression
@@ -150,18 +161,27 @@ export interface SelectOption {
   visibleWhen?: FEELExpression;
 }
 
+// ============================================================================
+// Field Definition - Discriminated Union
+// ============================================================================
+
 /**
- * Field definition with all conditional logic
+ * Base properties shared by all field types.
+ *
+ * Note: Display fields technically inherit all base properties including
+ * conditional logic (enabledWhen, requiredWhen, etc.), but these properties
+ * are semantically meaningless on display fields and should not be set.
+ * Runtime validation (Zod layer) enforces this constraint.
  */
-export interface FieldDefinition {
-  /** Display label for the field */
+export interface FieldDefinitionBase {
+  /** Field type - REQUIRED, used as discriminant for the union */
+  type: FieldType;
+  /** Display label */
   label?: string;
   /** Help text or description */
   description?: string;
   /** Placeholder text for input fields */
   placeholder?: string;
-  /** Field type override (inferred from schema if not provided) */
-  type?: FieldType;
 
   // Conditional logic (all FEEL expressions)
 
@@ -171,26 +191,165 @@ export interface FieldDefinition {
   requiredWhen?: FEELExpression;
   /** When this field is editable. If omitted, always enabled. */
   enabledWhen?: FEELExpression;
+  /** When this field is read-only (visible, not editable, value still submitted). */
+  readonlyWhen?: FEELExpression;
 
   // Validation rules (in addition to JSON Schema validation)
 
   /** Custom validation rules using FEEL expressions */
   validations?: ValidationRule[];
 
-  // Array-specific properties
+  // Presentation
 
-  /** For array fields: field definitions for each item. Requires type: "array" */
+  /** Presentation variant hint (e.g., "slider", "radio", "nps", "metric") */
+  variant?: string;
+  /** Variant-specific configuration */
+  variantConfig?: Record<string, unknown>;
+}
+
+/**
+ * Text-like and numeric input fields that support prefix/suffix adorners.
+ *
+ * Adorners are cross-variant: a "$" prefix applies to input, stepper,
+ * and slider variants alike. That's why they're top-level properties
+ * rather than inside variantConfig.
+ */
+export interface AdornableFieldDefinition extends FieldDefinitionBase {
+  type: "text" | "email" | "url" | "password" | "textarea"
+     | "number" | "integer";
+  /** Text/symbol displayed before input (e.g., "$", "https://") */
+  prefix?: string;
+  /** Text/symbol displayed after input (e.g., "USD", "kg", "%") */
+  suffix?: string;
+}
+
+/**
+ * Selection fields that have options.
+ */
+export interface SelectionFieldDefinition extends FieldDefinitionBase {
+  type: "select" | "multiselect";
+  /** Available options for selection */
+  options?: SelectOption[];
+}
+
+/**
+ * Simple fields with no type-specific properties beyond the base.
+ */
+export interface SimpleFieldDefinition extends FieldDefinitionBase {
+  type: "boolean" | "date" | "datetime";
+}
+
+/**
+ * Array fields with item field definitions and count constraints.
+ */
+export interface ArrayFieldDefinition extends FieldDefinitionBase {
+  type: "array";
+  /** Field definitions for each array item. Use `item.fieldName` in FEEL. */
   itemFields?: Record<string, FieldDefinition>;
   /** Minimum number of items (overrides schema) */
   minItems?: number;
   /** Maximum number of items (overrides schema) */
   maxItems?: number;
-
-  // Select field options
-
-  /** For select fields: available options */
-  options?: SelectOption[];
 }
+
+/**
+ * Object fields (nested grouping).
+ */
+export interface ObjectFieldDefinition extends FieldDefinitionBase {
+  type: "object";
+}
+
+/**
+ * Display-only fields for presentation content and computed output.
+ * Collect no data - excluded from JSON Schema, validation, and submission.
+ *
+ * Although display fields inherit all base properties, conditional logic
+ * properties (readonlyWhen, requiredWhen, enabledWhen, validations, placeholder)
+ * are semantically meaningless on display fields. Only visibleWhen is meaningful
+ * (to conditionally show/hide display content). The Zod validation layer
+ * enforces this constraint at runtime.
+ */
+export interface DisplayFieldDefinition extends FieldDefinitionBase {
+  type: "display";
+  /** Static content (plain text or markdown). For text, heading, alert, callout. */
+  content?: string;
+  /** Data source for dynamic display (e.g., "computed.totalPrice"). For metric, alert, summary. */
+  source?: string;
+  /** Display format (e.g., "currency", "percent", "decimal(2)", or template "{value} Nm") */
+  format?: string;
+}
+
+/**
+ * Computed fields (read-only calculated values).
+ * Note: Computed field definitions live in Forma.computed, not Forma.fields.
+ * This type exists for completeness if computed fields appear in the fields map.
+ */
+export interface ComputedFieldDefinition extends FieldDefinitionBase {
+  type: "computed";
+}
+
+/**
+ * Field definition - discriminated union on `type`.
+ *
+ * Use type narrowing to access type-specific properties:
+ *
+ * @example
+ * if (field.type === "number") {
+ *   field.prefix;  // string | undefined
+ * }
+ * if (field.type === "display") {
+ *   field.content; // string | undefined
+ * }
+ * if (field.type === "select") {
+ *   field.options; // SelectOption[] | undefined
+ * }
+ */
+export type FieldDefinition =
+  | AdornableFieldDefinition
+  | SelectionFieldDefinition
+  | SimpleFieldDefinition
+  | ArrayFieldDefinition
+  | ObjectFieldDefinition
+  | DisplayFieldDefinition
+  | ComputedFieldDefinition;
+
+// ============================================================================
+// Type Guards
+// ============================================================================
+
+/** Adornable field types that support prefix/suffix */
+const ADORNABLE_TYPES: ReadonlySet<FieldType> = new Set([
+  "text", "email", "url", "password", "textarea", "number", "integer",
+]);
+
+/** Check if field supports prefix/suffix adorners */
+export function isAdornableField(field: FieldDefinition): field is AdornableFieldDefinition {
+  return ADORNABLE_TYPES.has(field.type);
+}
+
+/** Check if field is a display-only field (no data) */
+export function isDisplayField(field: FieldDefinition): field is DisplayFieldDefinition {
+  return field.type === "display";
+}
+
+/** Check if field is a selection field (has options) */
+export function isSelectionField(field: FieldDefinition): field is SelectionFieldDefinition {
+  return field.type === "select" || field.type === "multiselect";
+}
+
+/** Check if field is an array field */
+export function isArrayField(field: FieldDefinition): field is ArrayFieldDefinition {
+  return field.type === "array";
+}
+
+/** Check if field collects data (not display) */
+export function isDataField(field: FieldDefinition): boolean {
+  return field.type !== "display";
+}
+
+// ============================================================================
+// Computed Fields
+// ============================================================================
 
 /**
  * Computed field definition - derived values from form data
@@ -205,6 +364,10 @@ export interface ComputedField {
   /** Whether to display this value in the form */
   display?: boolean;
 }
+
+// ============================================================================
+// Page / Form Structure
+// ============================================================================
 
 /**
  * Page definition for multi-step wizard forms
@@ -321,6 +484,13 @@ export interface EnabledResult {
 }
 
 /**
+ * Readonly fields result - map of field path to readonly state
+ */
+export interface ReadonlyResult {
+  [fieldPath: string]: boolean;
+}
+
+/**
  * Field validation error
  */
 export interface FieldError {
@@ -363,4 +533,3 @@ export interface CalculationResult {
   /** Errors encountered during calculation */
   errors: CalculationError[];
 }
-

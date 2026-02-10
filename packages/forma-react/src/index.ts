@@ -79,6 +79,8 @@ export type {
   ArrayComponentProps,
   ObjectComponentProps,
   ComputedComponentProps,
+  DisplayFieldProps,
+  DisplayComponentProps,
   ComponentMap,
 
   // Form state

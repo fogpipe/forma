@@ -7,11 +7,13 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { Forma, FieldError, ValidationResult, SelectOption } from "@fogpipe/forma-core";
+import { isAdornableField } from "@fogpipe/forma-core";
 import type { GetFieldPropsResult, GetSelectFieldPropsResult, GetArrayHelpersResult } from "./types.js";
 import {
   getVisibility,
   getRequired,
   getEnabled,
+  getReadonly,
   validate,
   calculate,
   getPageVisibility,
@@ -110,6 +112,8 @@ export interface UseFormaReturn {
   required: Record<string, boolean>;
   /** Field enabled state map */
   enabled: Record<string, boolean>;
+  /** Field readonly state map */
+  readonly: Record<string, boolean>;
   /** Visible options for select/multiselect fields, keyed by field path */
   optionsVisibility: OptionsVisibilityResult;
   /** Field touched state map */
@@ -269,6 +273,12 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   // Calculate enabled state
   const enabled = useMemo(
     () => getEnabled(state.data, spec, { computed }),
+    [state.data, spec, computed]
+  );
+
+  // Calculate readonly state
+  const readonly = useMemo(
+    () => getReadonly(state.data, spec, { computed }),
     [state.data, spec, computed]
   );
 
@@ -543,7 +553,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     // Also include array item field patterns
     for (const fieldId of spec.fieldOrder) {
       const fieldDef = spec.fields[fieldId];
-      if (fieldDef?.itemFields) {
+      if (fieldDef?.type === "array" && fieldDef.itemFields) {
         for (const key of fieldHandlers.current.keys()) {
           if (key.startsWith(`${fieldId}[`)) {
             validFields.add(key);
@@ -610,6 +620,11 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     const hasValidationRules = (fieldDef?.validations?.length ?? 0) > 0;
     const showRequiredIndicator = isRequired && (!isBooleanField || hasValidationRules);
 
+    // Pass through adorner props for adornable field types
+    const adornerProps = fieldDef && isAdornableField(fieldDef)
+      ? { prefix: fieldDef.prefix, suffix: fieldDef.suffix }
+      : {};
+
     return {
       name: path,
       value: getValueAtPath(path),
@@ -619,6 +634,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       placeholder: fieldDef?.placeholder,
       visible: visibility[path] !== false,
       enabled: enabled[path] !== false,
+      readonly: readonly[path] ?? false,
       required: isRequired,
       showRequiredIndicator,
       touched: isTouched,
@@ -629,8 +645,13 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       "aria-invalid": hasErrors || undefined,
       "aria-describedby": hasErrors ? `${path}-error` : undefined,
       "aria-required": isRequired || undefined,
+      // Adorner props (only for adornable field types)
+      ...adornerProps,
+      // Presentation variant
+      variant: fieldDef?.variant,
+      variantConfig: fieldDef?.variantConfig,
     };
-  }, [spec, state.touched, state.isSubmitted, visibility, enabled, required, validation.errors, validateOn, getValueAtPath, getFieldHandlers]);
+  }, [spec, state.touched, state.isSubmitted, visibility, enabled, readonly, required, validation.errors, validateOn, getValueAtPath, getFieldHandlers]);
 
   // Get select field props - uses pre-computed optionsVisibility map
   const getSelectFieldProps = useCallback((path: string): GetSelectFieldPropsResult => {
@@ -649,15 +670,16 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   const getArrayHelpers = useCallback((path: string): GetArrayHelpersResult => {
     const fieldDef = spec.fields[path];
     const currentValue = (getValueAtPath(path) as unknown[]) ?? [];
-    const minItems = fieldDef?.minItems ?? 0;
-    const maxItems = fieldDef?.maxItems ?? Infinity;
+    const arrayDef = fieldDef?.type === "array" ? fieldDef : undefined;
+    const minItems = arrayDef?.minItems ?? 0;
+    const maxItems = arrayDef?.maxItems ?? Infinity;
 
     const canAdd = currentValue.length < maxItems;
     const canRemove = currentValue.length > minItems;
 
     const getItemFieldProps = (index: number, fieldName: string): GetFieldPropsResult => {
       const itemPath = `${path}[${index}].${fieldName}`;
-      const itemFieldDef = fieldDef?.itemFields?.[fieldName];
+      const itemFieldDef = arrayDef?.itemFields?.[fieldName];
       const handlers = getFieldHandlers(itemPath);
 
       // Get item value
@@ -680,6 +702,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
         placeholder: itemFieldDef?.placeholder,
         visible: true,
         enabled: enabled[path] !== false,
+        readonly: readonly[itemPath] ?? false,
         required: false, // TODO: Evaluate item field required
         showRequiredIndicator: false, // Item fields don't show required indicator
         touched: isTouched,
@@ -728,7 +751,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       canAdd,
       canRemove,
     };
-  }, [spec.fields, getValueAtPath, setValueAtPath, getFieldHandlers, enabled, state.touched, state.isSubmitted, validation.errors, validateOn, optionsVisibility]);
+  }, [spec.fields, getValueAtPath, setValueAtPath, getFieldHandlers, enabled, readonly, state.touched, state.isSubmitted, validation.errors, validateOn, optionsVisibility]);
 
   return {
     data: state.data,
@@ -736,6 +759,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     visibility,
     required,
     enabled,
+    readonly,
     optionsVisibility,
     touched: state.touched,
     errors: validation.errors,

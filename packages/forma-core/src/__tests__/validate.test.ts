@@ -589,6 +589,7 @@ describe("validate", () => {
               type: "array",
               itemFields: {
                 quantity: {
+                  type: "number",
                   label: "Quantity",
                   validations: [
                     { rule: "value <= 100", message: "Cannot order more than 100 items" },

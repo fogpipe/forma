@@ -1,17 +1,21 @@
 /**
- * Enabled Fields Engine
+ * Readonly Fields Engine
  *
- * Determines which fields are currently enabled (editable) based on
- * conditional enabledWhen expressions.
+ * Determines which fields are currently read-only based on
+ * conditional readonlyWhen expressions.
+ *
+ * Readonly vs disabled:
+ * - readonlyWhen: field is visible with normal appearance, not editable, value IS submitted
+ * - enabledWhen: field is greyed out/dimmed, not interactive, value may be excluded
  */
 
 import { evaluateBoolean } from "../feel/index.js";
 import type {
   Forma,
   FieldDefinition,
-  EvaluationContext,
-  EnabledResult,
   ArrayFieldDefinition,
+  EvaluationContext,
+  ReadonlyResult,
 } from "../types.js";
 import { calculate } from "./calculate.js";
 
@@ -19,7 +23,7 @@ import { calculate } from "./calculate.js";
 // Types
 // ============================================================================
 
-export interface EnabledOptions {
+export interface ReadonlyOptions {
   /** Pre-calculated computed values */
   computed?: Record<string, unknown>;
 }
@@ -29,28 +33,28 @@ export interface EnabledOptions {
 // ============================================================================
 
 /**
- * Determine which fields are currently enabled (editable)
+ * Determine which fields are currently read-only
  *
- * Returns a map of field paths to boolean enabled states.
- * Fields without enabledWhen expressions are always enabled.
+ * Returns a map of field paths to boolean readonly states.
+ * Fields without readonlyWhen expressions are never readonly.
  *
  * @param data - Current form data
  * @param spec - Form specification
  * @param options - Optional pre-calculated computed values
- * @returns Map of field paths to enabled states
+ * @returns Map of field paths to readonly states
  *
  * @example
- * const enabled = getEnabled(
- *   { isLocked: true },
+ * const readonly = getReadonly(
+ *   { status: "submitted" },
  *   forma
  * );
- * // => { isLocked: true, lockedField: false, ... }
+ * // => { status: false, policyNumber: true, ... }
  */
-export function getEnabled(
+export function getReadonly(
   data: Record<string, unknown>,
   spec: Forma,
-  options: EnabledOptions = {}
-): EnabledResult {
+  options: ReadonlyOptions = {}
+): ReadonlyResult {
   const computed = options.computed ?? calculate(data, spec);
   const context: EvaluationContext = {
     data,
@@ -58,13 +62,13 @@ export function getEnabled(
     referenceData: spec.referenceData,
   };
 
-  const result: EnabledResult = {};
+  const result: ReadonlyResult = {};
 
-  // Evaluate each field's enabled status
+  // Evaluate each field's readonly status
   for (const fieldPath of spec.fieldOrder) {
     const fieldDef = spec.fields[fieldPath];
     if (fieldDef) {
-      result[fieldPath] = isFieldEnabled(fieldDef, context);
+      result[fieldPath] = isFieldReadonly(fieldDef, context);
     }
   }
 
@@ -73,7 +77,7 @@ export function getEnabled(
     if (fieldDef.type === "array" && fieldDef.itemFields) {
       const arrayData = data[fieldPath];
       if (Array.isArray(arrayData)) {
-        evaluateArrayItemEnabled(fieldPath, fieldDef, arrayData, data, computed, spec, result);
+        evaluateArrayItemReadonly(fieldPath, fieldDef, arrayData, data, computed, spec, result);
       }
     }
   }
@@ -82,36 +86,36 @@ export function getEnabled(
 }
 
 // ============================================================================
-// Field Enabled Check
+// Field Readonly Check
 // ============================================================================
 
 /**
- * Check if a field is enabled based on its definition
+ * Check if a field is readonly based on its definition
  */
-function isFieldEnabled(
+function isFieldReadonly(
   fieldDef: FieldDefinition,
   context: EvaluationContext
 ): boolean {
-  // If field has enabledWhen, evaluate it
-  if (fieldDef.enabledWhen) {
-    return evaluateBoolean(fieldDef.enabledWhen, context);
+  // If field has readonlyWhen, evaluate it
+  if (fieldDef.readonlyWhen) {
+    return evaluateBoolean(fieldDef.readonlyWhen, context);
   }
 
-  // No condition = always enabled
-  return true;
+  // No condition = never readonly
+  return false;
 }
 
 /**
- * Evaluate enabled state for array item fields
+ * Evaluate readonly state for array item fields
  */
-function evaluateArrayItemEnabled(
+function evaluateArrayItemReadonly(
   arrayPath: string,
   fieldDef: ArrayFieldDefinition,
   arrayData: unknown[],
   data: Record<string, unknown>,
   computed: Record<string, unknown>,
   spec: Forma,
-  result: EnabledResult
+  result: ReadonlyResult
 ): void {
   if (!fieldDef.itemFields) return;
 
@@ -127,31 +131,31 @@ function evaluateArrayItemEnabled(
 
     for (const [itemFieldName, itemFieldDef] of Object.entries(fieldDef.itemFields)) {
       const itemFieldPath = `${arrayPath}[${i}].${itemFieldName}`;
-      result[itemFieldPath] = isFieldEnabled(itemFieldDef, itemContext);
+      result[itemFieldPath] = isFieldReadonly(itemFieldDef, itemContext);
     }
   }
 }
 
 /**
- * Check if a single field is currently enabled
+ * Check if a single field is currently readonly
  *
  * @param fieldPath - Path to the field
  * @param data - Current form data
  * @param spec - Form specification
- * @returns True if the field is enabled
+ * @returns True if the field is readonly
  */
-export function isEnabled(
+export function isReadonly(
   fieldPath: string,
   data: Record<string, unknown>,
   spec: Forma
 ): boolean {
   const fieldDef = spec.fields[fieldPath];
   if (!fieldDef) {
-    return true; // Unknown fields are enabled by default
+    return false; // Unknown fields are not readonly by default
   }
 
-  if (!fieldDef.enabledWhen) {
-    return true; // No condition = always enabled
+  if (!fieldDef.readonlyWhen) {
+    return false; // No condition = never readonly
   }
 
   const computed = calculate(data, spec);
@@ -161,5 +165,5 @@ export function isEnabled(
     referenceData: spec.referenceData,
   };
 
-  return evaluateBoolean(fieldDef.enabledWhen, context);
+  return evaluateBoolean(fieldDef.readonlyWhen, context);
 }

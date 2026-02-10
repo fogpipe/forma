@@ -20,11 +20,19 @@ export type {
   JSONSchemaArray,
   JSONSchemaObject,
   JSONSchemaEnum,
-  // Field types
+  // Field types - base and groups
   FieldType,
+  FieldDefinitionBase,
+  AdornableFieldDefinition,
+  SelectionFieldDefinition,
+  SimpleFieldDefinition,
+  ArrayFieldDefinition,
+  ObjectFieldDefinition,
+  DisplayFieldDefinition,
+  ComputedFieldDefinition,
+  FieldDefinition,
   ValidationRule,
   SelectOption,
-  FieldDefinition,
   ComputedField,
   PageDefinition,
   FormMeta,
@@ -36,10 +44,20 @@ export type {
   RequiredResult,
   RequiredFieldsResult,
   EnabledResult,
+  ReadonlyResult,
   FieldError,
   ValidationResult,
   CalculationError,
   CalculationResult,
+} from "./types.js";
+
+// Type guards (runtime exports)
+export {
+  isAdornableField,
+  isDisplayField,
+  isSelectionField,
+  isArrayField,
+  isDataField,
 } from "./types.js";
 
 // FEEL expression evaluation

@@ -31,12 +31,22 @@ export interface BaseFieldProps {
   visible: boolean;
   /** Whether field is enabled (inverse of disabled) */
   enabled: boolean;
+  /** Whether field is readonly (visible, not editable, value still submitted) */
+  readonly: boolean;
   /** Display label from field definition */
   label: string;
   /** Help text or description from field definition */
   description?: string;
   /** Placeholder text from field definition */
   placeholder?: string;
+  /** Prefix adorner text (e.g., "$") - only for adornable field types */
+  prefix?: string;
+  /** Suffix adorner text (e.g., "kg") - only for adornable field types */
+  suffix?: string;
+  /** Presentation variant hint (e.g., "slider", "radio", "nps") */
+  variant?: string;
+  /** Variant-specific configuration */
+  variantConfig?: Record<string, unknown>;
 }
 
 /**
@@ -240,6 +250,22 @@ export interface ArrayItemFieldProps extends Omit<BaseFieldProps, "value" | "onC
 }
 
 /**
+ * Props for display fields (read-only presentation content)
+ */
+export interface DisplayFieldProps extends Omit<BaseFieldProps, "value" | "onChange"> {
+  fieldType: "display";
+  /** Static content (markdown/text) */
+  content?: string;
+  /** Computed source value (resolved by useForma from display field's source property) */
+  sourceValue?: unknown;
+  /** Display format string */
+  format?: string;
+  /** No onChange - display fields are read-only */
+  onChange?: never;
+  value?: never;
+}
+
+/**
  * Union of all field prop types
  */
 export type FieldProps =
@@ -253,7 +279,8 @@ export type FieldProps =
   | MultiSelectFieldProps
   | ArrayFieldProps
   | ObjectFieldProps
-  | ComputedFieldProps;
+  | ComputedFieldProps
+  | DisplayFieldProps;
 
 /**
  * Map of field types to React components
@@ -275,6 +302,7 @@ export interface ComponentMap {
   array?: React.ComponentType<ArrayComponentProps>;
   object?: React.ComponentType<ObjectComponentProps>;
   computed?: React.ComponentType<ComputedComponentProps>;
+  display?: React.ComponentType<DisplayComponentProps>;
   fallback?: React.ComponentType<FieldComponentProps>;
 }
 
@@ -382,6 +410,11 @@ export interface ComputedComponentProps {
   spec: Forma;
 }
 
+export interface DisplayComponentProps {
+  field: DisplayFieldProps;
+  spec: Forma;
+}
+
 /**
  * Generic field component props (for fallback/dynamic components)
  */
@@ -427,6 +460,8 @@ export interface GetFieldPropsResult {
   visible: boolean;
   /** Whether field is enabled (not disabled) */
   enabled: boolean;
+  /** Whether field is readonly (visible, not editable, value still submitted) */
+  readonly: boolean;
   /** Whether field is required (for validation) */
   required: boolean;
   /**
@@ -451,6 +486,14 @@ export interface GetFieldPropsResult {
   "aria-required"?: boolean;
   /** Options for select/multiselect fields (filtered by visibleWhen) */
   options?: SelectOption[];
+  /** Prefix adorner text (e.g., "$") */
+  prefix?: string;
+  /** Suffix adorner text (e.g., "kg") */
+  suffix?: string;
+  /** Presentation variant hint */
+  variant?: string;
+  /** Variant-specific configuration */
+  variantConfig?: Record<string, unknown>;
 }
 
 /**

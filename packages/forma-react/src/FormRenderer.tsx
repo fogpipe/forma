@@ -7,9 +7,10 @@
 
 import React, { forwardRef, useImperativeHandle, useRef, useMemo, useCallback } from "react";
 import type { Forma, FieldDefinition, ValidationResult, JSONSchemaProperty, SelectOption } from "@fogpipe/forma-core";
+import { isAdornableField, isSelectionField } from "@fogpipe/forma-core";
 import { useForma } from "./useForma.js";
 import { FormaContext } from "./context.js";
-import type { ComponentMap, LayoutProps, FieldWrapperProps, PageWrapperProps, BaseFieldProps, TextFieldProps, NumberFieldProps, SelectFieldProps, ArrayFieldProps, ArrayHelpers } from "./types.js";
+import type { ComponentMap, LayoutProps, FieldWrapperProps, PageWrapperProps, BaseFieldProps, TextFieldProps, NumberFieldProps, SelectFieldProps, ArrayFieldProps, ArrayHelpers, DisplayFieldProps } from "./types.js";
 
 /**
  * Props for FormRenderer component
@@ -247,8 +248,8 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       const isVisible = forma.visibility[fieldPath] !== false;
       if (!isVisible) return null;
 
-      // Infer field type
-      const fieldType = fieldDef.type || (fieldDef.itemFields ? "array" : "text");
+      // Get field type (type is required on all field definitions)
+      const fieldType = fieldDef.type;
       const componentKey = fieldType as keyof ComponentMap;
       const Component = components[componentKey] || components.fallback;
 
@@ -273,6 +274,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       const showRequiredIndicator = required && (!isBooleanField || hasValidationRules);
 
       // Base field props
+      const isReadonly = forma.readonly[fieldPath] ?? false;
       const baseProps: BaseFieldProps = {
         name: fieldPath,
         field: fieldDef,
@@ -286,13 +288,22 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
         // Convenience properties
         visible: true, // Always true since we already filtered for visibility
         enabled: !disabled,
+        readonly: isReadonly,
         label: fieldDef.label ?? fieldPath,
         description: fieldDef.description,
         placeholder: fieldDef.placeholder,
+        // Adorner properties (only for adornable field types)
+        ...(isAdornableField(fieldDef) && {
+          prefix: fieldDef.prefix,
+          suffix: fieldDef.suffix,
+        }),
+        // Presentation variant
+        variant: fieldDef.variant,
+        variantConfig: fieldDef.variantConfig,
       };
 
       // Build type-specific props
-      let fieldProps: BaseFieldProps | TextFieldProps | NumberFieldProps | SelectFieldProps | ArrayFieldProps = baseProps;
+      let fieldProps: BaseFieldProps | TextFieldProps | NumberFieldProps | SelectFieldProps | ArrayFieldProps | DisplayFieldProps = baseProps;
 
       if (fieldType === "number" || fieldType === "integer") {
         const constraints = getNumberConstraints(schemaProperty);
@@ -304,14 +315,15 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
           ...constraints,
         } as NumberFieldProps;
       } else if (fieldType === "select" || fieldType === "multiselect") {
+        const selectOptions = isSelectionField(fieldDef) ? fieldDef.options : [];
         fieldProps = {
           ...baseProps,
           fieldType,
           value: baseProps.value as string | string[] | null,
           onChange: baseProps.onChange as (value: string | string[] | null) => void,
-          options: forma.optionsVisibility[fieldPath] ?? fieldDef.options ?? [],
+          options: forma.optionsVisibility[fieldPath] ?? selectOptions ?? [],
         } as SelectFieldProps;
-      } else if (fieldType === "array" && fieldDef.itemFields) {
+      } else if (fieldType === "array" && fieldDef.type === "array" && fieldDef.itemFields) {
         const arrayValue = Array.isArray(baseProps.value) ? baseProps.value : [];
         const minItems = fieldDef.minItems ?? 0;
         const maxItems = fieldDef.maxItems ?? Infinity;
@@ -335,7 +347,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
             ...baseProps,
             itemIndex: index,
             fieldName,
-            options: (forma.optionsVisibility[itemPath] as SelectOption[] | undefined) ?? itemFieldDef?.options,
+            options: (forma.optionsVisibility[itemPath] as SelectOption[] | undefined) ?? (itemFieldDef && isSelectionField(itemFieldDef) ? itemFieldDef.options : undefined),
           };
         };
 
@@ -362,6 +374,19 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
           minItems,
           maxItems,
         } as ArrayFieldProps;
+      } else if (fieldType === "display" && fieldDef.type === "display") {
+        // Display fields (read-only presentation content)
+        // Resolve source value if the display field has a source property
+        const sourceValue = fieldDef.source ? forma.data[fieldDef.source] ?? forma.computed[fieldDef.source] : undefined;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { onChange: _onChange, value: _value, ...displayBaseProps } = baseProps;
+        fieldProps = {
+          ...displayBaseProps,
+          fieldType: "display",
+          content: fieldDef.content,
+          sourceValue,
+          format: fieldDef.format,
+        } as DisplayFieldProps;
       } else {
         // Text-based fields
         fieldProps = {

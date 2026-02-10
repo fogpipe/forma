@@ -12,6 +12,7 @@ import { evaluateBoolean } from "../feel/index.js";
 import type {
   Forma,
   FieldDefinition,
+  ArrayFieldDefinition,
   ValidationRule,
   EvaluationContext,
   ValidationResult,
@@ -95,6 +96,11 @@ export function validate(
       continue;
     }
 
+    // Skip display fields - they collect no data and need no validation
+    if (fieldDef.type === "display") {
+      continue;
+    }
+
     // Get schema property for type validation
     const schemaProperty = spec.schema.properties[fieldPath];
 
@@ -173,7 +179,7 @@ function validateField(
   }
 
   // 4. Array validation
-  if (Array.isArray(value)) {
+  if (Array.isArray(value) && fieldDef.type === "array") {
     const arrayErrors = validateArray(
       path,
       value,
@@ -212,7 +218,7 @@ function validateType(
   path: string,
   value: unknown,
   schema: JSONSchemaProperty,
-  fieldDef: FieldDefinition
+  fieldDef: { label?: string }
 ): FieldError | null {
   const label = fieldDef.label ?? path;
 
@@ -514,7 +520,7 @@ function validateCustomRules(
 function validateArray(
   path: string,
   value: unknown[],
-  fieldDef: FieldDefinition,
+  fieldDef: ArrayFieldDefinition,
   schemaProperty: JSONSchemaProperty | undefined,
   spec: Forma,
   data: Record<string, unknown>,
