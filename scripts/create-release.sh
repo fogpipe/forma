@@ -52,6 +52,10 @@ npm version "${NPM_VERSION}" --no-git-tag-version --allow-same-version
 npm pkg set "dependencies.@fogpipe/forma-core=^${NPM_VERSION}"
 cd ../..
 
+# Step 3b: Regenerate package-lock.json so workspace resolution stays correct
+echo "Regenerating package-lock.json..."
+npm install --package-lock-only
+
 # Step 4: Commit version bump and create tag
 echo "Committing version bump..."
 git add package.json package-lock.json packages/forma-core/package.json packages/forma-react/package.json
