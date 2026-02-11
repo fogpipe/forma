@@ -1,6 +1,6 @@
 {
   "name": "@fogpipe/forma-core",
-  "version": "0.12.0-alpha.1",
+  "version": "0.12.0-alpha.2",
   "description": "Forma core runtime: Types and evaluation engines for dynamic forms with FEEL expressions",
   "type": "module",
   "main": "./dist/index.js",
