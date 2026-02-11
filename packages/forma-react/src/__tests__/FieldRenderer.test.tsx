@@ -8,11 +8,13 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import { userEvent } from "@testing-library/user-event";
 import { FormRenderer } from "../FormRenderer.js";
-import { createTestComponentMap } from "./test-utils.js";
+import { FieldRenderer } from "../FieldRenderer.js";
+import { createTestSpec, createTestComponentMap } from "./test-utils.js";
 import type { Forma, JSONSchemaNumber, JSONSchemaInteger } from "@fogpipe/forma-core";
-import type { ComponentMap, NumberComponentProps, IntegerComponentProps } from "../types.js";
+import type { ComponentMap, LayoutProps, NumberComponentProps, IntegerComponentProps } from "../types.js";
 
 /**
  * Create a minimal Forma spec for testing numeric fields
@@ -361,6 +363,91 @@ describe("FieldRenderer", () => {
         expect(capturedProps!.min).toBe(0);
         expect(capturedProps!.max).toBe(5);
         expect(capturedProps!.step).toBe(0.5);
+      });
+    });
+  });
+
+  // ============================================================================
+  // FieldRenderer Visibility Wrapper Stability
+  // ============================================================================
+
+  describe("visibility wrapper stability (FieldRenderer)", () => {
+    /**
+     * FieldRenderer needs FormaContext, so we render it inside FormRenderer
+     * with a custom layout that uses FieldRenderer directly.
+     */
+    function createFieldRendererLayout(fieldPath: string) {
+      return function FieldRendererLayout({ children, onSubmit }: LayoutProps) {
+        return (
+          <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+            {children}
+            <FieldRenderer fieldPath={fieldPath} components={createTestComponentMap()} />
+          </form>
+        );
+      };
+    }
+
+    it("should render a hidden wrapper div when field is invisible", () => {
+      const spec = createTestSpec({
+        fields: {
+          toggle: { type: "boolean", label: "Toggle" },
+          details: {
+            type: "text",
+            label: "Details",
+            visibleWhen: "toggle = true",
+          },
+        },
+      });
+
+      const { container } = render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ toggle: false }}
+          components={createTestComponentMap()}
+          layout={createFieldRendererLayout("details")}
+        />
+      );
+
+      // FieldRenderer should produce a hidden wrapper
+      // Note: FormRenderer also renders its own wrapper, so find all
+      const wrappers = container.querySelectorAll('[data-field-path="details"]');
+      // At least one should have hidden attribute (the FieldRenderer one)
+      const hiddenWrapper = Array.from(wrappers).find(el => el.hasAttribute("hidden"));
+      expect(hiddenWrapper).toBeTruthy();
+      expect(hiddenWrapper!.children).toHaveLength(0);
+    });
+
+    it("should remove hidden attribute when field becomes visible", async () => {
+      const user = userEvent.setup();
+      const spec = createTestSpec({
+        fields: {
+          toggle: { type: "boolean", label: "Toggle" },
+          details: {
+            type: "text",
+            label: "Details",
+            visibleWhen: "toggle = true",
+          },
+        },
+      });
+
+      const { container } = render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ toggle: false }}
+          components={createTestComponentMap()}
+          layout={createFieldRendererLayout("details")}
+        />
+      );
+
+      // Toggle visibility
+      const checkbox = screen.getByRole("checkbox");
+      await user.click(checkbox);
+
+      await waitFor(() => {
+        const wrappers = container.querySelectorAll('[data-field-path="details"]');
+        // The FieldRenderer wrapper should now be visible (no hidden attr)
+        const visibleWrappers = Array.from(wrappers).filter(el => !el.hasAttribute("hidden"));
+        expect(visibleWrappers.length).toBeGreaterThan(0);
       });
     });
   });

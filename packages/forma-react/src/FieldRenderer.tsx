@@ -93,7 +93,9 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
   }
 
   const isVisible = forma.visibility[fieldPath] !== false;
-  if (!isVisible) return null;
+  if (!isVisible) {
+    return <div data-field-path={fieldPath} hidden />;
+  }
 
   // Get field type (type is required on all field definitions)
   const fieldType = fieldDef.type;
@@ -293,8 +295,8 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
   const element = React.createElement(Component as React.ComponentType<typeof componentProps>, componentProps);
 
   if (className) {
-    return <div className={className}>{element}</div>;
+    return <div data-field-path={fieldPath} className={className}>{element}</div>;
   }
 
-  return element;
+  return <div data-field-path={fieldPath}>{element}</div>;
 }

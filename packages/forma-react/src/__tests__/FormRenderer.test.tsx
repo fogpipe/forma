@@ -1153,4 +1153,173 @@ describe("FormRenderer", () => {
       });
     });
   });
+
+  // ============================================================================
+  // Visibility Wrapper Stability
+  // ============================================================================
+
+  describe("visibility wrapper stability", () => {
+    it("should render a hidden wrapper div when field is invisible", () => {
+      const spec = createTestSpec({
+        fields: {
+          toggle: { type: "boolean", label: "Toggle" },
+          details: {
+            type: "text",
+            label: "Details",
+            visibleWhen: "toggle = true",
+          },
+        },
+      });
+
+      const { container } = render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ toggle: false }}
+          components={createTestComponentMap()}
+        />
+      );
+
+      // The wrapper div should exist with hidden attribute
+      const wrapper = container.querySelector('[data-field-path="details"]');
+      expect(wrapper).toBeInTheDocument();
+      expect(wrapper).toHaveAttribute("hidden");
+      // Should have no children (field content not rendered)
+      expect(wrapper!.children).toHaveLength(0);
+    });
+
+    it("should remove hidden attribute when field becomes visible", async () => {
+      const user = userEvent.setup();
+      const spec = createTestSpec({
+        fields: {
+          toggle: { type: "boolean", label: "Toggle" },
+          details: {
+            type: "text",
+            label: "Details",
+            visibleWhen: "toggle = true",
+          },
+        },
+      });
+
+      const { container } = render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ toggle: false }}
+          components={createTestComponentMap()}
+        />
+      );
+
+      // Initially hidden
+      const wrapper = container.querySelector('[data-field-path="details"]');
+      expect(wrapper).toHaveAttribute("hidden");
+
+      // Toggle visibility
+      const checkbox = screen.getByRole("checkbox");
+      await user.click(checkbox);
+
+      // Now visible - wrapper should not have hidden attribute
+      await waitFor(() => {
+        const visibleWrapper = container.querySelector('[data-field-path="details"]');
+        expect(visibleWrapper).toBeInTheDocument();
+        expect(visibleWrapper).not.toHaveAttribute("hidden");
+      });
+    });
+
+    it("should reuse the same DOM node when toggling visibility", async () => {
+      const user = userEvent.setup();
+      const spec = createTestSpec({
+        fields: {
+          toggle: { type: "boolean", label: "Toggle" },
+          details: {
+            type: "text",
+            label: "Details",
+            visibleWhen: "toggle = true",
+          },
+        },
+      });
+
+      const { container } = render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ toggle: false }}
+          components={createTestComponentMap()}
+        />
+      );
+
+      // Get reference to the wrapper DOM node
+      const wrapperBefore = container.querySelector('[data-field-path="details"]');
+      expect(wrapperBefore).toHaveAttribute("hidden");
+
+      // Toggle to visible
+      const checkbox = screen.getByRole("checkbox");
+      await user.click(checkbox);
+
+      await waitFor(() => {
+        const wrapperAfter = container.querySelector('[data-field-path="details"]');
+        expect(wrapperAfter).not.toHaveAttribute("hidden");
+        // Same DOM node should be reused (React reconciliation with same key + element type)
+        expect(wrapperAfter).toBe(wrapperBefore);
+      });
+    });
+
+    it("should not render field content inside hidden wrapper", () => {
+      const spec = createTestSpec({
+        fields: {
+          toggle: { type: "boolean", label: "Toggle" },
+          details: {
+            type: "text",
+            label: "Details",
+            visibleWhen: "toggle = true",
+          },
+        },
+      });
+
+      const { container } = render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ toggle: false }}
+          components={createTestComponentMap()}
+        />
+      );
+
+      const wrapper = container.querySelector('[data-field-path="details"]');
+      expect(wrapper).toHaveAttribute("hidden");
+      // The test component renders data-testid="field-details" - should not exist
+      expect(screen.queryByTestId("field-details")).not.toBeInTheDocument();
+      // Wrapper should be empty
+      expect(wrapper!.innerHTML).toBe("");
+    });
+
+    it("should render field content inside visible wrapper", async () => {
+      const user = userEvent.setup();
+      const spec = createTestSpec({
+        fields: {
+          toggle: { type: "boolean", label: "Toggle" },
+          details: {
+            type: "text",
+            label: "Details",
+            visibleWhen: "toggle = true",
+          },
+        },
+      });
+
+      const { container } = render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ toggle: false }}
+          components={createTestComponentMap()}
+        />
+      );
+
+      // Toggle to visible
+      await user.click(screen.getByRole("checkbox"));
+
+      await waitFor(() => {
+        const wrapper = container.querySelector('[data-field-path="details"]');
+        expect(wrapper).not.toHaveAttribute("hidden");
+        // Field content should be rendered inside
+        expect(wrapper!.children.length).toBeGreaterThan(0);
+        expect(screen.getByTestId("field-details")).toBeInTheDocument();
+      });
+    });
+  });
 });

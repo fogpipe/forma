@@ -225,6 +225,24 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       [forma, focusField, focusFirstError]
     );
 
+    // Destructure only the values renderField needs from forma.
+    // This prevents renderField from recreating when unrelated state changes
+    // (isSubmitting, isDirty, wizard page navigation, etc.)
+    const {
+      data: formaData,
+      computed: formaComputed,
+      visibility: formaVisibility,
+      required: formaRequired,
+      enabled: formaEnabled,
+      readonly: formaReadonly,
+      optionsVisibility: formaOptionsVisibility,
+      touched: formaTouched,
+      errors: formaErrors,
+      setFieldValue,
+      setFieldTouched,
+      getArrayHelpers,
+    } = forma;
+
     // Determine which fields to render based on pages or fieldOrder
     const fieldsToRender = useMemo(() => {
       if (spec.pages && spec.pages.length > 0 && forma.wizard) {
@@ -245,8 +263,10 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       const fieldDef = spec.fields[fieldPath];
       if (!fieldDef) return null;
 
-      const isVisible = forma.visibility[fieldPath] !== false;
-      if (!isVisible) return null;
+      const isVisible = formaVisibility[fieldPath] !== false;
+      if (!isVisible) {
+        return <div key={fieldPath} data-field-path={fieldPath} hidden />;
+      }
 
       // Get field type (type is required on all field definitions)
       const fieldType = fieldDef.type;
@@ -258,10 +278,10 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
         return null;
       }
 
-      const errors = forma.errors.filter((e) => e.field === fieldPath);
-      const touched = forma.touched[fieldPath] ?? false;
-      const required = forma.required[fieldPath] ?? false;
-      const disabled = forma.enabled[fieldPath] === false;
+      const errors = formaErrors.filter((e) => e.field === fieldPath);
+      const touched = formaTouched[fieldPath] ?? false;
+      const required = formaRequired[fieldPath] ?? false;
+      const disabled = formaEnabled[fieldPath] === false;
 
       // Get schema property for additional constraints
       const schemaProperty = spec.schema.properties[fieldPath];
@@ -274,17 +294,17 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       const showRequiredIndicator = required && (!isBooleanField || hasValidationRules);
 
       // Base field props
-      const isReadonly = forma.readonly[fieldPath] ?? false;
+      const isReadonly = formaReadonly[fieldPath] ?? false;
       const baseProps: BaseFieldProps = {
         name: fieldPath,
         field: fieldDef,
-        value: forma.data[fieldPath],
+        value: formaData[fieldPath],
         touched,
         required,
         disabled,
         errors,
-        onChange: (value: unknown) => forma.setFieldValue(fieldPath, value),
-        onBlur: () => forma.setFieldTouched(fieldPath),
+        onChange: (value: unknown) => setFieldValue(fieldPath, value),
+        onBlur: () => setFieldTouched(fieldPath),
         // Convenience properties
         visible: true, // Always true since we already filtered for visibility
         enabled: !disabled,
@@ -321,7 +341,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
           fieldType,
           value: baseProps.value as string | string[] | null,
           onChange: baseProps.onChange as (value: string | string[] | null) => void,
-          options: forma.optionsVisibility[fieldPath] ?? selectOptions ?? [],
+          options: formaOptionsVisibility[fieldPath] ?? selectOptions ?? [],
         } as SelectFieldProps;
       } else if (fieldType === "array" && fieldDef.type === "array" && fieldDef.itemFields) {
         const arrayValue = Array.isArray(baseProps.value) ? baseProps.value : [];
@@ -330,7 +350,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
         const itemFieldDefs = fieldDef.itemFields;
 
         // Get helpers from useForma - these are fresh on each render, avoiding stale closures
-        const baseHelpers = forma.getArrayHelpers(fieldPath);
+        const baseHelpers = getArrayHelpers(fieldPath);
 
         // Wrap push to add default item creation when called without arguments
         const pushWithDefault = (item?: unknown): void => {
@@ -347,7 +367,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
             ...baseProps,
             itemIndex: index,
             fieldName,
-            options: (forma.optionsVisibility[itemPath] as SelectOption[] | undefined) ?? (itemFieldDef && isSelectionField(itemFieldDef) ? itemFieldDef.options : undefined),
+            options: (formaOptionsVisibility[itemPath] as SelectOption[] | undefined) ?? (itemFieldDef && isSelectionField(itemFieldDef) ? itemFieldDef.options : undefined),
           };
         };
 
@@ -377,7 +397,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       } else if (fieldType === "display" && fieldDef.type === "display") {
         // Display fields (read-only presentation content)
         // Resolve source value if the display field has a source property
-        const sourceValue = fieldDef.source ? forma.data[fieldDef.source] ?? forma.computed[fieldDef.source] : undefined;
+        const sourceValue = fieldDef.source ? formaData[fieldDef.source] ?? formaComputed[fieldDef.source] : undefined;
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { onChange: _onChange, value: _value, ...displayBaseProps } = baseProps;
         fieldProps = {
@@ -401,20 +421,27 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       const componentProps = { field: fieldProps, spec };
 
       return (
-        <FieldWrapper
-          key={fieldPath}
-          fieldPath={fieldPath}
-          field={fieldDef}
-          errors={errors}
-          touched={touched}
-          required={required}
-          showRequiredIndicator={showRequiredIndicator}
-          visible={isVisible}
-        >
-          {React.createElement(Component as React.ComponentType<typeof componentProps>, componentProps)}
-        </FieldWrapper>
+        <div key={fieldPath} data-field-path={fieldPath}>
+          <FieldWrapper
+            fieldPath={fieldPath}
+            field={fieldDef}
+            errors={errors}
+            touched={touched}
+            required={required}
+            showRequiredIndicator={showRequiredIndicator}
+            visible={isVisible}
+          >
+            {React.createElement(Component as React.ComponentType<typeof componentProps>, componentProps)}
+          </FieldWrapper>
+        </div>
       );
-    }, [spec, forma, components, FieldWrapper]);
+    }, [
+      spec, components, FieldWrapper,
+      formaData, formaComputed, formaVisibility, formaRequired,
+      formaEnabled, formaReadonly, formaOptionsVisibility,
+      formaTouched, formaErrors,
+      setFieldValue, setFieldTouched, getArrayHelpers,
+    ]);
 
     // Render fields (memoized)
     const renderedFields = useMemo(

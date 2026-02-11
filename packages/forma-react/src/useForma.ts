@@ -753,7 +753,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     };
   }, [spec.fields, getValueAtPath, setValueAtPath, getFieldHandlers, enabled, readonly, state.touched, state.isSubmitted, validation.errors, validateOn, optionsVisibility]);
 
-  return {
+  return useMemo((): UseFormaReturn => ({
     data: state.data,
     computed,
     visibility,
@@ -779,5 +779,13 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     getFieldProps,
     getSelectFieldProps,
     getArrayHelpers,
-  };
+  }), [
+    state.data, state.touched, state.isSubmitting, state.isSubmitted, state.isDirty,
+    computed, visibility, required, enabled, readonly, optionsVisibility,
+    validation.errors, validation.valid,
+    spec, wizard,
+    setFieldValue, setFieldTouched, setValues,
+    validateField, validateForm, submitForm, resetForm,
+    getFieldProps, getSelectFieldProps, getArrayHelpers,
+  ]);
 }
