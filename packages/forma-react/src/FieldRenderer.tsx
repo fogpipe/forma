@@ -6,7 +6,11 @@
  */
 
 import React from "react";
-import type { FieldDefinition, JSONSchemaProperty, SelectOption } from "@fogpipe/forma-core";
+import type {
+  FieldDefinition,
+  JSONSchemaProperty,
+  SelectOption,
+} from "@fogpipe/forma-core";
 import { isAdornableField } from "@fogpipe/forma-core";
 import { useFormaContext } from "./context.js";
 import type {
@@ -37,13 +41,23 @@ export interface FieldRendererProps {
 /**
  * Extract numeric constraints from JSON Schema property
  */
-function getNumberConstraints(schema?: JSONSchemaProperty): { min?: number; max?: number; step?: number } {
+function getNumberConstraints(schema?: JSONSchemaProperty): {
+  min?: number;
+  max?: number;
+  step?: number;
+} {
   if (!schema) return {};
   if (schema.type !== "number" && schema.type !== "integer") return {};
 
   // Extract min/max from schema
-  const min = "minimum" in schema && typeof schema.minimum === "number" ? schema.minimum : undefined;
-  const max = "maximum" in schema && typeof schema.maximum === "number" ? schema.maximum : undefined;
+  const min =
+    "minimum" in schema && typeof schema.minimum === "number"
+      ? schema.minimum
+      : undefined;
+  const max =
+    "maximum" in schema && typeof schema.maximum === "number"
+      ? schema.maximum
+      : undefined;
 
   // Use multipleOf for step if defined, otherwise default to 1 for integers
   let step: number | undefined;
@@ -59,7 +73,9 @@ function getNumberConstraints(schema?: JSONSchemaProperty): { min?: number; max?
 /**
  * Create a default item for an array field based on item field definitions
  */
-function createDefaultItem(itemFields: Record<string, FieldDefinition>): Record<string, unknown> {
+function createDefaultItem(
+  itemFields: Record<string, FieldDefinition>,
+): Record<string, unknown> {
   const item: Record<string, unknown> = {};
   for (const [fieldName, fieldDef] of Object.entries(itemFields)) {
     if (fieldDef.type === "boolean") {
@@ -82,7 +98,11 @@ function createDefaultItem(itemFields: Record<string, FieldDefinition>): Record<
  * <FieldRenderer fieldPath="email" components={componentMap} />
  * ```
  */
-export function FieldRenderer({ fieldPath, components, className }: FieldRendererProps) {
+export function FieldRenderer({
+  fieldPath,
+  components,
+  className,
+}: FieldRendererProps) {
   const forma = useFormaContext();
   const { spec } = forma;
 
@@ -145,7 +165,15 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
   };
 
   // Build type-specific props
-  let fieldProps: BaseFieldProps | TextFieldProps | NumberFieldProps | IntegerFieldProps | SelectFieldProps | MultiSelectFieldProps | ArrayFieldProps | DisplayFieldProps = baseProps;
+  let fieldProps:
+    | BaseFieldProps
+    | TextFieldProps
+    | NumberFieldProps
+    | IntegerFieldProps
+    | SelectFieldProps
+    | MultiSelectFieldProps
+    | ArrayFieldProps
+    | DisplayFieldProps = baseProps;
 
   if (fieldType === "number") {
     const constraints = getNumberConstraints(schemaProperty);
@@ -168,7 +196,8 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
     } as IntegerFieldProps;
   } else if (fieldType === "select") {
     // Use pre-computed visible options from memoized map
-    const visibleOptions = (forma.optionsVisibility[fieldPath] ?? []) as SelectOption[];
+    const visibleOptions = (forma.optionsVisibility[fieldPath] ??
+      []) as SelectOption[];
     fieldProps = {
       ...baseProps,
       fieldType: "select",
@@ -178,7 +207,8 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
     } as SelectFieldProps;
   } else if (fieldType === "multiselect") {
     // Use pre-computed visible options from memoized map
-    const visibleOptions = (forma.optionsVisibility[fieldPath] ?? []) as SelectOption[];
+    const visibleOptions = (forma.optionsVisibility[fieldPath] ??
+      []) as SelectOption[];
     fieldProps = {
       ...baseProps,
       fieldType: "multiselect",
@@ -186,7 +216,11 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
       onChange: baseProps.onChange as (value: string[]) => void,
       options: visibleOptions,
     } as MultiSelectFieldProps;
-  } else if (fieldType === "array" && fieldDef.type === "array" && fieldDef.itemFields) {
+  } else if (
+    fieldType === "array" &&
+    fieldDef.type === "array" &&
+    fieldDef.itemFields
+  ) {
     const arrayValue = (baseProps.value as unknown[] | undefined) ?? [];
     const minItems = fieldDef.minItems ?? 0;
     const maxItems = fieldDef.maxItems ?? Infinity;
@@ -216,7 +250,10 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
       },
       swap: (indexA: number, indexB: number) => {
         const newArray = [...arrayValue];
-        [newArray[indexA], newArray[indexB]] = [newArray[indexB], newArray[indexA]];
+        [newArray[indexA], newArray[indexB]] = [
+          newArray[indexB],
+          newArray[indexA],
+        ];
         forma.setFieldValue(fieldPath, newArray);
       },
       getItemFieldProps: (index: number, fieldName: string) => {
@@ -226,7 +263,9 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
         const itemValue = item[fieldName];
 
         // Use pre-computed visible options from memoized map
-        const visibleOptions = forma.optionsVisibility[itemPath] as SelectOption[] | undefined;
+        const visibleOptions = forma.optionsVisibility[itemPath] as
+          | SelectOption[]
+          | undefined;
 
         return {
           name: itemPath,
@@ -243,7 +282,10 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
           errors: forma.errors.filter((e) => e.field === itemPath),
           onChange: (value: unknown) => {
             const newArray = [...arrayValue];
-            const existingItem = (newArray[index] ?? {}) as Record<string, unknown>;
+            const existingItem = (newArray[index] ?? {}) as Record<
+              string,
+              unknown
+            >;
             newArray[index] = { ...existingItem, [fieldName]: value };
             forma.setFieldValue(fieldPath, newArray);
           },
@@ -270,9 +312,15 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
     } as ArrayFieldProps;
   } else if (fieldType === "display" && fieldDef.type === "display") {
     // Display fields (read-only presentation content)
-    const sourceValue = fieldDef.source ? forma.data[fieldDef.source] ?? forma.computed[fieldDef.source] : undefined;
+    const sourceValue = fieldDef.source
+      ? (forma.data[fieldDef.source] ?? forma.computed[fieldDef.source])
+      : undefined;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { onChange: _onChange, value: _value, ...displayBaseProps } = baseProps;
+    const {
+      onChange: _onChange,
+      value: _value,
+      ...displayBaseProps
+    } = baseProps;
     fieldProps = {
       ...displayBaseProps,
       fieldType: "display",
@@ -284,7 +332,12 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
     // Text-based fields
     fieldProps = {
       ...baseProps,
-      fieldType: fieldType as "text" | "email" | "password" | "url" | "textarea",
+      fieldType: fieldType as
+        | "text"
+        | "email"
+        | "password"
+        | "url"
+        | "textarea",
       value: (baseProps.value as string) ?? "",
       onChange: baseProps.onChange as (value: string) => void,
     };
@@ -292,10 +345,17 @@ export function FieldRenderer({ fieldPath, components, className }: FieldRendere
 
   // Wrap props in { field, spec } structure for components
   const componentProps = { field: fieldProps, spec };
-  const element = React.createElement(Component as React.ComponentType<typeof componentProps>, componentProps);
+  const element = React.createElement(
+    Component as React.ComponentType<typeof componentProps>,
+    componentProps,
+  );
 
   if (className) {
-    return <div data-field-path={fieldPath} className={className}>{element}</div>;
+    return (
+      <div data-field-path={fieldPath} className={className}>
+        {element}
+      </div>
+    );
   }
 
   return <div data-field-path={fieldPath}>{element}</div>;

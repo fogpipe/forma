@@ -5,10 +5,26 @@
  * This is a placeholder - the full implementation will be migrated from formidable.
  */
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import type { Forma, FieldError, ValidationResult, SelectOption } from "@fogpipe/forma-core";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
+import type {
+  Forma,
+  FieldError,
+  ValidationResult,
+  SelectOption,
+} from "@fogpipe/forma-core";
 import { isAdornableField } from "@fogpipe/forma-core";
-import type { GetFieldPropsResult, GetSelectFieldPropsResult, GetArrayHelpersResult } from "./types.js";
+import type {
+  GetFieldPropsResult,
+  GetSelectFieldPropsResult,
+  GetArrayHelpersResult,
+} from "./types.js";
 import {
   getVisibility,
   getRequired,
@@ -32,7 +48,10 @@ export interface UseFormaOptions {
   /** Submit handler */
   onSubmit?: (data: Record<string, unknown>) => void | Promise<void>;
   /** Change handler */
-  onChange?: (data: Record<string, unknown>, computed?: Record<string, unknown>) => void;
+  onChange?: (
+    data: Record<string, unknown>,
+    computed?: Record<string, unknown>,
+  ) => void;
   /** When to validate: on change, blur, or submit only */
   validateOn?: "change" | "blur" | "submit";
   /** Additional reference data to merge with spec.referenceData */
@@ -222,7 +241,15 @@ function getDefaultBooleanValues(spec: Forma): Record<string, boolean> {
  * Main Forma hook
  */
 export function useForma(options: UseFormaOptions): UseFormaReturn {
-  const { spec: inputSpec, initialData = {}, onSubmit, onChange, validateOn = "blur", referenceData, validationDebounceMs = 0 } = options;
+  const {
+    spec: inputSpec,
+    initialData = {},
+    onSubmit,
+    onChange,
+    validateOn = "blur",
+    referenceData,
+    validationDebounceMs = 0,
+  } = options;
 
   // Merge referenceData from options with spec.referenceData
   const spec = useMemo((): Forma => {
@@ -255,47 +282,48 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   // Calculate computed values
   const computed = useMemo(
     () => calculate(state.data, spec),
-    [state.data, spec]
+    [state.data, spec],
   );
 
   // Calculate visibility
   const visibility = useMemo(
     () => getVisibility(state.data, spec, { computed }),
-    [state.data, spec, computed]
+    [state.data, spec, computed],
   );
 
   // Calculate required state
   const required = useMemo(
     () => getRequired(state.data, spec, { computed }),
-    [state.data, spec, computed]
+    [state.data, spec, computed],
   );
 
   // Calculate enabled state
   const enabled = useMemo(
     () => getEnabled(state.data, spec, { computed }),
-    [state.data, spec, computed]
+    [state.data, spec, computed],
   );
 
   // Calculate readonly state
   const readonly = useMemo(
     () => getReadonly(state.data, spec, { computed }),
-    [state.data, spec, computed]
+    [state.data, spec, computed],
   );
 
   // Calculate visible options for all select/multiselect fields (memoized)
   const optionsVisibility = useMemo(
     () => getOptionsVisibility(state.data, spec, { computed }),
-    [state.data, spec, computed]
+    [state.data, spec, computed],
   );
 
   // Validate form - compute immediate result
   const immediateValidation = useMemo(
     () => validate(state.data, spec, { computed, onlyVisible: true }),
-    [state.data, spec, computed]
+    [state.data, spec, computed],
   );
 
   // Debounced validation state (only used when validationDebounceMs > 0)
-  const [debouncedValidation, setDebouncedValidation] = useState<ValidationResult>(immediateValidation);
+  const [debouncedValidation, setDebouncedValidation] =
+    useState<ValidationResult>(immediateValidation);
 
   // Apply debouncing if configured
   useEffect(() => {
@@ -314,7 +342,8 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   }, [immediateValidation, validationDebounceMs]);
 
   // Use debounced validation for display, but immediate for submit
-  const validation = validationDebounceMs > 0 ? debouncedValidation : immediateValidation;
+  const validation =
+    validationDebounceMs > 0 ? debouncedValidation : immediateValidation;
 
   // isDirty is tracked via reducer state for O(1) performance
 
@@ -328,42 +357,52 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   }, [state.data, computed, onChange]);
 
   // Helper function to set value at nested path
-  const setNestedValue = useCallback((path: string, value: unknown): void => {
-    // Handle array index notation: "items[0].name" -> nested structure
-    const parts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
+  const setNestedValue = useCallback(
+    (path: string, value: unknown): void => {
+      // Handle array index notation: "items[0].name" -> nested structure
+      const parts = path.replace(/\[(\d+)\]/g, ".$1").split(".");
 
-    if (parts.length === 1) {
-      // Simple path - just set directly
-      dispatch({ type: "SET_FIELD_VALUE", field: path, value });
-      return;
-    }
-
-    // Build nested object for complex paths
-    const buildNestedObject = (data: Record<string, unknown>, pathParts: string[], val: unknown): Record<string, unknown> => {
-      const result = { ...data };
-      let current: Record<string, unknown> = result;
-
-      for (let i = 0; i < pathParts.length - 1; i++) {
-        const part = pathParts[i];
-        const nextPart = pathParts[i + 1];
-        const isNextArrayIndex = /^\d+$/.test(nextPart);
-
-        if (current[part] === undefined) {
-          current[part] = isNextArrayIndex ? [] : {};
-        } else if (Array.isArray(current[part])) {
-          current[part] = [...(current[part] as unknown[])];
-        } else {
-          current[part] = { ...(current[part] as Record<string, unknown>) };
-        }
-        current = current[part] as Record<string, unknown>;
+      if (parts.length === 1) {
+        // Simple path - just set directly
+        dispatch({ type: "SET_FIELD_VALUE", field: path, value });
+        return;
       }
 
-      current[pathParts[pathParts.length - 1]] = val;
-      return result;
-    };
+      // Build nested object for complex paths
+      const buildNestedObject = (
+        data: Record<string, unknown>,
+        pathParts: string[],
+        val: unknown,
+      ): Record<string, unknown> => {
+        const result = { ...data };
+        let current: Record<string, unknown> = result;
 
-    dispatch({ type: "SET_VALUES", values: buildNestedObject(state.data, parts, value) });
-  }, [state.data]);
+        for (let i = 0; i < pathParts.length - 1; i++) {
+          const part = pathParts[i];
+          const nextPart = pathParts[i + 1];
+          const isNextArrayIndex = /^\d+$/.test(nextPart);
+
+          if (current[part] === undefined) {
+            current[part] = isNextArrayIndex ? [] : {};
+          } else if (Array.isArray(current[part])) {
+            current[part] = [...(current[part] as unknown[])];
+          } else {
+            current[part] = { ...(current[part] as Record<string, unknown>) };
+          }
+          current = current[part] as Record<string, unknown>;
+        }
+
+        current[pathParts[pathParts.length - 1]] = val;
+        return result;
+      };
+
+      dispatch({
+        type: "SET_VALUES",
+        values: buildNestedObject(state.data, parts, value),
+      });
+    },
+    [state.data],
+  );
 
   // Actions
   const setFieldValue = useCallback(
@@ -373,7 +412,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
         dispatch({ type: "SET_FIELD_TOUCHED", field: path, touched: true });
       }
     },
-    [validateOn, setNestedValue]
+    [validateOn, setNestedValue],
   );
 
   const setFieldTouched = useCallback((path: string, touched = true) => {
@@ -388,7 +427,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     (path: string): FieldError[] => {
       return validation.errors.filter((e) => e.field === path);
     },
-    [validation]
+    [validation],
   );
 
   const validateForm = useCallback((): ValidationResult => {
@@ -432,7 +471,10 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
 
     // Clamp currentPage to valid range (handles case where current page becomes hidden)
     const maxPageIndex = Math.max(0, visiblePages.length - 1);
-    const clampedPageIndex = Math.min(Math.max(0, state.currentPage), maxPageIndex);
+    const clampedPageIndex = Math.min(
+      Math.max(0, state.currentPage),
+      maxPageIndex,
+    );
 
     // Auto-correct page index if it's out of bounds
     if (clampedPageIndex !== state.currentPage && visiblePages.length > 0) {
@@ -470,12 +512,13 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
         // Get errors only for visible fields on the current page
         const pageErrors = validation.errors.filter((e) => {
           // Check if field is on current page (including array items like "items[0].name")
-          const isOnCurrentPage = currentPage.fields.includes(e.field) ||
-            currentPage.fields.some(f => e.field.startsWith(`${f}[`));
+          const isOnCurrentPage =
+            currentPage.fields.includes(e.field) ||
+            currentPage.fields.some((f) => e.field.startsWith(`${f}[`));
           // Only count errors for visible fields
           const isVisible = visibility[e.field] !== false;
           // Only count actual errors, not warnings
-          const isError = e.severity === 'error';
+          const isError = e.severity === "error";
           return isOnCurrentPage && isVisible && isError;
         });
         return pageErrors.length === 0;
@@ -491,7 +534,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       validateCurrentPage: () => {
         if (!currentPage) return true;
         const pageErrors = validation.errors.filter((e) =>
-          currentPage.fields.includes(e.field)
+          currentPage.fields.includes(e.field),
         );
         return pageErrors.length === 0;
       },
@@ -502,7 +545,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   // Uses stateDataRef to always access current state, avoiding stale closure issues
   const getValueAtPath = useCallback((path: string): unknown => {
     // Handle array index notation: "items[0].name" -> ["items", "0", "name"]
-    const parts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
+    const parts = path.replace(/\[(\d+)\]/g, ".$1").split(".");
     let value: unknown = stateDataRef.current;
     for (const part of parts) {
       if (value === null || value === undefined) return undefined;
@@ -515,7 +558,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   // Uses stateDataRef to always access current state, avoiding stale closure issues
   const setValueAtPath = useCallback((path: string, value: unknown): void => {
     // For nested paths, we need to build the nested structure
-    const parts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
+    const parts = path.replace(/\[(\d+)\]/g, ".$1").split(".");
     if (parts.length === 1) {
       dispatch({ type: "SET_FIELD_VALUE", field: path, value });
       return;
@@ -545,7 +588,9 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   }, []); // No dependencies - uses ref for current state
 
   // Memoized onChange/onBlur handlers for fields
-  const fieldHandlers = useRef<Map<string, { onChange: (value: unknown) => void; onBlur: () => void }>>(new Map());
+  const fieldHandlers = useRef<
+    Map<string, { onChange: (value: unknown) => void; onBlur: () => void }>
+  >(new Map());
 
   // Clean up stale field handlers when spec changes to prevent memory leaks
   useEffect(() => {
@@ -563,229 +608,309 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     }
     // Remove handlers for fields that no longer exist
     for (const key of fieldHandlers.current.keys()) {
-      const baseField = key.split('[')[0];
+      const baseField = key.split("[")[0];
       if (!validFields.has(key) && !validFields.has(baseField)) {
         fieldHandlers.current.delete(key);
       }
     }
   }, [spec]);
 
-  const getFieldHandlers = useCallback((path: string) => {
-    if (!fieldHandlers.current.has(path)) {
-      fieldHandlers.current.set(path, {
-        onChange: (value: unknown) => setValueAtPath(path, value),
-        onBlur: () => setFieldTouched(path),
-      });
-    }
-    return fieldHandlers.current.get(path)!;
-  }, [setValueAtPath, setFieldTouched]);
+  const getFieldHandlers = useCallback(
+    (path: string) => {
+      if (!fieldHandlers.current.has(path)) {
+        fieldHandlers.current.set(path, {
+          onChange: (value: unknown) => setValueAtPath(path, value),
+          onBlur: () => setFieldTouched(path),
+        });
+      }
+      return fieldHandlers.current.get(path)!;
+    },
+    [setValueAtPath, setFieldTouched],
+  );
 
   // Get field props for any field
-  const getFieldProps = useCallback((path: string): GetFieldPropsResult => {
-    const fieldDef = spec.fields[path];
-    const handlers = getFieldHandlers(path);
+  const getFieldProps = useCallback(
+    (path: string): GetFieldPropsResult => {
+      const fieldDef = spec.fields[path];
+      const handlers = getFieldHandlers(path);
 
-    // Determine field type from definition or infer from schema
-    let fieldType = fieldDef?.type || "text";
-    if (!fieldType || fieldType === "computed") {
-      const schemaProperty = spec.schema.properties[path];
-      if (schemaProperty) {
-        if (schemaProperty.type === "number") fieldType = "number";
-        else if (schemaProperty.type === "integer") fieldType = "integer";
-        else if (schemaProperty.type === "boolean") fieldType = "boolean";
-        else if (schemaProperty.type === "array") fieldType = "array";
-        else if (schemaProperty.type === "object") fieldType = "object";
-        else if ("enum" in schemaProperty && schemaProperty.enum) fieldType = "select";
-        else if ("format" in schemaProperty) {
-          if (schemaProperty.format === "date") fieldType = "date";
-          else if (schemaProperty.format === "date-time") fieldType = "datetime";
-          else if (schemaProperty.format === "email") fieldType = "email";
-          else if (schemaProperty.format === "uri") fieldType = "url";
+      // Determine field type from definition or infer from schema
+      let fieldType = fieldDef?.type || "text";
+      if (!fieldType || fieldType === "computed") {
+        const schemaProperty = spec.schema.properties[path];
+        if (schemaProperty) {
+          if (schemaProperty.type === "number") fieldType = "number";
+          else if (schemaProperty.type === "integer") fieldType = "integer";
+          else if (schemaProperty.type === "boolean") fieldType = "boolean";
+          else if (schemaProperty.type === "array") fieldType = "array";
+          else if (schemaProperty.type === "object") fieldType = "object";
+          else if ("enum" in schemaProperty && schemaProperty.enum)
+            fieldType = "select";
+          else if ("format" in schemaProperty) {
+            if (schemaProperty.format === "date") fieldType = "date";
+            else if (schemaProperty.format === "date-time")
+              fieldType = "datetime";
+            else if (schemaProperty.format === "email") fieldType = "email";
+            else if (schemaProperty.format === "uri") fieldType = "url";
+          }
         }
       }
-    }
 
-    const fieldErrors = validation.errors.filter((e) => e.field === path);
-    const isTouched = state.touched[path] ?? false;
-    const showErrors = validateOn === "change" || (validateOn === "blur" && isTouched) || state.isSubmitted;
-    const displayedErrors = showErrors ? fieldErrors : [];
-    const hasErrors = displayedErrors.length > 0;
-    const isRequired = required[path] ?? false;
+      const fieldErrors = validation.errors.filter((e) => e.field === path);
+      const isTouched = state.touched[path] ?? false;
+      const showErrors =
+        validateOn === "change" ||
+        (validateOn === "blur" && isTouched) ||
+        state.isSubmitted;
+      const displayedErrors = showErrors ? fieldErrors : [];
+      const hasErrors = displayedErrors.length > 0;
+      const isRequired = required[path] ?? false;
 
-    // Boolean fields: hide asterisk unless they have validation rules (consent pattern)
-    // - Binary question ("Do you smoke?"): no validation → false is valid → hide asterisk
-    // - Consent checkbox ("I accept terms"): has validation rule → show asterisk
-    const schemaProperty = spec.schema.properties[path];
-    const isBooleanField = schemaProperty?.type === "boolean" || fieldDef?.type === "boolean";
-    const hasValidationRules = (fieldDef?.validations?.length ?? 0) > 0;
-    const showRequiredIndicator = isRequired && (!isBooleanField || hasValidationRules);
+      // Boolean fields: hide asterisk unless they have validation rules (consent pattern)
+      // - Binary question ("Do you smoke?"): no validation → false is valid → hide asterisk
+      // - Consent checkbox ("I accept terms"): has validation rule → show asterisk
+      const schemaProperty = spec.schema.properties[path];
+      const isBooleanField =
+        schemaProperty?.type === "boolean" || fieldDef?.type === "boolean";
+      const hasValidationRules = (fieldDef?.validations?.length ?? 0) > 0;
+      const showRequiredIndicator =
+        isRequired && (!isBooleanField || hasValidationRules);
 
-    // Pass through adorner props for adornable field types
-    const adornerProps = fieldDef && isAdornableField(fieldDef)
-      ? { prefix: fieldDef.prefix, suffix: fieldDef.suffix }
-      : {};
-
-    return {
-      name: path,
-      value: getValueAtPath(path),
-      type: fieldType,
-      label: fieldDef?.label || path.charAt(0).toUpperCase() + path.slice(1),
-      description: fieldDef?.description,
-      placeholder: fieldDef?.placeholder,
-      visible: visibility[path] !== false,
-      enabled: enabled[path] !== false,
-      readonly: readonly[path] ?? false,
-      required: isRequired,
-      showRequiredIndicator,
-      touched: isTouched,
-      errors: displayedErrors,
-      onChange: handlers.onChange,
-      onBlur: handlers.onBlur,
-      // ARIA accessibility attributes
-      "aria-invalid": hasErrors || undefined,
-      "aria-describedby": hasErrors ? `${path}-error` : undefined,
-      "aria-required": isRequired || undefined,
-      // Adorner props (only for adornable field types)
-      ...adornerProps,
-      // Presentation variant
-      variant: fieldDef?.variant,
-      variantConfig: fieldDef?.variantConfig,
-    };
-  }, [spec, state.touched, state.isSubmitted, visibility, enabled, readonly, required, validation.errors, validateOn, getValueAtPath, getFieldHandlers]);
-
-  // Get select field props - uses pre-computed optionsVisibility map
-  const getSelectFieldProps = useCallback((path: string): GetSelectFieldPropsResult => {
-    const baseProps = getFieldProps(path);
-
-    // Look up pre-computed visible options from memoized map
-    const visibleOptions = optionsVisibility[path] ?? [];
-
-    return {
-      ...baseProps,
-      options: visibleOptions as SelectOption[],
-    };
-  }, [getFieldProps, optionsVisibility]);
-
-  // Get array helpers
-  const getArrayHelpers = useCallback((path: string): GetArrayHelpersResult => {
-    const fieldDef = spec.fields[path];
-    const currentValue = (getValueAtPath(path) as unknown[]) ?? [];
-    const arrayDef = fieldDef?.type === "array" ? fieldDef : undefined;
-    const minItems = arrayDef?.minItems ?? 0;
-    const maxItems = arrayDef?.maxItems ?? Infinity;
-
-    const canAdd = currentValue.length < maxItems;
-    const canRemove = currentValue.length > minItems;
-
-    const getItemFieldProps = (index: number, fieldName: string): GetFieldPropsResult => {
-      const itemPath = `${path}[${index}].${fieldName}`;
-      const itemFieldDef = arrayDef?.itemFields?.[fieldName];
-      const handlers = getFieldHandlers(itemPath);
-
-      // Get item value
-      const item = (currentValue[index] as Record<string, unknown>) ?? {};
-      const itemValue = item[fieldName];
-
-      const fieldErrors = validation.errors.filter((e) => e.field === itemPath);
-      const isTouched = state.touched[itemPath] ?? false;
-      const showErrors = validateOn === "change" || (validateOn === "blur" && isTouched) || state.isSubmitted;
-
-      // Look up pre-computed visible options from memoized map
-      const visibleOptions = optionsVisibility[itemPath] as SelectOption[] | undefined;
+      // Pass through adorner props for adornable field types
+      const adornerProps =
+        fieldDef && isAdornableField(fieldDef)
+          ? { prefix: fieldDef.prefix, suffix: fieldDef.suffix }
+          : {};
 
       return {
-        name: itemPath,
-        value: itemValue,
-        type: itemFieldDef?.type || "text",
-        label: itemFieldDef?.label || fieldName.charAt(0).toUpperCase() + fieldName.slice(1),
-        description: itemFieldDef?.description,
-        placeholder: itemFieldDef?.placeholder,
-        visible: true,
+        name: path,
+        value: getValueAtPath(path),
+        type: fieldType,
+        label: fieldDef?.label || path.charAt(0).toUpperCase() + path.slice(1),
+        description: fieldDef?.description,
+        placeholder: fieldDef?.placeholder,
+        visible: visibility[path] !== false,
         enabled: enabled[path] !== false,
-        readonly: readonly[itemPath] ?? false,
-        required: false, // TODO: Evaluate item field required
-        showRequiredIndicator: false, // Item fields don't show required indicator
+        readonly: readonly[path] ?? false,
+        required: isRequired,
+        showRequiredIndicator,
         touched: isTouched,
-        errors: showErrors ? fieldErrors : [],
+        errors: displayedErrors,
         onChange: handlers.onChange,
         onBlur: handlers.onBlur,
-        options: visibleOptions,
+        // ARIA accessibility attributes
+        "aria-invalid": hasErrors || undefined,
+        "aria-describedby": hasErrors ? `${path}-error` : undefined,
+        "aria-required": isRequired || undefined,
+        // Adorner props (only for adornable field types)
+        ...adornerProps,
+        // Presentation variant
+        variant: fieldDef?.variant,
+        variantConfig: fieldDef?.variantConfig,
       };
-    };
+    },
+    [
+      spec,
+      state.touched,
+      state.isSubmitted,
+      visibility,
+      enabled,
+      readonly,
+      required,
+      validation.errors,
+      validateOn,
+      getValueAtPath,
+      getFieldHandlers,
+    ],
+  );
 
-    return {
-      items: currentValue,
-      push: (item: unknown) => {
-        if (canAdd) {
-          setValueAtPath(path, [...currentValue, item]);
-        }
-      },
-      remove: (index: number) => {
-        if (canRemove) {
-          const newArray = [...currentValue];
-          newArray.splice(index, 1);
-          setValueAtPath(path, newArray);
-        }
-      },
-      move: (from: number, to: number) => {
-        const newArray = [...currentValue];
-        const [item] = newArray.splice(from, 1);
-        newArray.splice(to, 0, item);
-        setValueAtPath(path, newArray);
-      },
-      swap: (indexA: number, indexB: number) => {
-        const newArray = [...currentValue];
-        [newArray[indexA], newArray[indexB]] = [newArray[indexB], newArray[indexA]];
-        setValueAtPath(path, newArray);
-      },
-      insert: (index: number, item: unknown) => {
-        if (canAdd) {
-          const newArray = [...currentValue];
-          newArray.splice(index, 0, item);
-          setValueAtPath(path, newArray);
-        }
-      },
-      getItemFieldProps,
-      minItems,
-      maxItems,
-      canAdd,
-      canRemove,
-    };
-  }, [spec.fields, getValueAtPath, setValueAtPath, getFieldHandlers, enabled, readonly, state.touched, state.isSubmitted, validation.errors, validateOn, optionsVisibility]);
+  // Get select field props - uses pre-computed optionsVisibility map
+  const getSelectFieldProps = useCallback(
+    (path: string): GetSelectFieldPropsResult => {
+      const baseProps = getFieldProps(path);
 
-  return useMemo((): UseFormaReturn => ({
-    data: state.data,
-    computed,
-    visibility,
-    required,
-    enabled,
-    readonly,
-    optionsVisibility,
-    touched: state.touched,
-    errors: validation.errors,
-    isValid: validation.valid,
-    isSubmitting: state.isSubmitting,
-    isSubmitted: state.isSubmitted,
-    isDirty: state.isDirty,
-    spec,
-    wizard,
-    setFieldValue,
-    setFieldTouched,
-    setValues,
-    validateField,
-    validateForm,
-    submitForm,
-    resetForm,
-    getFieldProps,
-    getSelectFieldProps,
-    getArrayHelpers,
-  }), [
-    state.data, state.touched, state.isSubmitting, state.isSubmitted, state.isDirty,
-    computed, visibility, required, enabled, readonly, optionsVisibility,
-    validation.errors, validation.valid,
-    spec, wizard,
-    setFieldValue, setFieldTouched, setValues,
-    validateField, validateForm, submitForm, resetForm,
-    getFieldProps, getSelectFieldProps, getArrayHelpers,
-  ]);
+      // Look up pre-computed visible options from memoized map
+      const visibleOptions = optionsVisibility[path] ?? [];
+
+      return {
+        ...baseProps,
+        options: visibleOptions as SelectOption[],
+      };
+    },
+    [getFieldProps, optionsVisibility],
+  );
+
+  // Get array helpers
+  const getArrayHelpers = useCallback(
+    (path: string): GetArrayHelpersResult => {
+      const fieldDef = spec.fields[path];
+      const currentValue = (getValueAtPath(path) as unknown[]) ?? [];
+      const arrayDef = fieldDef?.type === "array" ? fieldDef : undefined;
+      const minItems = arrayDef?.minItems ?? 0;
+      const maxItems = arrayDef?.maxItems ?? Infinity;
+
+      const canAdd = currentValue.length < maxItems;
+      const canRemove = currentValue.length > minItems;
+
+      const getItemFieldProps = (
+        index: number,
+        fieldName: string,
+      ): GetFieldPropsResult => {
+        const itemPath = `${path}[${index}].${fieldName}`;
+        const itemFieldDef = arrayDef?.itemFields?.[fieldName];
+        const handlers = getFieldHandlers(itemPath);
+
+        // Get item value
+        const item = (currentValue[index] as Record<string, unknown>) ?? {};
+        const itemValue = item[fieldName];
+
+        const fieldErrors = validation.errors.filter(
+          (e) => e.field === itemPath,
+        );
+        const isTouched = state.touched[itemPath] ?? false;
+        const showErrors =
+          validateOn === "change" ||
+          (validateOn === "blur" && isTouched) ||
+          state.isSubmitted;
+
+        // Look up pre-computed visible options from memoized map
+        const visibleOptions = optionsVisibility[itemPath] as
+          | SelectOption[]
+          | undefined;
+
+        return {
+          name: itemPath,
+          value: itemValue,
+          type: itemFieldDef?.type || "text",
+          label:
+            itemFieldDef?.label ||
+            fieldName.charAt(0).toUpperCase() + fieldName.slice(1),
+          description: itemFieldDef?.description,
+          placeholder: itemFieldDef?.placeholder,
+          visible: true,
+          enabled: enabled[path] !== false,
+          readonly: readonly[itemPath] ?? false,
+          required: false, // TODO: Evaluate item field required
+          showRequiredIndicator: false, // Item fields don't show required indicator
+          touched: isTouched,
+          errors: showErrors ? fieldErrors : [],
+          onChange: handlers.onChange,
+          onBlur: handlers.onBlur,
+          options: visibleOptions,
+        };
+      };
+
+      return {
+        items: currentValue,
+        push: (item: unknown) => {
+          if (canAdd) {
+            setValueAtPath(path, [...currentValue, item]);
+          }
+        },
+        remove: (index: number) => {
+          if (canRemove) {
+            const newArray = [...currentValue];
+            newArray.splice(index, 1);
+            setValueAtPath(path, newArray);
+          }
+        },
+        move: (from: number, to: number) => {
+          const newArray = [...currentValue];
+          const [item] = newArray.splice(from, 1);
+          newArray.splice(to, 0, item);
+          setValueAtPath(path, newArray);
+        },
+        swap: (indexA: number, indexB: number) => {
+          const newArray = [...currentValue];
+          [newArray[indexA], newArray[indexB]] = [
+            newArray[indexB],
+            newArray[indexA],
+          ];
+          setValueAtPath(path, newArray);
+        },
+        insert: (index: number, item: unknown) => {
+          if (canAdd) {
+            const newArray = [...currentValue];
+            newArray.splice(index, 0, item);
+            setValueAtPath(path, newArray);
+          }
+        },
+        getItemFieldProps,
+        minItems,
+        maxItems,
+        canAdd,
+        canRemove,
+      };
+    },
+    [
+      spec.fields,
+      getValueAtPath,
+      setValueAtPath,
+      getFieldHandlers,
+      enabled,
+      readonly,
+      state.touched,
+      state.isSubmitted,
+      validation.errors,
+      validateOn,
+      optionsVisibility,
+    ],
+  );
+
+  return useMemo(
+    (): UseFormaReturn => ({
+      data: state.data,
+      computed,
+      visibility,
+      required,
+      enabled,
+      readonly,
+      optionsVisibility,
+      touched: state.touched,
+      errors: validation.errors,
+      isValid: validation.valid,
+      isSubmitting: state.isSubmitting,
+      isSubmitted: state.isSubmitted,
+      isDirty: state.isDirty,
+      spec,
+      wizard,
+      setFieldValue,
+      setFieldTouched,
+      setValues,
+      validateField,
+      validateForm,
+      submitForm,
+      resetForm,
+      getFieldProps,
+      getSelectFieldProps,
+      getArrayHelpers,
+    }),
+    [
+      state.data,
+      state.touched,
+      state.isSubmitting,
+      state.isSubmitted,
+      state.isDirty,
+      computed,
+      visibility,
+      required,
+      enabled,
+      readonly,
+      optionsVisibility,
+      validation.errors,
+      validation.valid,
+      spec,
+      wizard,
+      setFieldValue,
+      setFieldTouched,
+      setValues,
+      validateField,
+      validateForm,
+      submitForm,
+      resetForm,
+      getFieldProps,
+      getSelectFieldProps,
+      getArrayHelpers,
+    ],
+  );
 }

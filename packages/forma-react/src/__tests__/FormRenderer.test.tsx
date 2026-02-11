@@ -29,10 +29,7 @@ describe("FormRenderer", () => {
       });
 
       render(
-        <FormRenderer
-          spec={spec}
-          components={createTestComponentMap()}
-        />
+        <FormRenderer spec={spec} components={createTestComponentMap()} />,
       );
 
       expect(screen.getByTestId("field-name")).toBeInTheDocument();
@@ -50,10 +47,7 @@ describe("FormRenderer", () => {
       });
 
       const { container } = render(
-        <FormRenderer
-          spec={spec}
-          components={createTestComponentMap()}
-        />
+        <FormRenderer spec={spec} components={createTestComponentMap()} />,
       );
 
       const fields = container.querySelectorAll("[data-testid^='field-']");
@@ -74,7 +68,7 @@ describe("FormRenderer", () => {
           spec={spec}
           initialData={{ name: "John Doe" }}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       const input = screen.getByRole("textbox");
@@ -95,7 +89,7 @@ describe("FormRenderer", () => {
           spec={spec}
           components={createTestComponentMap()}
           layout={CustomLayout}
-        />
+        />,
       );
 
       expect(screen.getByTestId("custom-layout")).toBeInTheDocument();
@@ -113,10 +107,7 @@ describe("FormRenderer", () => {
       });
 
       render(
-        <FormRenderer
-          spec={spec}
-          components={createTestComponentMap()}
-        />
+        <FormRenderer spec={spec} components={createTestComponentMap()} />,
       );
 
       expect(screen.getByRole("textbox")).toBeInTheDocument();
@@ -128,10 +119,7 @@ describe("FormRenderer", () => {
       });
 
       render(
-        <FormRenderer
-          spec={spec}
-          components={createTestComponentMap()}
-        />
+        <FormRenderer spec={spec} components={createTestComponentMap()} />,
       );
 
       expect(screen.getByRole("spinbutton")).toBeInTheDocument();
@@ -143,10 +131,7 @@ describe("FormRenderer", () => {
       });
 
       render(
-        <FormRenderer
-          spec={spec}
-          components={createTestComponentMap()}
-        />
+        <FormRenderer spec={spec} components={createTestComponentMap()} />,
       );
 
       expect(screen.getByRole("checkbox")).toBeInTheDocument();
@@ -166,10 +151,7 @@ describe("FormRenderer", () => {
       });
 
       render(
-        <FormRenderer
-          spec={spec}
-          components={createTestComponentMap()}
-        />
+        <FormRenderer spec={spec} components={createTestComponentMap()} />,
       );
 
       expect(screen.getByRole("combobox")).toBeInTheDocument();
@@ -193,7 +175,7 @@ describe("FormRenderer", () => {
           spec={spec}
           initialData={{ items: [{ name: "Item 1" }] }}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       expect(screen.getByTestId("field-items")).toBeInTheDocument();
@@ -218,7 +200,7 @@ describe("FormRenderer", () => {
           spec={spec}
           components={createTestComponentMap()}
           onChange={onChange}
-        />
+        />,
       );
 
       const input = screen.getByRole("textbox");
@@ -239,7 +221,7 @@ describe("FormRenderer", () => {
           spec={spec}
           initialData={{ agree: false }}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       const checkbox = screen.getByRole("checkbox");
@@ -264,10 +246,7 @@ describe("FormRenderer", () => {
       });
 
       render(
-        <FormRenderer
-          spec={spec}
-          components={createTestComponentMap()}
-        />
+        <FormRenderer spec={spec} components={createTestComponentMap()} />,
       );
 
       const select = screen.getByRole("combobox");
@@ -295,7 +274,7 @@ describe("FormRenderer", () => {
           initialData={{ name: "John" }}
           onSubmit={onSubmit}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       const submitButton = screen.getByRole("button", { name: /submit/i });
@@ -316,7 +295,7 @@ describe("FormRenderer", () => {
           spec={spec}
           onSubmit={onSubmit}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       const submitButton = screen.getByRole("button", { name: /submit/i });
@@ -332,10 +311,7 @@ describe("FormRenderer", () => {
       });
 
       render(
-        <FormRenderer
-          spec={spec}
-          components={createTestComponentMap()}
-        />
+        <FormRenderer spec={spec} components={createTestComponentMap()} />,
       );
 
       const submitButton = screen.getByRole("button", { name: /submit/i });
@@ -350,7 +326,7 @@ describe("FormRenderer", () => {
     it("should disable submit button while submitting", async () => {
       const user = userEvent.setup();
       const onSubmit = vi.fn(
-        (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 100))
+        (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 100)),
       );
       const spec = createTestSpec({
         fields: { name: { type: "text" } },
@@ -362,7 +338,7 @@ describe("FormRenderer", () => {
           initialData={{ name: "John" }}
           onSubmit={onSubmit}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       const submitButton = screen.getByRole("button", { name: /submit/i });
@@ -594,7 +570,7 @@ describe("FormRenderer", () => {
           spec={spec}
           initialData={{ name: "Test" }}
           components={components}
-        />
+        />,
       );
 
       expect(screen.getByTestId("consumer")).toBeInTheDocument();
@@ -609,7 +585,7 @@ describe("FormRenderer", () => {
       }
 
       expect(() => render(<BadComponent />)).toThrow(
-        /useFormaContext must be used within/
+        /useFormaContext must be used within/,
       );
     });
   });
@@ -632,10 +608,7 @@ describe("FormRenderer", () => {
       });
 
       render(
-        <FormRenderer
-          spec={spec}
-          components={createTestComponentMap()}
-        />
+        <FormRenderer spec={spec} components={createTestComponentMap()} />,
       );
 
       // First page should be visible
@@ -662,7 +635,7 @@ describe("FormRenderer", () => {
           spec={spec}
           components={createTestComponentMap()}
           pageWrapper={CustomPageWrapper}
-        />
+        />,
       );
 
       const pageWrapper = screen.getByTestId("custom-page");
@@ -693,7 +666,7 @@ describe("FormRenderer", () => {
           spec={spec}
           initialData={{ showDetails: false }}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       // Details field should not be rendered when hidden
@@ -718,7 +691,7 @@ describe("FormRenderer", () => {
           spec={spec}
           initialData={{ showDetails: false }}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       // Initially hidden
@@ -756,29 +729,46 @@ describe("FormRenderer", () => {
             type: "select",
             label: "Position",
             options: [
-              { value: "dev", label: "Developer", visibleWhen: 'department = "engineering"' },
-              { value: "qa", label: "QA Engineer", visibleWhen: 'department = "engineering"' },
-              { value: "rep", label: "Sales Rep", visibleWhen: 'department = "sales"' },
-              { value: "mgr", label: "Sales Manager", visibleWhen: 'department = "sales"' },
+              {
+                value: "dev",
+                label: "Developer",
+                visibleWhen: 'department = "engineering"',
+              },
+              {
+                value: "qa",
+                label: "QA Engineer",
+                visibleWhen: 'department = "engineering"',
+              },
+              {
+                value: "rep",
+                label: "Sales Rep",
+                visibleWhen: 'department = "sales"',
+              },
+              {
+                value: "mgr",
+                label: "Sales Manager",
+                visibleWhen: 'department = "sales"',
+              },
             ],
           },
         },
       });
 
       render(
-        <FormRenderer
-          spec={spec}
-          components={createTestComponentMap()}
-        />
+        <FormRenderer spec={spec} components={createTestComponentMap()} />,
       );
 
       // Initially no department selected - no position options should show
-      const positionSelect = screen.getByTestId("field-position").querySelector("select")!;
+      const positionSelect = screen
+        .getByTestId("field-position")
+        .querySelector("select")!;
       // Only the placeholder "Select..." option should be present
       expect(positionSelect.querySelectorAll("option")).toHaveLength(1);
 
       // Select Engineering department
-      const departmentSelect = screen.getByTestId("field-department").querySelector("select")!;
+      const departmentSelect = screen
+        .getByTestId("field-department")
+        .querySelector("select")!;
       await user.selectOptions(departmentSelect, "engineering");
 
       // Now only engineering positions should show
@@ -823,10 +813,7 @@ describe("FormRenderer", () => {
       });
 
       render(
-        <FormRenderer
-          spec={spec}
-          components={createTestComponentMap()}
-        />
+        <FormRenderer spec={spec} components={createTestComponentMap()} />,
       );
 
       expect(screen.getByText("Red")).toBeInTheDocument();
@@ -851,22 +838,29 @@ describe("FormRenderer", () => {
             label: "Features",
             options: [
               { value: "email", label: "Email Support" },
-              { value: "phone", label: "Phone Support", visibleWhen: 'tier = "premium"' },
-              { value: "priority", label: "Priority Queue", visibleWhen: 'tier = "premium"' },
+              {
+                value: "phone",
+                label: "Phone Support",
+                visibleWhen: 'tier = "premium"',
+              },
+              {
+                value: "priority",
+                label: "Priority Queue",
+                visibleWhen: 'tier = "premium"',
+              },
             ],
           },
         },
       });
 
       render(
-        <FormRenderer
-          spec={spec}
-          components={createTestComponentMap()}
-        />
+        <FormRenderer spec={spec} components={createTestComponentMap()} />,
       );
 
       // Initially no tier selected - only non-conditional option visible
-      const featuresSelect = screen.getByTestId("field-features").querySelector("select")!;
+      const featuresSelect = screen
+        .getByTestId("field-features")
+        .querySelector("select")!;
       await waitFor(() => {
         // placeholder + 1 option without visibleWhen
         expect(featuresSelect.querySelectorAll("option")).toHaveLength(2);
@@ -875,7 +869,9 @@ describe("FormRenderer", () => {
       });
 
       // Select Premium tier
-      const tierSelect = screen.getByTestId("field-tier").querySelector("select")!;
+      const tierSelect = screen
+        .getByTestId("field-tier")
+        .querySelector("select")!;
       await user.selectOptions(tierSelect, "premium");
 
       // All options should now show
@@ -895,8 +891,8 @@ describe("FormRenderer", () => {
             type: "select",
             label: "Category",
             options: [
-              { value: "a", label: "Option A", visibleWhen: 'toggle = true' },
-              { value: "b", label: "Option B", visibleWhen: 'toggle = true' },
+              { value: "a", label: "Option A", visibleWhen: "toggle = true" },
+              { value: "b", label: "Option B", visibleWhen: "toggle = true" },
             ],
           },
           toggle: {
@@ -911,11 +907,13 @@ describe("FormRenderer", () => {
           spec={spec}
           initialData={{ toggle: false }}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       // All options have visibleWhen that evaluates to false
-      const categorySelect = screen.getByTestId("field-category").querySelector("select")!;
+      const categorySelect = screen
+        .getByTestId("field-category")
+        .querySelector("select")!;
       // Only placeholder
       expect(categorySelect.querySelectorAll("option")).toHaveLength(1);
     });
@@ -943,7 +941,7 @@ describe("FormRenderer", () => {
           spec={spec}
           initialData={{ items: [] }}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       const addButton = screen.getByTestId("add-items");
@@ -971,7 +969,7 @@ describe("FormRenderer", () => {
           spec={spec}
           initialData={{ items: [{ name: "Item 1" }, { name: "Item 2" }] }}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       expect(screen.getByTestId("array-item-items-0")).toBeInTheDocument();
@@ -982,7 +980,9 @@ describe("FormRenderer", () => {
 
       await waitFor(() => {
         // After removing first item, we should have only 1 item (at index 0)
-        expect(screen.queryByTestId("array-item-items-1")).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId("array-item-items-1"),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -1006,7 +1006,7 @@ describe("FormRenderer", () => {
             spec={spec}
             initialData={{ items: [] }}
             components={createTestComponentMap()}
-          />
+          />,
         );
 
         const addButton = screen.getByTestId("add-items");
@@ -1050,7 +1050,7 @@ describe("FormRenderer", () => {
             spec={spec}
             initialData={{ items: [] }}
             components={createTestComponentMap()}
-          />
+          />,
         );
 
         const addButton = screen.getByTestId("add-items");
@@ -1072,7 +1072,9 @@ describe("FormRenderer", () => {
           // Should have 2 items remaining (indices 0 and 1)
           expect(screen.getByTestId("array-item-items-0")).toBeInTheDocument();
           expect(screen.getByTestId("array-item-items-1")).toBeInTheDocument();
-          expect(screen.queryByTestId("array-item-items-2")).not.toBeInTheDocument();
+          expect(
+            screen.queryByTestId("array-item-items-2"),
+          ).not.toBeInTheDocument();
         });
       });
 
@@ -1095,7 +1097,7 @@ describe("FormRenderer", () => {
             initialData={{ items: [{ name: "Existing Item" }] }}
             components={createTestComponentMap()}
             onChange={onChange}
-          />
+          />,
         );
 
         // Verify initial state
@@ -1134,7 +1136,7 @@ describe("FormRenderer", () => {
             spec={spec}
             initialData={{ items: [] }}
             components={createTestComponentMap()}
-          />
+          />,
         );
 
         const addButton = screen.getByTestId("add-items");
@@ -1147,7 +1149,9 @@ describe("FormRenderer", () => {
         // All 5 items should be present
         await waitFor(() => {
           for (let i = 0; i < 5; i++) {
-            expect(screen.getByTestId(`array-item-items-${i}`)).toBeInTheDocument();
+            expect(
+              screen.getByTestId(`array-item-items-${i}`),
+            ).toBeInTheDocument();
           }
         });
       });
@@ -1176,7 +1180,7 @@ describe("FormRenderer", () => {
           spec={spec}
           initialData={{ toggle: false }}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       // The wrapper div should exist with hidden attribute
@@ -1205,7 +1209,7 @@ describe("FormRenderer", () => {
           spec={spec}
           initialData={{ toggle: false }}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       // Initially hidden
@@ -1218,7 +1222,9 @@ describe("FormRenderer", () => {
 
       // Now visible - wrapper should not have hidden attribute
       await waitFor(() => {
-        const visibleWrapper = container.querySelector('[data-field-path="details"]');
+        const visibleWrapper = container.querySelector(
+          '[data-field-path="details"]',
+        );
         expect(visibleWrapper).toBeInTheDocument();
         expect(visibleWrapper).not.toHaveAttribute("hidden");
       });
@@ -1242,11 +1248,13 @@ describe("FormRenderer", () => {
           spec={spec}
           initialData={{ toggle: false }}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       // Get reference to the wrapper DOM node
-      const wrapperBefore = container.querySelector('[data-field-path="details"]');
+      const wrapperBefore = container.querySelector(
+        '[data-field-path="details"]',
+      );
       expect(wrapperBefore).toHaveAttribute("hidden");
 
       // Toggle to visible
@@ -1254,7 +1262,9 @@ describe("FormRenderer", () => {
       await user.click(checkbox);
 
       await waitFor(() => {
-        const wrapperAfter = container.querySelector('[data-field-path="details"]');
+        const wrapperAfter = container.querySelector(
+          '[data-field-path="details"]',
+        );
         expect(wrapperAfter).not.toHaveAttribute("hidden");
         // Same DOM node should be reused (React reconciliation with same key + element type)
         expect(wrapperAfter).toBe(wrapperBefore);
@@ -1278,7 +1288,7 @@ describe("FormRenderer", () => {
           spec={spec}
           initialData={{ toggle: false }}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       const wrapper = container.querySelector('[data-field-path="details"]');
@@ -1307,7 +1317,7 @@ describe("FormRenderer", () => {
           spec={spec}
           initialData={{ toggle: false }}
           components={createTestComponentMap()}
-        />
+        />,
       );
 
       // Toggle to visible

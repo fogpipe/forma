@@ -13,15 +13,24 @@ import { userEvent } from "@testing-library/user-event";
 import { FormRenderer } from "../FormRenderer.js";
 import { FieldRenderer } from "../FieldRenderer.js";
 import { createTestSpec, createTestComponentMap } from "./test-utils.js";
-import type { Forma, JSONSchemaNumber, JSONSchemaInteger } from "@fogpipe/forma-core";
-import type { ComponentMap, LayoutProps, NumberComponentProps, IntegerComponentProps } from "../types.js";
+import type {
+  Forma,
+  JSONSchemaNumber,
+  JSONSchemaInteger,
+} from "@fogpipe/forma-core";
+import type {
+  ComponentMap,
+  LayoutProps,
+  NumberComponentProps,
+  IntegerComponentProps,
+} from "../types.js";
 
 /**
  * Create a minimal Forma spec for testing numeric fields
  */
 function createNumericSpec(
   schemaProps: JSONSchemaNumber | JSONSchemaInteger,
-  fieldDef: Record<string, unknown> = {}
+  fieldDef: Record<string, unknown> = {},
 ): Forma {
   return {
     version: "1.0",
@@ -48,7 +57,7 @@ function createNumericSpec(
  */
 function createPropsCapturingComponentMap(
   onRenderNumber: (props: NumberComponentProps["field"]) => void,
-  onRenderInteger?: (props: IntegerComponentProps["field"]) => void
+  onRenderInteger?: (props: IntegerComponentProps["field"]) => void,
 ): ComponentMap {
   const baseComponents = createTestComponentMap();
 
@@ -64,7 +73,9 @@ function createPropsCapturingComponentMap(
             data-max={props.max}
             data-step={props.step}
             value={props.value ?? ""}
-            onChange={(e) => props.onChange(e.target.value ? Number(e.target.value) : null)}
+            onChange={(e) =>
+              props.onChange(e.target.value ? Number(e.target.value) : null)
+            }
           />
         </div>
       );
@@ -78,7 +89,9 @@ function createPropsCapturingComponentMap(
             data-min={props.min}
             data-max={props.max}
             value={props.value ?? ""}
-            onChange={(e) => props.onChange(e.target.value ? Number(e.target.value) : null)}
+            onChange={(e) =>
+              props.onChange(e.target.value ? Number(e.target.value) : null)
+            }
           />
         </div>
       );
@@ -109,7 +122,7 @@ describe("FieldRenderer", () => {
             components={createPropsCapturingComponentMap((props) => {
               capturedProps = props;
             })}
-          />
+          />,
         );
 
         expect(capturedProps).not.toBeNull();
@@ -132,7 +145,7 @@ describe("FieldRenderer", () => {
             components={createPropsCapturingComponentMap((props) => {
               capturedProps = props;
             })}
-          />
+          />,
         );
 
         expect(capturedProps!.step).toBe(0.5);
@@ -152,7 +165,7 @@ describe("FieldRenderer", () => {
             components={createPropsCapturingComponentMap((props) => {
               capturedProps = props;
             })}
-          />
+          />,
         );
 
         expect(capturedProps!.step).toBe(0.1);
@@ -174,9 +187,9 @@ describe("FieldRenderer", () => {
               () => {},
               (props) => {
                 capturedProps = props;
-              }
+              },
             )}
-          />
+          />,
         );
 
         expect(capturedProps).not.toBeNull();
@@ -216,7 +229,7 @@ describe("FieldRenderer", () => {
             components={createPropsCapturingComponentMap((props) => {
               capturedProps = props;
             })}
-          />
+          />,
         );
 
         expect(capturedProps!.step).toBe(15);
@@ -238,7 +251,7 @@ describe("FieldRenderer", () => {
             components={createPropsCapturingComponentMap((props) => {
               capturedProps = props;
             })}
-          />
+          />,
         );
 
         expect(capturedProps!.min).toBe(0);
@@ -263,7 +276,7 @@ describe("FieldRenderer", () => {
             components={createPropsCapturingComponentMap((props) => {
               capturedProps = props;
             })}
-          />
+          />,
         );
 
         expect(capturedProps!.min).toBe(0.05);
@@ -284,7 +297,7 @@ describe("FieldRenderer", () => {
             components={createPropsCapturingComponentMap((props) => {
               capturedProps = props;
             })}
-          />
+          />,
         );
 
         expect(capturedProps!.min).toBeUndefined();
@@ -309,7 +322,7 @@ describe("FieldRenderer", () => {
             components={createPropsCapturingComponentMap((props) => {
               capturedProps = props;
             })}
-          />
+          />,
         );
 
         expect(capturedProps!.min).toBe(0.05);
@@ -333,7 +346,7 @@ describe("FieldRenderer", () => {
             components={createPropsCapturingComponentMap((props) => {
               capturedProps = props;
             })}
-          />
+          />,
         );
 
         expect(capturedProps!.min).toBe(0);
@@ -357,7 +370,7 @@ describe("FieldRenderer", () => {
             components={createPropsCapturingComponentMap((props) => {
               capturedProps = props;
             })}
-          />
+          />,
         );
 
         expect(capturedProps!.min).toBe(0);
@@ -379,9 +392,17 @@ describe("FieldRenderer", () => {
     function createFieldRendererLayout(fieldPath: string) {
       return function FieldRendererLayout({ children, onSubmit }: LayoutProps) {
         return (
-          <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSubmit();
+            }}
+          >
             {children}
-            <FieldRenderer fieldPath={fieldPath} components={createTestComponentMap()} />
+            <FieldRenderer
+              fieldPath={fieldPath}
+              components={createTestComponentMap()}
+            />
           </form>
         );
       };
@@ -405,14 +426,18 @@ describe("FieldRenderer", () => {
           initialData={{ toggle: false }}
           components={createTestComponentMap()}
           layout={createFieldRendererLayout("details")}
-        />
+        />,
       );
 
       // FieldRenderer should produce a hidden wrapper
       // Note: FormRenderer also renders its own wrapper, so find all
-      const wrappers = container.querySelectorAll('[data-field-path="details"]');
+      const wrappers = container.querySelectorAll(
+        '[data-field-path="details"]',
+      );
       // At least one should have hidden attribute (the FieldRenderer one)
-      const hiddenWrapper = Array.from(wrappers).find(el => el.hasAttribute("hidden"));
+      const hiddenWrapper = Array.from(wrappers).find((el) =>
+        el.hasAttribute("hidden"),
+      );
       expect(hiddenWrapper).toBeTruthy();
       expect(hiddenWrapper!.children).toHaveLength(0);
     });
@@ -436,7 +461,7 @@ describe("FieldRenderer", () => {
           initialData={{ toggle: false }}
           components={createTestComponentMap()}
           layout={createFieldRendererLayout("details")}
-        />
+        />,
       );
 
       // Toggle visibility
@@ -444,9 +469,13 @@ describe("FieldRenderer", () => {
       await user.click(checkbox);
 
       await waitFor(() => {
-        const wrappers = container.querySelectorAll('[data-field-path="details"]');
+        const wrappers = container.querySelectorAll(
+          '[data-field-path="details"]',
+        );
         // The FieldRenderer wrapper should now be visible (no hidden attr)
-        const visibleWrappers = Array.from(wrappers).filter(el => !el.hasAttribute("hidden"));
+        const visibleWrappers = Array.from(wrappers).filter(
+          (el) => !el.hasAttribute("hidden"),
+        );
         expect(visibleWrappers.length).toBeGreaterThan(0);
       });
     });
