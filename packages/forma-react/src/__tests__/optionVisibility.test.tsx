@@ -34,7 +34,7 @@ describe("Option Visibility", () => {
       const props = result.current.getSelectFieldProps("department");
 
       expect(props.options).toHaveLength(3);
-      expect(props.options.map(o => o.value)).toEqual(["eng", "hr", "sales"]);
+      expect(props.options.map((o) => o.value)).toEqual(["eng", "hr", "sales"]);
     });
 
     it("should filter options based on visibleWhen expressions", () => {
@@ -45,21 +45,33 @@ describe("Option Visibility", () => {
             type: "select",
             options: [
               { value: "intern", label: "Intern" },
-              { value: "junior", label: "Junior Developer", visibleWhen: "experienceYears >= 1" },
-              { value: "senior", label: "Senior Developer", visibleWhen: "experienceYears >= 5" },
-              { value: "lead", label: "Tech Lead", visibleWhen: "experienceYears >= 8" },
+              {
+                value: "junior",
+                label: "Junior Developer",
+                visibleWhen: "experienceYears >= 1",
+              },
+              {
+                value: "senior",
+                label: "Senior Developer",
+                visibleWhen: "experienceYears >= 5",
+              },
+              {
+                value: "lead",
+                label: "Tech Lead",
+                visibleWhen: "experienceYears >= 8",
+              },
             ],
           },
         },
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { experienceYears: 3 } })
+        useForma({ spec, initialData: { experienceYears: 3 } }),
       );
 
       // With 3 years: intern, junior should be visible
       let props = result.current.getSelectFieldProps("position");
-      expect(props.options.map(o => o.value)).toEqual(["intern", "junior"]);
+      expect(props.options.map((o) => o.value)).toEqual(["intern", "junior"]);
 
       // Change to 6 years: intern, junior, senior should be visible
       act(() => {
@@ -67,7 +79,11 @@ describe("Option Visibility", () => {
       });
 
       props = result.current.getSelectFieldProps("position");
-      expect(props.options.map(o => o.value)).toEqual(["intern", "junior", "senior"]);
+      expect(props.options.map((o) => o.value)).toEqual([
+        "intern",
+        "junior",
+        "senior",
+      ]);
 
       // Change to 10 years: all should be visible
       act(() => {
@@ -75,7 +91,12 @@ describe("Option Visibility", () => {
       });
 
       props = result.current.getSelectFieldProps("position");
-      expect(props.options.map(o => o.value)).toEqual(["intern", "junior", "senior", "lead"]);
+      expect(props.options.map((o) => o.value)).toEqual([
+        "intern",
+        "junior",
+        "senior",
+        "lead",
+      ]);
     });
 
     it("should filter options based on another select field value", () => {
@@ -91,22 +112,41 @@ describe("Option Visibility", () => {
           position: {
             type: "select",
             options: [
-              { value: "dev_frontend", label: "Frontend Developer", visibleWhen: 'department = "eng"' },
-              { value: "dev_backend", label: "Backend Developer", visibleWhen: 'department = "eng"' },
-              { value: "recruiter", label: "Recruiter", visibleWhen: 'department = "hr"' },
-              { value: "hr_manager", label: "HR Manager", visibleWhen: 'department = "hr"' },
+              {
+                value: "dev_frontend",
+                label: "Frontend Developer",
+                visibleWhen: 'department = "eng"',
+              },
+              {
+                value: "dev_backend",
+                label: "Backend Developer",
+                visibleWhen: 'department = "eng"',
+              },
+              {
+                value: "recruiter",
+                label: "Recruiter",
+                visibleWhen: 'department = "hr"',
+              },
+              {
+                value: "hr_manager",
+                label: "HR Manager",
+                visibleWhen: 'department = "hr"',
+              },
             ],
           },
         },
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { department: "eng" } })
+        useForma({ spec, initialData: { department: "eng" } }),
       );
 
       // With Engineering selected
       let props = result.current.getSelectFieldProps("position");
-      expect(props.options.map(o => o.value)).toEqual(["dev_frontend", "dev_backend"]);
+      expect(props.options.map((o) => o.value)).toEqual([
+        "dev_frontend",
+        "dev_backend",
+      ]);
 
       // Switch to HR
       act(() => {
@@ -114,7 +154,10 @@ describe("Option Visibility", () => {
       });
 
       props = result.current.getSelectFieldProps("position");
-      expect(props.options.map(o => o.value)).toEqual(["recruiter", "hr_manager"]);
+      expect(props.options.map((o) => o.value)).toEqual([
+        "recruiter",
+        "hr_manager",
+      ]);
     });
 
     it("should return empty options when all are hidden", () => {
@@ -124,15 +167,23 @@ describe("Option Visibility", () => {
           premiumFeature: {
             type: "select",
             options: [
-              { value: "feature_a", label: "Feature A", visibleWhen: "isPremium = true" },
-              { value: "feature_b", label: "Feature B", visibleWhen: "isPremium = true" },
+              {
+                value: "feature_a",
+                label: "Feature A",
+                visibleWhen: "isPremium = true",
+              },
+              {
+                value: "feature_b",
+                label: "Feature B",
+                visibleWhen: "isPremium = true",
+              },
             ],
           },
         },
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { isPremium: false } })
+        useForma({ spec, initialData: { isPremium: false } }),
       );
 
       const props = result.current.getSelectFieldProps("premiumFeature");
@@ -148,8 +199,16 @@ describe("Option Visibility", () => {
             type: "select",
             options: [
               { value: "standard", label: "Standard Shipping" },
-              { value: "express", label: "Express Shipping", visibleWhen: "computed.orderTotal >= 50" },
-              { value: "overnight", label: "Overnight Shipping", visibleWhen: "computed.orderTotal >= 100" },
+              {
+                value: "express",
+                label: "Express Shipping",
+                visibleWhen: "computed.orderTotal >= 50",
+              },
+              {
+                value: "overnight",
+                label: "Overnight Shipping",
+                visibleWhen: "computed.orderTotal >= 100",
+              },
             ],
           },
         },
@@ -159,12 +218,12 @@ describe("Option Visibility", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { quantity: 2, unitPrice: 20 } })
+        useForma({ spec, initialData: { quantity: 2, unitPrice: 20 } }),
       );
 
       // Total = 40: only standard
       let props = result.current.getSelectFieldProps("shippingMethod");
-      expect(props.options.map(o => o.value)).toEqual(["standard"]);
+      expect(props.options.map((o) => o.value)).toEqual(["standard"]);
 
       // Total = 60: standard and express
       act(() => {
@@ -172,7 +231,10 @@ describe("Option Visibility", () => {
       });
 
       props = result.current.getSelectFieldProps("shippingMethod");
-      expect(props.options.map(o => o.value)).toEqual(["standard", "express"]);
+      expect(props.options.map((o) => o.value)).toEqual([
+        "standard",
+        "express",
+      ]);
 
       // Total = 120: all options
       act(() => {
@@ -180,7 +242,11 @@ describe("Option Visibility", () => {
       });
 
       props = result.current.getSelectFieldProps("shippingMethod");
-      expect(props.options.map(o => o.value)).toEqual(["standard", "express", "overnight"]);
+      expect(props.options.map((o) => o.value)).toEqual([
+        "standard",
+        "express",
+        "overnight",
+      ]);
     });
   });
 
@@ -203,20 +269,28 @@ describe("Option Visibility", () => {
             type: "multiselect",
             options: [
               { value: "basic", label: "Basic Features" },
-              { value: "advanced", label: "Advanced Features", visibleWhen: 'accountType = "paid"' },
-              { value: "enterprise", label: "Enterprise Features", visibleWhen: 'accountType = "paid"' },
+              {
+                value: "advanced",
+                label: "Advanced Features",
+                visibleWhen: 'accountType = "paid"',
+              },
+              {
+                value: "enterprise",
+                label: "Enterprise Features",
+                visibleWhen: 'accountType = "paid"',
+              },
             ],
           },
         },
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { accountType: "free" } })
+        useForma({ spec, initialData: { accountType: "free" } }),
       );
 
       // Free account: only basic
       let props = result.current.getSelectFieldProps("features");
-      expect(props.options.map(o => o.value)).toEqual(["basic"]);
+      expect(props.options.map((o) => o.value)).toEqual(["basic"]);
 
       // Paid account: all features
       act(() => {
@@ -224,7 +298,11 @@ describe("Option Visibility", () => {
       });
 
       props = result.current.getSelectFieldProps("features");
-      expect(props.options.map(o => o.value)).toEqual(["basic", "advanced", "enterprise"]);
+      expect(props.options.map((o) => o.value)).toEqual([
+        "basic",
+        "advanced",
+        "enterprise",
+      ]);
     });
   });
 
@@ -249,9 +327,17 @@ describe("Option Visibility", () => {
               addon: {
                 type: "select",
                 options: [
-                  { value: "warranty", label: "Extended Warranty", visibleWhen: 'item.category = "electronics"' },
+                  {
+                    value: "warranty",
+                    label: "Extended Warranty",
+                    visibleWhen: 'item.category = "electronics"',
+                  },
                   { value: "insurance", label: "Shipping Insurance" },
-                  { value: "giftWrap", label: "Gift Wrap", visibleWhen: 'item.category = "clothing"' },
+                  {
+                    value: "giftWrap",
+                    label: "Gift Wrap",
+                    visibleWhen: 'item.category = "clothing"',
+                  },
                 ],
               },
             },
@@ -268,18 +354,24 @@ describe("Option Visibility", () => {
               { category: "clothing", addon: null },
             ],
           },
-        })
+        }),
       );
 
       const helpers = result.current.getArrayHelpers("orderItems");
 
       // First item (electronics): warranty and insurance
       const item0Props = helpers.getItemFieldProps(0, "addon");
-      expect(item0Props.options?.map(o => o.value)).toEqual(["warranty", "insurance"]);
+      expect(item0Props.options?.map((o) => o.value)).toEqual([
+        "warranty",
+        "insurance",
+      ]);
 
       // Second item (clothing): insurance and giftWrap
       const item1Props = helpers.getItemFieldProps(1, "addon");
-      expect(item1Props.options?.map(o => o.value)).toEqual(["insurance", "giftWrap"]);
+      expect(item1Props.options?.map((o) => o.value)).toEqual([
+        "insurance",
+        "giftWrap",
+      ]);
     });
 
     it("should update array item options when item data changes", () => {
@@ -300,7 +392,11 @@ describe("Option Visibility", () => {
                 options: [
                   { value: "email", label: "Email" },
                   { value: "phone", label: "Phone" },
-                  { value: "fax", label: "Fax", visibleWhen: 'item.type = "business"' },
+                  {
+                    value: "fax",
+                    label: "Fax",
+                    visibleWhen: 'item.type = "business"',
+                  },
                 ],
               },
             },
@@ -314,13 +410,16 @@ describe("Option Visibility", () => {
           initialData: {
             contacts: [{ type: "personal", method: null }],
           },
-        })
+        }),
       );
 
       // Initially personal: email and phone only
       let helpers = result.current.getArrayHelpers("contacts");
       let methodProps = helpers.getItemFieldProps(0, "method");
-      expect(methodProps.options?.map(o => o.value)).toEqual(["email", "phone"]);
+      expect(methodProps.options?.map((o) => o.value)).toEqual([
+        "email",
+        "phone",
+      ]);
 
       // Change to business: fax becomes available
       act(() => {
@@ -329,7 +428,11 @@ describe("Option Visibility", () => {
 
       helpers = result.current.getArrayHelpers("contacts");
       methodProps = helpers.getItemFieldProps(0, "method");
-      expect(methodProps.options?.map(o => o.value)).toEqual(["email", "phone", "fax"]);
+      expect(methodProps.options?.map((o) => o.value)).toEqual([
+        "email",
+        "phone",
+        "fax",
+      ]);
     });
 
     it("should use itemIndex in option visibleWhen expressions", () => {
@@ -342,7 +445,11 @@ describe("Option Visibility", () => {
                 type: "select",
                 options: [
                   { value: "member", label: "Team Member" },
-                  { value: "lead", label: "Team Lead", visibleWhen: "itemIndex = 0" },
+                  {
+                    value: "lead",
+                    label: "Team Lead",
+                    visibleWhen: "itemIndex = 0",
+                  },
                 ],
               },
             },
@@ -356,22 +463,25 @@ describe("Option Visibility", () => {
           initialData: {
             teamMembers: [{ role: null }, { role: null }, { role: null }],
           },
-        })
+        }),
       );
 
       const helpers = result.current.getArrayHelpers("teamMembers");
 
       // First item: can be member or lead
       const item0Props = helpers.getItemFieldProps(0, "role");
-      expect(item0Props.options?.map(o => o.value)).toEqual(["member", "lead"]);
+      expect(item0Props.options?.map((o) => o.value)).toEqual([
+        "member",
+        "lead",
+      ]);
 
       // Second item: can only be member
       const item1Props = helpers.getItemFieldProps(1, "role");
-      expect(item1Props.options?.map(o => o.value)).toEqual(["member"]);
+      expect(item1Props.options?.map((o) => o.value)).toEqual(["member"]);
 
       // Third item: can only be member
       const item2Props = helpers.getItemFieldProps(2, "role");
-      expect(item2Props.options?.map(o => o.value)).toEqual(["member"]);
+      expect(item2Props.options?.map((o) => o.value)).toEqual(["member"]);
     });
 
     it("should combine form data, computed values, and item context", () => {
@@ -392,8 +502,17 @@ describe("Option Visibility", () => {
                 type: "select",
                 options: [
                   { value: "standard", label: "Standard" },
-                  { value: "express", label: "Express", visibleWhen: "isPremiumOrder = true" },
-                  { value: "priority", label: "Priority", visibleWhen: 'isPremiumOrder = true and item.productType = "premium"' },
+                  {
+                    value: "express",
+                    label: "Express",
+                    visibleWhen: "isPremiumOrder = true",
+                  },
+                  {
+                    value: "priority",
+                    label: "Priority",
+                    visibleWhen:
+                      'isPremiumOrder = true and item.productType = "premium"',
+                  },
                 ],
               },
             },
@@ -411,14 +530,18 @@ describe("Option Visibility", () => {
               { productType: "premium", shipping: null },
             ],
           },
-        })
+        }),
       );
 
       let helpers = result.current.getArrayHelpers("lineItems");
 
       // Not premium order: only standard shipping for both
-      expect(helpers.getItemFieldProps(0, "shipping").options?.map(o => o.value)).toEqual(["standard"]);
-      expect(helpers.getItemFieldProps(1, "shipping").options?.map(o => o.value)).toEqual(["standard"]);
+      expect(
+        helpers.getItemFieldProps(0, "shipping").options?.map((o) => o.value),
+      ).toEqual(["standard"]);
+      expect(
+        helpers.getItemFieldProps(1, "shipping").options?.map((o) => o.value),
+      ).toEqual(["standard"]);
 
       // Upgrade to premium order
       act(() => {
@@ -428,10 +551,14 @@ describe("Option Visibility", () => {
       helpers = result.current.getArrayHelpers("lineItems");
 
       // Standard product: standard and express
-      expect(helpers.getItemFieldProps(0, "shipping").options?.map(o => o.value)).toEqual(["standard", "express"]);
+      expect(
+        helpers.getItemFieldProps(0, "shipping").options?.map((o) => o.value),
+      ).toEqual(["standard", "express"]);
 
       // Premium product: standard, express, and priority
-      expect(helpers.getItemFieldProps(1, "shipping").options?.map(o => o.value)).toEqual(["standard", "express", "priority"]);
+      expect(
+        helpers.getItemFieldProps(1, "shipping").options?.map((o) => o.value),
+      ).toEqual(["standard", "express", "priority"]);
     });
   });
 
@@ -460,7 +587,11 @@ describe("Option Visibility", () => {
             type: "select",
             options: [
               { value: "valid", label: "Valid Option" },
-              { value: "invalid", label: "Invalid", visibleWhen: "this is not valid FEEL syntax !!!" },
+              {
+                value: "invalid",
+                label: "Invalid",
+                visibleWhen: "this is not valid FEEL syntax !!!",
+              },
             ],
           },
         },
@@ -470,7 +601,7 @@ describe("Option Visibility", () => {
       const props = result.current.getSelectFieldProps("status");
 
       // Invalid expression should hide the option (treated as false)
-      expect(props.options.map(o => o.value)).toEqual(["valid"]);
+      expect(props.options.map((o) => o.value)).toEqual(["valid"]);
     });
 
     it("should preserve selected value when option becomes hidden", () => {
@@ -481,20 +612,27 @@ describe("Option Visibility", () => {
             type: "select",
             options: [
               { value: "basic", label: "Basic" },
-              { value: "advanced", label: "Advanced", visibleWhen: "level >= 5" },
+              {
+                value: "advanced",
+                label: "Advanced",
+                visibleWhen: "level >= 5",
+              },
             ],
           },
         },
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { level: 5, feature: "advanced" } })
+        useForma({ spec, initialData: { level: 5, feature: "advanced" } }),
       );
 
       // Initially advanced is selected and visible
       expect(result.current.data.feature).toBe("advanced");
-      expect(result.current.getSelectFieldProps("feature").options.map(o => o.value))
-        .toEqual(["basic", "advanced"]);
+      expect(
+        result.current
+          .getSelectFieldProps("feature")
+          .options.map((o) => o.value),
+      ).toEqual(["basic", "advanced"]);
 
       // Reduce level - advanced option becomes hidden but value is preserved
       act(() => {
@@ -504,8 +642,11 @@ describe("Option Visibility", () => {
       // Value is preserved (validation would catch this if needed)
       expect(result.current.data.feature).toBe("advanced");
       // But option is no longer visible
-      expect(result.current.getSelectFieldProps("feature").options.map(o => o.value))
-        .toEqual(["basic"]);
+      expect(
+        result.current
+          .getSelectFieldProps("feature")
+          .options.map((o) => o.value),
+      ).toEqual(["basic"]);
     });
   });
 });

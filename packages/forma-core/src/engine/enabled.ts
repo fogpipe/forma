@@ -49,7 +49,7 @@ export interface EnabledOptions {
 export function getEnabled(
   data: Record<string, unknown>,
   spec: Forma,
-  options: EnabledOptions = {}
+  options: EnabledOptions = {},
 ): EnabledResult {
   const computed = options.computed ?? calculate(data, spec);
   const context: EvaluationContext = {
@@ -73,7 +73,15 @@ export function getEnabled(
     if (fieldDef.type === "array" && fieldDef.itemFields) {
       const arrayData = data[fieldPath];
       if (Array.isArray(arrayData)) {
-        evaluateArrayItemEnabled(fieldPath, fieldDef, arrayData, data, computed, spec, result);
+        evaluateArrayItemEnabled(
+          fieldPath,
+          fieldDef,
+          arrayData,
+          data,
+          computed,
+          spec,
+          result,
+        );
       }
     }
   }
@@ -90,7 +98,7 @@ export function getEnabled(
  */
 function isFieldEnabled(
   fieldDef: FieldDefinition,
-  context: EvaluationContext
+  context: EvaluationContext,
 ): boolean {
   // If field has enabledWhen, evaluate it
   if (fieldDef.enabledWhen) {
@@ -111,7 +119,7 @@ function evaluateArrayItemEnabled(
   data: Record<string, unknown>,
   computed: Record<string, unknown>,
   spec: Forma,
-  result: EnabledResult
+  result: EnabledResult,
 ): void {
   if (!fieldDef.itemFields) return;
 
@@ -125,7 +133,9 @@ function evaluateArrayItemEnabled(
       itemIndex: i,
     };
 
-    for (const [itemFieldName, itemFieldDef] of Object.entries(fieldDef.itemFields)) {
+    for (const [itemFieldName, itemFieldDef] of Object.entries(
+      fieldDef.itemFields,
+    )) {
       const itemFieldPath = `${arrayPath}[${i}].${itemFieldName}`;
       result[itemFieldPath] = isFieldEnabled(itemFieldDef, itemContext);
     }
@@ -143,7 +153,7 @@ function evaluateArrayItemEnabled(
 export function isEnabled(
   fieldPath: string,
   data: Record<string, unknown>,
-  spec: Forma
+  spec: Forma,
 ): boolean {
   const fieldDef = spec.fields[fieldPath];
   if (!fieldDef) {

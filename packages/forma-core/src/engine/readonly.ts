@@ -53,7 +53,7 @@ export interface ReadonlyOptions {
 export function getReadonly(
   data: Record<string, unknown>,
   spec: Forma,
-  options: ReadonlyOptions = {}
+  options: ReadonlyOptions = {},
 ): ReadonlyResult {
   const computed = options.computed ?? calculate(data, spec);
   const context: EvaluationContext = {
@@ -77,7 +77,15 @@ export function getReadonly(
     if (fieldDef.type === "array" && fieldDef.itemFields) {
       const arrayData = data[fieldPath];
       if (Array.isArray(arrayData)) {
-        evaluateArrayItemReadonly(fieldPath, fieldDef, arrayData, data, computed, spec, result);
+        evaluateArrayItemReadonly(
+          fieldPath,
+          fieldDef,
+          arrayData,
+          data,
+          computed,
+          spec,
+          result,
+        );
       }
     }
   }
@@ -94,7 +102,7 @@ export function getReadonly(
  */
 function isFieldReadonly(
   fieldDef: FieldDefinition,
-  context: EvaluationContext
+  context: EvaluationContext,
 ): boolean {
   // If field has readonlyWhen, evaluate it
   if (fieldDef.readonlyWhen) {
@@ -115,7 +123,7 @@ function evaluateArrayItemReadonly(
   data: Record<string, unknown>,
   computed: Record<string, unknown>,
   spec: Forma,
-  result: ReadonlyResult
+  result: ReadonlyResult,
 ): void {
   if (!fieldDef.itemFields) return;
 
@@ -129,7 +137,9 @@ function evaluateArrayItemReadonly(
       itemIndex: i,
     };
 
-    for (const [itemFieldName, itemFieldDef] of Object.entries(fieldDef.itemFields)) {
+    for (const [itemFieldName, itemFieldDef] of Object.entries(
+      fieldDef.itemFields,
+    )) {
       const itemFieldPath = `${arrayPath}[${i}].${itemFieldName}`;
       result[itemFieldPath] = isFieldReadonly(itemFieldDef, itemContext);
     }
@@ -147,7 +157,7 @@ function evaluateArrayItemReadonly(
 export function isReadonly(
   fieldPath: string,
   data: Record<string, unknown>,
-  spec: Forma
+  spec: Forma,
 ): boolean {
   const fieldDef = spec.fields[fieldPath];
   if (!fieldDef) {

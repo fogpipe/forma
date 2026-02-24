@@ -26,7 +26,7 @@ import type { EvaluationContext } from "../types.js";
  * Create a minimal evaluation context for testing
  */
 function createContext(
-  overrides: Partial<EvaluationContext> = {}
+  overrides: Partial<EvaluationContext> = {},
 ): EvaluationContext {
   return {
     data: {},
@@ -51,7 +51,7 @@ describe("evaluate", () => {
     it("evaluates field references from data", () => {
       const result = evaluate(
         "age >= 18",
-        createContext({ data: { age: 21 } })
+        createContext({ data: { age: 21 } }),
       );
       expect(result.success).toBe(true);
       if (result.success) {
@@ -62,7 +62,7 @@ describe("evaluate", () => {
     it("evaluates computed field references", () => {
       const result = evaluate(
         "computed.total > 100",
-        createContext({ data: {}, computed: { total: 150 } })
+        createContext({ data: {}, computed: { total: 150 } }),
       );
       expect(result.success).toBe(true);
       if (result.success) {
@@ -73,7 +73,7 @@ describe("evaluate", () => {
     it("evaluates item field references in array context", () => {
       const result = evaluate(
         "item.quantity > 5",
-        createContext({ data: {}, item: { quantity: 10 } })
+        createContext({ data: {}, item: { quantity: 10 } }),
       );
       expect(result.success).toBe(true);
       if (result.success) {
@@ -82,7 +82,10 @@ describe("evaluate", () => {
     });
 
     it("evaluates value reference for validation", () => {
-      const result = evaluate("value >= 0", createContext({ data: {}, value: 5 }));
+      const result = evaluate(
+        "value >= 0",
+        createContext({ data: {}, value: 5 }),
+      );
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.value).toBe(true);
@@ -106,7 +109,7 @@ describe("evaluate", () => {
       // This differs from strict FEEL three-valued logic
       const result = evaluate(
         "undefinedField = true",
-        createContext({ data: {} })
+        createContext({ data: {} }),
       );
       expect(result.success).toBe(true);
       if (result.success) {
@@ -118,7 +121,7 @@ describe("evaluate", () => {
       // In feelin, undefined != null returns false
       const result = evaluate(
         "undefinedField != null",
-        createContext({ data: {} })
+        createContext({ data: {} }),
       );
       expect(result.success).toBe(true);
       if (result.success) {
@@ -130,7 +133,7 @@ describe("evaluate", () => {
       // Numeric comparisons DO return null when field is undefined
       const result = evaluate(
         "undefinedField > 5",
-        createContext({ data: {} })
+        createContext({ data: {} }),
       );
       expect(result.success).toBe(true);
       if (result.success) {
@@ -141,7 +144,7 @@ describe("evaluate", () => {
     it("returns null for string length of undefined field", () => {
       const result = evaluate(
         "string length(undefinedField)",
-        createContext({ data: {} })
+        createContext({ data: {} }),
       );
       expect(result.success).toBe(true);
       if (result.success) {
@@ -152,7 +155,7 @@ describe("evaluate", () => {
     it("returns null for string length comparison with undefined field", () => {
       const result = evaluate(
         "string length(undefinedField) > 0",
-        createContext({ data: {} })
+        createContext({ data: {} }),
       );
       expect(result.success).toBe(true);
       if (result.success) {
@@ -163,7 +166,7 @@ describe("evaluate", () => {
     it("returns null for count of undefined field", () => {
       const result = evaluate(
         "count(undefinedField) > 0",
-        createContext({ data: {} })
+        createContext({ data: {} }),
       );
       expect(result.success).toBe(true);
       if (result.success) {
@@ -173,10 +176,7 @@ describe("evaluate", () => {
 
     it("propagates null through logical AND with null operand", () => {
       // null and true = null
-      const result = evaluate(
-        "null and true",
-        createContext({ data: {} })
-      );
+      const result = evaluate("null and true", createContext({ data: {} }));
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.value).toBeNull();
@@ -188,7 +188,7 @@ describe("evaluate", () => {
       // null propagates through AND
       const result = evaluate(
         "computed.eligible and x = true",
-        createContext({ data: { x: true }, computed: { eligible: null } })
+        createContext({ data: { x: true }, computed: { eligible: null } }),
       );
       expect(result.success).toBe(true);
       if (result.success) {
@@ -201,7 +201,7 @@ describe("evaluate", () => {
       // false and null = false (short-circuit)
       const result = evaluate(
         "computed.eligible and x = true",
-        createContext({ data: {}, computed: { eligible: null } })
+        createContext({ data: {}, computed: { eligible: null } }),
       );
       expect(result.success).toBe(true);
       if (result.success) {
@@ -240,7 +240,7 @@ describe("evaluateBoolean", () => {
     it("returns true for true expression", () => {
       const result = evaluateBoolean(
         "age >= 18",
-        createContext({ data: { age: 21 } })
+        createContext({ data: { age: 21 } }),
       );
       expect(result).toBe(true);
       expect(consoleWarnSpy).not.toHaveBeenCalled();
@@ -249,7 +249,7 @@ describe("evaluateBoolean", () => {
     it("returns false for false expression", () => {
       const result = evaluateBoolean(
         "age >= 18",
-        createContext({ data: { age: 15 } })
+        createContext({ data: { age: 15 } }),
       );
       expect(result).toBe(false);
       expect(consoleWarnSpy).not.toHaveBeenCalled();
@@ -258,7 +258,7 @@ describe("evaluateBoolean", () => {
     it("returns true for explicitly true boolean field", () => {
       const result = evaluateBoolean(
         "hasConsent = true",
-        createContext({ data: { hasConsent: true } })
+        createContext({ data: { hasConsent: true } }),
       );
       expect(result).toBe(true);
       expect(consoleWarnSpy).not.toHaveBeenCalled();
@@ -267,7 +267,7 @@ describe("evaluateBoolean", () => {
     it("returns false for explicitly false boolean field", () => {
       const result = evaluateBoolean(
         "hasConsent = true",
-        createContext({ data: { hasConsent: false } })
+        createContext({ data: { hasConsent: false } }),
       );
       expect(result).toBe(false);
       expect(consoleWarnSpy).not.toHaveBeenCalled();
@@ -289,7 +289,7 @@ describe("evaluateBoolean", () => {
       // feelin returns false for undefined = true, so no warning
       const result = evaluateBoolean(
         "undefinedField = true",
-        createContext({ data: {} })
+        createContext({ data: {} }),
       );
 
       expect(result).toBe(false);
@@ -300,39 +300,39 @@ describe("evaluateBoolean", () => {
       // undefinedField > 5 returns null, triggering warning
       const result = evaluateBoolean(
         "undefinedField > 5",
-        createContext({ data: {} })
+        createContext({ data: {} }),
       );
 
       expect(result).toBe(false);
       expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("returned null")
+        expect.stringContaining("returned null"),
       );
     });
 
     it("logs warning for string length comparison on undefined field", () => {
       const result = evaluateBoolean(
         "string length(undefinedField) > 0",
-        createContext({ data: {} })
+        createContext({ data: {} }),
       );
 
       expect(result).toBe(false);
       expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("returned null")
+        expect.stringContaining("returned null"),
       );
     });
 
     it("logs warning for count comparison on undefined field", () => {
       const result = evaluateBoolean(
         "count(undefinedField) > 0",
-        createContext({ data: {} })
+        createContext({ data: {} }),
       );
 
       expect(result).toBe(false);
       expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("returned null")
+        expect.stringContaining("returned null"),
       );
     });
 
@@ -340,13 +340,13 @@ describe("evaluateBoolean", () => {
       // computed.eligible is null, AND propagates null when other operand is defined
       const result = evaluateBoolean(
         "computed.eligible and x = true",
-        createContext({ data: { x: true }, computed: { eligible: null } })
+        createContext({ data: { x: true }, computed: { eligible: null } }),
       );
 
       expect(result).toBe(false);
       expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("returned null")
+        expect.stringContaining("returned null"),
       );
     });
 
@@ -355,7 +355,7 @@ describe("evaluateBoolean", () => {
       // feelin may short-circuit: false and null = false (no null in result)
       const result = evaluateBoolean(
         "computed.eligible and x = true",
-        createContext({ data: {}, computed: { eligible: null } })
+        createContext({ data: {}, computed: { eligible: null } }),
       );
 
       expect(result).toBe(false);
@@ -365,7 +365,7 @@ describe("evaluateBoolean", () => {
     it("logs warning for explicit null and true expression", () => {
       const result = evaluateBoolean(
         "null and true",
-        createContext({ data: {} })
+        createContext({ data: {} }),
       );
 
       expect(result).toBe(false);
@@ -373,52 +373,40 @@ describe("evaluateBoolean", () => {
     });
 
     it("warning message includes expression that caused it", () => {
-      evaluateBoolean(
-        "undefinedField > 5",
-        createContext({ data: {} })
-      );
+      evaluateBoolean("undefinedField > 5", createContext({ data: {} }));
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("undefinedField > 5")
+        expect.stringContaining("undefinedField > 5"),
       );
     });
 
     it("warning message includes null-safe pattern guidance", () => {
-      evaluateBoolean(
-        "undefinedField > 5",
-        createContext({ data: {} })
-      );
+      evaluateBoolean("undefinedField > 5", createContext({ data: {} }));
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("null-safe patterns")
+        expect.stringContaining("null-safe patterns"),
       );
     });
   });
 
   describe("non-boolean result handling", () => {
     it("logs warning and returns false for numeric result", () => {
-      const result = evaluateBoolean(
-        "2 + 3",
-        createContext({ data: {} })
-      );
+      const result = evaluateBoolean("2 + 3", createContext({ data: {} }));
 
       expect(result).toBe(false);
       expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("did not return boolean")
+        expect.stringContaining("did not return boolean"),
       );
     });
 
     it("logs warning and returns false for string result", () => {
-      const result = evaluateBoolean(
-        '"hello"',
-        createContext({ data: {} })
-      );
+      const result = evaluateBoolean('"hello"', createContext({ data: {} }));
 
       expect(result).toBe(false);
       expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("did not return boolean")
+        expect.stringContaining("did not return boolean"),
       );
     });
   });
@@ -428,7 +416,7 @@ describe("evaluateBoolean", () => {
       // Force an error by using invalid function
       const result = evaluateBoolean(
         "nonExistentFunction(x)",
-        createContext({ data: {} })
+        createContext({ data: {} }),
       );
 
       expect(result).toBe(false);
@@ -454,9 +442,12 @@ describe("evaluateNumber", () => {
   });
 
   it("returns number for valid arithmetic", () => {
-    const result = evaluateNumber("quantity * price", createContext({
-      data: { quantity: 5, price: 10 }
-    }));
+    const result = evaluateNumber(
+      "quantity * price",
+      createContext({
+        data: { quantity: 5, price: 10 },
+      }),
+    );
     expect(result).toBe(50);
   });
 
@@ -464,7 +455,7 @@ describe("evaluateNumber", () => {
     const result = evaluateNumber('"hello"', createContext());
     expect(result).toBeNull();
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("did not return number")
+      expect.stringContaining("did not return number"),
     );
   });
 
@@ -493,7 +484,7 @@ describe("evaluateString", () => {
   it("returns string for valid string expression", () => {
     const result = evaluateString(
       'if age >= 18 then "adult" else "minor"',
-      createContext({ data: { age: 21 } })
+      createContext({ data: { age: 21 } }),
     );
     expect(result).toBe("adult");
   });
@@ -502,7 +493,7 @@ describe("evaluateString", () => {
     const result = evaluateString("2 + 3", createContext());
     expect(result).toBeNull();
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("did not return string")
+      expect.stringContaining("did not return string"),
     );
   });
 });
@@ -529,7 +520,7 @@ describe("evaluateBooleanBatch", () => {
         canDrive: "age >= 16",
         canDrink: "age >= 21",
       },
-      createContext({ data: { age: 20 } })
+      createContext({ data: { age: 20 } }),
     );
 
     expect(results.canVote).toBe(true);
@@ -544,7 +535,7 @@ describe("evaluateBooleanBatch", () => {
         visible: "undefinedField = true",
         enabled: "anotherUndefined = false",
       },
-      createContext({ data: {} })
+      createContext({ data: {} }),
     );
 
     expect(results.visible).toBe(false);
@@ -559,7 +550,7 @@ describe("evaluateBooleanBatch", () => {
         hasEnoughItems: "count(items) > 5",
         hasLongName: "string length(name) > 10",
       },
-      createContext({ data: {} })
+      createContext({ data: {} }),
     );
 
     expect(results.hasEnoughItems).toBe(false);
@@ -643,7 +634,7 @@ describe("real-world scenarios", () => {
             inclusionDiagnosis: true,
             inclusionHbA1c: true,
           },
-        })
+        }),
       );
 
       expect(result).toBe(true);
@@ -659,7 +650,7 @@ describe("real-world scenarios", () => {
             inclusionDiagnosis: false,
             inclusionHbA1c: true,
           },
-        })
+        }),
       );
 
       expect(result).toBe(false);
@@ -677,7 +668,7 @@ describe("real-world scenarios", () => {
             // inclusionDiagnosis not yet answered
             inclusionHbA1c: true,
           },
-        })
+        }),
       );
 
       expect(result).toBe(false);
@@ -695,7 +686,7 @@ describe("real-world scenarios", () => {
             inclusionAge: true,
             // inclusionDiagnosis not yet answered
           },
-        })
+        }),
       );
 
       expect(allAnswered).toBe(false);
@@ -712,7 +703,7 @@ describe("real-world scenarios", () => {
           data: {
             // signingOnBehalf not yet answered
           },
-        })
+        }),
       );
 
       // feelin returns true for undefined != true
@@ -728,7 +719,7 @@ describe("real-world scenarios", () => {
         createContext({
           data: {},
           computed: { eligible: true },
-        })
+        }),
       );
 
       expect(result).toBe(true);
@@ -741,7 +732,7 @@ describe("real-world scenarios", () => {
         createContext({
           data: {},
           computed: { eligible: false },
-        })
+        }),
       );
 
       expect(result).toBe(false);
@@ -755,7 +746,7 @@ describe("real-world scenarios", () => {
         createContext({
           data: {},
           computed: { eligible: null },
-        })
+        }),
       );
 
       expect(result).toBe(false);
@@ -771,13 +762,13 @@ describe("real-world scenarios", () => {
         createContext({
           data: { otherCondition: true },
           computed: { eligible: null },
-        })
+        }),
       );
 
       expect(result).toBe(false);
       expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("returned null")
+        expect.stringContaining("returned null"),
       );
     });
 
@@ -788,7 +779,7 @@ describe("real-world scenarios", () => {
         createContext({
           data: {},
           computed: { eligible: null },
-        })
+        }),
       );
 
       expect(result).toBe(false);
@@ -801,7 +792,7 @@ describe("real-world scenarios", () => {
       // This is a common pattern that triggers warnings
       const result = evaluateBoolean(
         "string length(signature) > 0",
-        createContext({ data: {} })
+        createContext({ data: {} }),
       );
 
       expect(result).toBe(false);
@@ -811,7 +802,7 @@ describe("real-world scenarios", () => {
     it("no warning when field has value", () => {
       const result = evaluateBoolean(
         "string length(signature) > 0",
-        createContext({ data: { signature: "John Doe" } })
+        createContext({ data: { signature: "John Doe" } }),
       );
 
       expect(result).toBe(true);
@@ -822,7 +813,7 @@ describe("real-world scenarios", () => {
       // Proper null-safe pattern: check != null first
       const result = evaluateBoolean(
         "signature != null and string length(signature) > 0",
-        createContext({ data: {} })
+        createContext({ data: {} }),
       );
 
       expect(result).toBe(false);

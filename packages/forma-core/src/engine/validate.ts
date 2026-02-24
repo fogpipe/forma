@@ -73,7 +73,7 @@ export interface ValidateOptions {
 export function validate(
   data: Record<string, unknown>,
   spec: Forma,
-  options: ValidateOptions = {}
+  options: ValidateOptions = {},
 ): ValidationResult {
   const { onlyVisible = true } = options;
 
@@ -81,7 +81,8 @@ export function validate(
   const computed = options.computed ?? calculate(data, spec);
 
   // Calculate visibility
-  const visibility = options.visibility ?? getVisibility(data, spec, { computed });
+  const visibility =
+    options.visibility ?? getVisibility(data, spec, { computed });
 
   // Collect errors
   const errors: FieldError[] = [];
@@ -114,7 +115,7 @@ export function validate(
       data,
       computed,
       visibility,
-      onlyVisible
+      onlyVisible,
     );
 
     errors.push(...fieldErrors);
@@ -142,7 +143,7 @@ function validateField(
   data: Record<string, unknown>,
   computed: Record<string, unknown>,
   visibility: Record<string, boolean>,
-  onlyVisible: boolean
+  onlyVisible: boolean,
 ): FieldError[] {
   const errors: FieldError[] = [];
   const context: EvaluationContext = {
@@ -174,7 +175,11 @@ function validateField(
 
   // 3. Custom FEEL validation rules
   if (fieldDef.validations && !isEmpty(value)) {
-    const customErrors = validateCustomRules(path, fieldDef.validations, context);
+    const customErrors = validateCustomRules(
+      path,
+      fieldDef.validations,
+      context,
+    );
     errors.push(...customErrors);
   }
 
@@ -189,7 +194,7 @@ function validateField(
       data,
       computed,
       visibility,
-      onlyVisible
+      onlyVisible,
     );
     errors.push(...arrayErrors);
   }
@@ -218,7 +223,7 @@ function validateType(
   path: string,
   value: unknown,
   schema: JSONSchemaProperty,
-  fieldDef: { label?: string }
+  fieldDef: { label?: string },
 ): FieldError | null {
   const label = fieldDef.label ?? path;
 
@@ -320,7 +325,10 @@ function validateType(
         }
       }
 
-      if ("exclusiveMinimum" in schema && schema.exclusiveMinimum !== undefined) {
+      if (
+        "exclusiveMinimum" in schema &&
+        schema.exclusiveMinimum !== undefined
+      ) {
         if (value <= schema.exclusiveMinimum) {
           return {
             field: path,
@@ -330,7 +338,10 @@ function validateType(
         }
       }
 
-      if ("exclusiveMaximum" in schema && schema.exclusiveMaximum !== undefined) {
+      if (
+        "exclusiveMaximum" in schema &&
+        schema.exclusiveMaximum !== undefined
+      ) {
         if (value >= schema.exclusiveMaximum) {
           return {
             field: path,
@@ -344,7 +355,8 @@ function validateType(
         const multipleOf = schema.multipleOf;
         // Use epsilon comparison to handle floating point precision issues
         const remainder = Math.abs(value % multipleOf);
-        const isValid = remainder < 1e-10 || Math.abs(remainder - multipleOf) < 1e-10;
+        const isValid =
+          remainder < 1e-10 || Math.abs(remainder - multipleOf) < 1e-10;
         if (!isValid) {
           return {
             field: path,
@@ -402,7 +414,7 @@ function validateFormat(
   path: string,
   value: string,
   format: string,
-  label: string
+  label: string,
 ): FieldError | null {
   switch (format) {
     case "email": {
@@ -430,7 +442,10 @@ function validateFormat(
       }
       // Verify the date is actually valid (e.g., not Feb 30)
       const parsed = new Date(value + "T00:00:00Z");
-      if (isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
+      if (
+        isNaN(parsed.getTime()) ||
+        parsed.toISOString().slice(0, 10) !== value
+      ) {
         return {
           field: path,
           message: `${label} must be a valid date`,
@@ -465,7 +480,8 @@ function validateFormat(
     }
 
     case "uuid": {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(value)) {
         return {
           field: path,
@@ -491,7 +507,7 @@ function validateFormat(
 function validateCustomRules(
   path: string,
   rules: ValidationRule[],
-  context: EvaluationContext
+  context: EvaluationContext,
 ): FieldError[] {
   const errors: FieldError[] = [];
 
@@ -526,13 +542,14 @@ function validateArray(
   data: Record<string, unknown>,
   computed: Record<string, unknown>,
   visibility: Record<string, boolean>,
-  onlyVisible: boolean
+  onlyVisible: boolean,
 ): FieldError[] {
   const errors: FieldError[] = [];
   const label = fieldDef.label ?? path;
 
   // Get array schema for minItems/maxItems fallback
-  const arraySchema = schemaProperty?.type === "array" ? schemaProperty : undefined;
+  const arraySchema =
+    schemaProperty?.type === "array" ? schemaProperty : undefined;
 
   // Check min/max items - fieldDef overrides schema
   const minItems = fieldDef.minItems ?? arraySchema?.minItems;
@@ -571,7 +588,7 @@ function validateArray(
         data,
         computed,
         visibility,
-        onlyVisible
+        onlyVisible,
       );
       errors.push(...itemErrors);
     }
@@ -593,7 +610,7 @@ function validateArrayItem(
   data: Record<string, unknown>,
   computed: Record<string, unknown>,
   visibility: Record<string, boolean>,
-  onlyVisible: boolean
+  onlyVisible: boolean,
 ): FieldError[] {
   const errors: FieldError[] = [];
 
@@ -649,7 +666,7 @@ function validateArrayItem(
         itemFieldPath,
         value,
         fieldSchema,
-        fieldDef ?? { label: fieldName }
+        fieldDef ?? { label: fieldName },
       );
       if (typeError) {
         errors.push(typeError);
@@ -658,7 +675,11 @@ function validateArrayItem(
 
     // Custom validations from fieldDef
     if (fieldDef?.validations && !isEmpty(value)) {
-      const customErrors = validateCustomRules(itemFieldPath, fieldDef.validations, context);
+      const customErrors = validateCustomRules(
+        itemFieldPath,
+        fieldDef.validations,
+        context,
+      );
       errors.push(...customErrors);
     }
   }
@@ -681,7 +702,7 @@ function validateArrayItem(
 export function validateSingleField(
   fieldPath: string,
   data: Record<string, unknown>,
-  spec: Forma
+  spec: Forma,
 ): FieldError[] {
   const fieldDef = spec.fields[fieldPath];
   if (!fieldDef) {
@@ -701,6 +722,6 @@ export function validateSingleField(
     data,
     computed,
     visibility,
-    true
+    true,
   );
 }

@@ -48,7 +48,7 @@ export interface RequiredOptions {
 export function getRequired(
   data: Record<string, unknown>,
   spec: Forma,
-  options: RequiredOptions = {}
+  options: RequiredOptions = {},
 ): RequiredFieldsResult {
   const computed = options.computed ?? calculate(data, spec);
   const context: EvaluationContext = {
@@ -82,13 +82,15 @@ export function getRequired(
             itemIndex: i,
           };
 
-          for (const [itemFieldName, itemFieldDef] of Object.entries(fieldDef.itemFields)) {
+          for (const [itemFieldName, itemFieldDef] of Object.entries(
+            fieldDef.itemFields,
+          )) {
             const itemFieldPath = `${fieldPath}[${i}].${itemFieldName}`;
             result[itemFieldPath] = isFieldRequired(
               itemFieldPath,
               itemFieldDef,
               spec,
-              itemContext
+              itemContext,
             );
           }
         }
@@ -111,7 +113,7 @@ export function isFieldRequired(
   fieldPath: string,
   fieldDef: FieldDefinition,
   spec: Forma,
-  context: EvaluationContext
+  context: EvaluationContext,
 ): boolean {
   // If field has requiredWhen, evaluate it
   if (fieldDef.requiredWhen) {
@@ -133,7 +135,7 @@ export function isFieldRequired(
 export function isRequired(
   fieldPath: string,
   data: Record<string, unknown>,
-  spec: Forma
+  spec: Forma,
 ): boolean {
   const fieldDef = spec.fields[fieldPath];
   if (!fieldDef) {

@@ -70,6 +70,7 @@ When making changes to forma-core that affect forma-react, ensure both packages 
 ### Entry Points
 
 forma-core exports three entry points:
+
 - `@fogpipe/forma-core` - Main exports (types + engines + FEEL)
 - `@fogpipe/forma-core/engine` - Engine functions only
 - `@fogpipe/forma-core/feel` - FEEL evaluation only
@@ -77,6 +78,7 @@ forma-core exports three entry points:
 ### Form Engines
 
 The core package has five engines that compute form state:
+
 1. **Visibility** - Which fields to show (evaluates `visible` expressions)
 2. **Required** - Conditional required state (evaluates `required` expressions)
 3. **Enabled** - Conditional enabled/disabled state
@@ -86,6 +88,7 @@ The core package has five engines that compute form state:
 ### FEEL Expression Context
 
 FEEL expressions have access to:
+
 - `data` - Current form data
 - `computed` - Computed field values
 - `ref` - Reference to another field's value
@@ -115,6 +118,7 @@ All commits must follow the Conventional Commits specification:
 ```
 
 **Types:**
+
 - `feat:` - New feature (triggers MINOR version bump)
 - `fix:` - Bug fix (triggers PATCH version bump)
 - `docs:` - Documentation only changes
@@ -123,10 +127,12 @@ All commits must follow the Conventional Commits specification:
 - `chore:` - Build, CI, dependencies, tooling
 
 **Breaking Changes:**
+
 - Add `!` after type: `feat!: remove deprecated API`
 - Triggers MAJOR version bump
 
 **Examples:**
+
 ```bash
 git commit -m "feat: add date picker field type"
 git commit -m "fix: correct validation message for required fields"
@@ -136,6 +142,7 @@ git commit -m "feat!: change API response format"
 ### Branch Names
 
 Use descriptive branch names:
+
 - `feat/add-date-field` - New features
 - `fix/validation-error` - Bug fixes
 - `docs/update-readme` - Documentation
@@ -154,6 +161,7 @@ Use the `/release` command to create a new release. This will:
 7. Trigger the publish workflow to GitHub Packages
 
 The publish workflow automatically:
+
 - Runs quality checks
 - Publishes @fogpipe/forma-core
 - Publishes @fogpipe/forma-react
@@ -163,6 +171,7 @@ The publish workflow automatically:
 ### Build Failures
 
 If `turbo run build` fails:
+
 1. Check TypeScript errors: `turbo run check-types`
 2. Ensure dependencies are installed: `npm install`
 3. Clear Turbo cache: `rm -rf .turbo node_modules/.cache`
@@ -170,6 +179,7 @@ If `turbo run build` fails:
 ### TypeScript Errors in forma-react
 
 forma-react depends on forma-core types. If you see type errors:
+
 1. Ensure forma-core builds first: `cd packages/forma-core && npm run build`
 2. Then build forma-react: `cd packages/forma-react && npm run build`
 
@@ -178,6 +188,7 @@ Or just run `turbo run build` at root - Turbo handles the order.
 ### Test Failures
 
 Run tests in watch mode for faster iteration:
+
 ```bash
 cd packages/forma-core
 npm run test:watch

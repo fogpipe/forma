@@ -93,7 +93,11 @@ describe("FEEL null handling in visibility expressions", () => {
       // Since the field has a value (false), it's not null
       // Note: FEEL may still return null/false for != null comparisons
       const hasAnsweredValue = result.current.computed?.hasAnswered;
-      expect(hasAnsweredValue === true || hasAnsweredValue === null || hasAnsweredValue === false).toBe(true);
+      expect(
+        hasAnsweredValue === true ||
+          hasAnsweredValue === null ||
+          hasAnsweredValue === false,
+      ).toBe(true);
     });
   });
 
@@ -120,8 +124,12 @@ describe("FEEL null handling in visibility expressions", () => {
       // The chain: age is undefined → hasAge evaluates to null → canProceed evaluates to null
       // Both computed values should be null or false due to the dependency chain
       const computed = result.current.computed;
-      expect(computed?.hasAge === null || computed?.hasAge === false).toBe(true);
-      expect(computed?.canProceed === null || computed?.canProceed === false).toBe(true);
+      expect(computed?.hasAge === null || computed?.hasAge === false).toBe(
+        true,
+      );
+      expect(
+        computed?.canProceed === null || computed?.canProceed === false,
+      ).toBe(true);
 
       // When we provide a value, the chain resolves
       act(() => {
@@ -339,8 +347,16 @@ describe("page navigation with conditional visibility", () => {
         },
       },
       pages: [
-        { id: "inclusion", title: "Inclusion Criteria", fields: ["ageOk", "diagnosisOk"] },
-        { id: "exclusion", title: "Exclusion Criteria", fields: ["pregnant", "allergy"] },
+        {
+          id: "inclusion",
+          title: "Inclusion Criteria",
+          fields: ["ageOk", "diagnosisOk"],
+        },
+        {
+          id: "exclusion",
+          title: "Exclusion Criteria",
+          fields: ["pregnant", "allergy"],
+        },
         {
           id: "consent",
           title: "Consent",
@@ -396,13 +412,16 @@ describe("page navigation with conditional visibility", () => {
       },
       computed: {
         eligibilityDetermined: {
-          expression: "(ageOk = true or ageOk = false) and (pregnant = true or pregnant = false)",
+          expression:
+            "(ageOk = true or ageOk = false) and (pregnant = true or pregnant = false)",
         },
         eligible: {
-          expression: "computed.eligibilityDetermined = true and ageOk = true and pregnant = false",
+          expression:
+            "computed.eligibilityDetermined = true and ageOk = true and pregnant = false",
         },
         ineligible: {
-          expression: "computed.eligibilityDetermined = true and (ageOk = false or pregnant = true)",
+          expression:
+            "computed.eligibilityDetermined = true and (ageOk = false or pregnant = true)",
         },
       },
       pages: [

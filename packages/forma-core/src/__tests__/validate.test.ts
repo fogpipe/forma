@@ -22,7 +22,7 @@ function createTestSpec(options: {
       acc[key] = fields[key] || { label: key };
       return acc;
     },
-    {} as Record<string, unknown>
+    {} as Record<string, unknown>,
   );
 
   return {
@@ -70,7 +70,9 @@ describe("validate", () => {
       expect(result.valid).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].field).toBe("amount");
-      expect(result.errors[0].message).toBe("Amount must be a multiple of 0.01");
+      expect(result.errors[0].message).toBe(
+        "Amount must be a multiple of 0.01",
+      );
     });
 
     it("should handle multipleOf for integers", () => {
@@ -256,7 +258,9 @@ describe("validate", () => {
 
       const result = validate({ percentage: 101 }, spec);
       expect(result.valid).toBe(false);
-      expect(result.errors[0].message).toBe("Percentage must be no more than 100");
+      expect(result.errors[0].message).toBe(
+        "Percentage must be no more than 100",
+      );
     });
 
     it("should validate string minLength", () => {
@@ -272,7 +276,9 @@ describe("validate", () => {
 
       const result = validate({ name: "J" }, spec);
       expect(result.valid).toBe(false);
-      expect(result.errors[0].message).toBe("Name must be at least 2 characters");
+      expect(result.errors[0].message).toBe(
+        "Name must be at least 2 characters",
+      );
     });
   });
 
@@ -310,7 +316,9 @@ describe("validate", () => {
         const result = validate({ items: ["a"] }, spec);
         expect(result.valid).toBe(false);
         expect(result.errors[0].field).toBe("items");
-        expect(result.errors[0].message).toBe("Items must have at least 2 items");
+        expect(result.errors[0].message).toBe(
+          "Items must have at least 2 items",
+        );
       });
 
       it("should validate maxItems from schema when fieldDef does not specify it", () => {
@@ -341,7 +349,9 @@ describe("validate", () => {
         const result = validate({ tags: ["a", "b", "c", "d"] }, spec);
         expect(result.valid).toBe(false);
         expect(result.errors[0].field).toBe("tags");
-        expect(result.errors[0].message).toBe("Tags must have no more than 3 items");
+        expect(result.errors[0].message).toBe(
+          "Tags must have no more than 3 items",
+        );
       });
 
       it("should allow fieldDef.minItems to override schema.minItems", () => {
@@ -409,7 +419,7 @@ describe("validate", () => {
               { name: "Bob", score: 87 },
             ],
           },
-          spec
+          spec,
         );
         expect(validResult.valid).toBe(true);
 
@@ -421,7 +431,7 @@ describe("validate", () => {
               { name: "Bob", score: 87 },
             ],
           },
-          spec
+          spec,
         );
         expect(maxResult.valid).toBe(false);
         expect(maxResult.errors[0].field).toBe("scores[0].score");
@@ -435,7 +445,7 @@ describe("validate", () => {
               { name: "Bob", score: 87 },
             ],
           },
-          spec
+          spec,
         );
         expect(minResult.valid).toBe(false);
         expect(minResult.errors[0].field).toBe("scores[0].score");
@@ -470,7 +480,10 @@ describe("validate", () => {
 
         // Valid - name is present (age is optional)
         expect(
-          validate({ people: [{ name: "Alice" }, { name: "Bob", age: 30 }] }, spec).valid
+          validate(
+            { people: [{ name: "Alice" }, { name: "Bob", age: 30 }] },
+            spec,
+          ).valid,
         ).toBe(true);
 
         // Invalid - missing required name
@@ -508,19 +521,32 @@ describe("validate", () => {
 
         // Valid
         expect(
-          validate({ emails: [{ address: "test@example.com", label: "Work" }] }, spec).valid
+          validate(
+            { emails: [{ address: "test@example.com", label: "Work" }] },
+            spec,
+          ).valid,
         ).toBe(true);
 
         // Invalid email format
-        const emailResult = validate({ emails: [{ address: "not-an-email" }] }, spec);
+        const emailResult = validate(
+          { emails: [{ address: "not-an-email" }] },
+          spec,
+        );
         expect(emailResult.valid).toBe(false);
         expect(emailResult.errors[0].field).toBe("emails[0].address");
         expect(emailResult.errors[0].message).toContain("valid email");
 
         // Invalid label (too long)
         const labelResult = validate(
-          { emails: [{ address: "test@example.com", label: "This label is way too long for the constraint" }] },
-          spec
+          {
+            emails: [
+              {
+                address: "test@example.com",
+                label: "This label is way too long for the constraint",
+              },
+            ],
+          },
+          spec,
         );
         expect(labelResult.valid).toBe(false);
         expect(labelResult.errors[0].field).toBe("emails[0].label");
@@ -552,7 +578,10 @@ describe("validate", () => {
         };
 
         // Valid - correct precision
-        expect(validate({ prices: [{ amount: 10.99 }, { amount: 5.0 }] }, spec).valid).toBe(true);
+        expect(
+          validate({ prices: [{ amount: 10.99 }, { amount: 5.0 }] }, spec)
+            .valid,
+        ).toBe(true);
 
         // Invalid - wrong precision
         const result = validate({ prices: [{ amount: 10.999 }] }, spec);
@@ -592,7 +621,10 @@ describe("validate", () => {
                   type: "number",
                   label: "Quantity",
                   validations: [
-                    { rule: "value <= 100", message: "Cannot order more than 100 items" },
+                    {
+                      rule: "value <= 100",
+                      message: "Cannot order more than 100 items",
+                    },
                   ],
                 },
               },
@@ -602,17 +634,27 @@ describe("validate", () => {
         };
 
         // Valid
-        expect(validate({ orders: [{ quantity: 5, price: 10.0 }] }, spec).valid).toBe(true);
+        expect(
+          validate({ orders: [{ quantity: 5, price: 10.0 }] }, spec).valid,
+        ).toBe(true);
 
         // Invalid - schema minimum violated
-        const minResult = validate({ orders: [{ quantity: 0, price: 10.0 }] }, spec);
+        const minResult = validate(
+          { orders: [{ quantity: 0, price: 10.0 }] },
+          spec,
+        );
         expect(minResult.valid).toBe(false);
         expect(minResult.errors[0].message).toContain("at least 1");
 
         // Invalid - custom FEEL validation violated
-        const customResult = validate({ orders: [{ quantity: 150, price: 10.0 }] }, spec);
+        const customResult = validate(
+          { orders: [{ quantity: 150, price: 10.0 }] },
+          spec,
+        );
         expect(customResult.valid).toBe(false);
-        expect(customResult.errors.some((e) => e.message.includes("more than 100"))).toBe(true);
+        expect(
+          customResult.errors.some((e) => e.message.includes("more than 100")),
+        ).toBe(true);
 
         // Invalid - empty array (minItems from schema)
         const emptyResult = validate({ orders: [] }, spec);

@@ -17,7 +17,9 @@ export const FormaContext = createContext<UseFormaReturn | null>(null);
 export function useFormaContext(): UseFormaReturn {
   const context = useContext(FormaContext);
   if (!context) {
-    throw new Error("useFormaContext must be used within a FormaContext.Provider");
+    throw new Error(
+      "useFormaContext must be used within a FormaContext.Provider",
+    );
   }
   return context;
 }

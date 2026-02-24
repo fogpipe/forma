@@ -26,7 +26,10 @@ describe("canProceed", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { name: "John", email: "john@example.com" } })
+        useForma({
+          spec,
+          initialData: { name: "John", email: "john@example.com" },
+        }),
       );
 
       expect(result.current.wizard?.canProceed).toBe(true);
@@ -38,13 +41,11 @@ describe("canProceed", () => {
           name: { type: "text", label: "Name", required: true },
           email: { type: "email", label: "Email", required: true },
         },
-        pages: [
-          { id: "page1", title: "Page 1", fields: ["name", "email"] },
-        ],
+        pages: [{ id: "page1", title: "Page 1", fields: ["name", "email"] }],
       });
 
-      const { result } = renderHook(() =>
-        useForma({ spec, initialData: { name: "John" } }) // email is missing
+      const { result } = renderHook(
+        () => useForma({ spec, initialData: { name: "John" } }), // email is missing
       );
 
       expect(result.current.wizard?.canProceed).toBe(false);
@@ -63,8 +64,8 @@ describe("canProceed", () => {
         ],
       });
 
-      const { result } = renderHook(() =>
-        useForma({ spec, initialData: { name: "John" } }) // page 2 fields empty
+      const { result } = renderHook(
+        () => useForma({ spec, initialData: { name: "John" } }), // page 2 fields empty
       );
 
       // On page 1, only name is checked (which is filled)
@@ -84,7 +85,7 @@ describe("canProceed", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { name: "John" } })
+        useForma({ spec, initialData: { name: "John" } }),
       );
 
       // Page 1 is valid
@@ -112,13 +113,11 @@ describe("canProceed", () => {
             },
           },
         },
-        pages: [
-          { id: "page1", title: "Page 1", fields: ["items"] },
-        ],
+        pages: [{ id: "page1", title: "Page 1", fields: ["items"] }],
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { items: [] } })
+        useForma({ spec, initialData: { items: [] } }),
       );
 
       // Array is empty but minItems requires at least 1
@@ -139,15 +138,24 @@ describe("canProceed", () => {
         fields: {
           showEmail: { type: "boolean", label: "Show Email" },
           name: { type: "text", label: "Name", required: true },
-          email: { type: "email", label: "Email", required: true, visibleWhen: "showEmail = true" },
+          email: {
+            type: "email",
+            label: "Email",
+            required: true,
+            visibleWhen: "showEmail = true",
+          },
         },
         pages: [
-          { id: "page1", title: "Page 1", fields: ["showEmail", "name", "email"] },
+          {
+            id: "page1",
+            title: "Page 1",
+            fields: ["showEmail", "name", "email"],
+          },
         ],
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { showEmail: false, name: "John" } })
+        useForma({ spec, initialData: { showEmail: false, name: "John" } }),
       );
 
       // Email is required but hidden, so it shouldn't block progression
@@ -159,15 +167,24 @@ describe("canProceed", () => {
         fields: {
           showEmail: { type: "boolean", label: "Show Email" },
           name: { type: "text", label: "Name", required: true },
-          email: { type: "email", label: "Email", required: true, visibleWhen: "showEmail = true" },
+          email: {
+            type: "email",
+            label: "Email",
+            required: true,
+            visibleWhen: "showEmail = true",
+          },
         },
         pages: [
-          { id: "page1", title: "Page 1", fields: ["showEmail", "name", "email"] },
+          {
+            id: "page1",
+            title: "Page 1",
+            fields: ["showEmail", "name", "email"],
+          },
         ],
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { showEmail: false, name: "John" } })
+        useForma({ spec, initialData: { showEmail: false, name: "John" } }),
       );
 
       // Email is hidden
@@ -197,13 +214,11 @@ describe("canProceed", () => {
           name: { type: "text", label: "Name", required: true },
           age: { type: "number", label: "Age" }, // Not required
         },
-        pages: [
-          { id: "page1", title: "Page 1", fields: ["name", "age"] },
-        ],
+        pages: [{ id: "page1", title: "Page 1", fields: ["name", "age"] }],
       });
 
-      const { result } = renderHook(() =>
-        useForma({ spec, initialData: { age: 25 } }) // name missing
+      const { result } = renderHook(
+        () => useForma({ spec, initialData: { age: 25 } }), // name missing
       );
 
       expect(result.current.wizard?.canProceed).toBe(false);
@@ -219,7 +234,11 @@ describe("canProceed", () => {
       const spec = createTestSpec({
         fields: {
           hasSpouse: { type: "boolean", label: "Has Spouse" },
-          spouseName: { type: "text", label: "Spouse Name", requiredWhen: "hasSpouse = true" },
+          spouseName: {
+            type: "text",
+            label: "Spouse Name",
+            requiredWhen: "hasSpouse = true",
+          },
         },
         pages: [
           { id: "page1", title: "Page 1", fields: ["hasSpouse", "spouseName"] },
@@ -227,7 +246,7 @@ describe("canProceed", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { hasSpouse: false } })
+        useForma({ spec, initialData: { hasSpouse: false } }),
       );
 
       // Spouse name not required when hasSpouse is false
@@ -258,29 +277,31 @@ describe("canProceed", () => {
       // use a validation rule: { rule: "value = true", message: "Must accept terms" }
       const spec = createTestSpec({
         fields: {
-          hasPets: { type: "boolean", label: "Do you have pets?", required: true },
+          hasPets: {
+            type: "boolean",
+            label: "Do you have pets?",
+            required: true,
+          },
         },
-        pages: [
-          { id: "page1", title: "Page 1", fields: ["hasPets"] },
-        ],
+        pages: [{ id: "page1", title: "Page 1", fields: ["hasPets"] }],
       });
 
       // With auto-initialization, boolean defaults to false (a valid value)
       const { result: resultDefault } = renderHook(() =>
-        useForma({ spec, initialData: {} })
+        useForma({ spec, initialData: {} }),
       );
       expect(resultDefault.current.data.hasPets).toBe(false);
       expect(resultDefault.current.wizard?.canProceed).toBe(true); // false is valid
 
       // explicit false should be valid (user answered "no")
       const { result: resultFalse } = renderHook(() =>
-        useForma({ spec, initialData: { hasPets: false } })
+        useForma({ spec, initialData: { hasPets: false } }),
       );
       expect(resultFalse.current.wizard?.canProceed).toBe(true);
 
       // true should be valid (user answered "yes")
       const { result: resultTrue } = renderHook(() =>
-        useForma({ spec, initialData: { hasPets: true } })
+        useForma({ spec, initialData: { hasPets: true } }),
       );
       expect(resultTrue.current.wizard?.canProceed).toBe(true);
     });
@@ -298,14 +319,10 @@ describe("canProceed", () => {
             ],
           },
         },
-        pages: [
-          { id: "page1", title: "Page 1", fields: ["country"] },
-        ],
+        pages: [{ id: "page1", title: "Page 1", fields: ["country"] }],
       });
 
-      const { result } = renderHook(() =>
-        useForma({ spec, initialData: {} })
-      );
+      const { result } = renderHook(() => useForma({ spec, initialData: {} }));
 
       expect(result.current.wizard?.canProceed).toBe(false);
 
@@ -323,26 +340,24 @@ describe("canProceed", () => {
         fields: {
           name: { type: "text", label: "Name", required: true },
         },
-        pages: [
-          { id: "page1", title: "Page 1", fields: ["name"] },
-        ],
+        pages: [{ id: "page1", title: "Page 1", fields: ["name"] }],
       });
 
       // Empty string should be invalid
       const { result: resultEmpty } = renderHook(() =>
-        useForma({ spec, initialData: { name: "" } })
+        useForma({ spec, initialData: { name: "" } }),
       );
       expect(resultEmpty.current.wizard?.canProceed).toBe(false);
 
       // Whitespace only should be invalid
       const { result: resultWhitespace } = renderHook(() =>
-        useForma({ spec, initialData: { name: "   " } })
+        useForma({ spec, initialData: { name: "   " } }),
       );
       expect(resultWhitespace.current.wizard?.canProceed).toBe(false);
 
       // Actual value should be valid
       const { result: resultValid } = renderHook(() =>
-        useForma({ spec, initialData: { name: "John" } })
+        useForma({ spec, initialData: { name: "John" } }),
       );
       expect(resultValid.current.wizard?.canProceed).toBe(true);
     });
@@ -352,26 +367,24 @@ describe("canProceed", () => {
         fields: {
           age: { type: "number", label: "Age", required: true },
         },
-        pages: [
-          { id: "page1", title: "Page 1", fields: ["age"] },
-        ],
+        pages: [{ id: "page1", title: "Page 1", fields: ["age"] }],
       });
 
       // null should be invalid
       const { result: resultNull } = renderHook(() =>
-        useForma({ spec, initialData: { age: null } })
+        useForma({ spec, initialData: { age: null } }),
       );
       expect(resultNull.current.wizard?.canProceed).toBe(false);
 
       // undefined should be invalid
       const { result: resultUndefined } = renderHook(() =>
-        useForma({ spec, initialData: {} })
+        useForma({ spec, initialData: {} }),
       );
       expect(resultUndefined.current.wizard?.canProceed).toBe(false);
 
       // 0 should be valid (it's a real number)
       const { result: resultZero } = renderHook(() =>
-        useForma({ spec, initialData: { age: 0 } })
+        useForma({ spec, initialData: { age: 0 } }),
       );
       expect(resultZero.current.wizard?.canProceed).toBe(true);
     });
@@ -388,26 +401,27 @@ describe("canProceed", () => {
             },
           },
         },
-        pages: [
-          { id: "page1", title: "Page 1", fields: ["items"] },
-        ],
+        pages: [{ id: "page1", title: "Page 1", fields: ["items"] }],
       });
 
       // Empty array with minItems > 0 should be invalid
       const { result: resultEmpty } = renderHook(() =>
-        useForma({ spec, initialData: { items: [] } })
+        useForma({ spec, initialData: { items: [] } }),
       );
       expect(resultEmpty.current.wizard?.canProceed).toBe(false);
 
       // 1 item but minItems is 2
       const { result: resultOne } = renderHook(() =>
-        useForma({ spec, initialData: { items: [{ name: "Item 1" }] } })
+        useForma({ spec, initialData: { items: [{ name: "Item 1" }] } }),
       );
       expect(resultOne.current.wizard?.canProceed).toBe(false);
 
       // 2 items should be valid
       const { result: resultTwo } = renderHook(() =>
-        useForma({ spec, initialData: { items: [{ name: "Item 1" }, { name: "Item 2" }] } })
+        useForma({
+          spec,
+          initialData: { items: [{ name: "Item 1" }, { name: "Item 2" }] },
+        }),
       );
       expect(resultTwo.current.wizard?.canProceed).toBe(true);
     });
@@ -425,9 +439,7 @@ describe("canProceed", () => {
         ],
       });
 
-      const { result } = renderHook(() =>
-        useForma({ spec, initialData: {} })
-      );
+      const { result } = renderHook(() => useForma({ spec, initialData: {} }));
 
       // Empty page should allow progression
       expect(result.current.wizard?.canProceed).toBe(true);
@@ -437,16 +449,30 @@ describe("canProceed", () => {
       const spec = createTestSpec({
         fields: {
           showFields: { type: "boolean", label: "Show Fields" },
-          name: { type: "text", label: "Name", required: true, visibleWhen: "showFields = true" },
-          email: { type: "email", label: "Email", required: true, visibleWhen: "showFields = true" },
+          name: {
+            type: "text",
+            label: "Name",
+            required: true,
+            visibleWhen: "showFields = true",
+          },
+          email: {
+            type: "email",
+            label: "Email",
+            required: true,
+            visibleWhen: "showFields = true",
+          },
         },
         pages: [
-          { id: "page1", title: "Page 1", fields: ["showFields", "name", "email"] },
+          {
+            id: "page1",
+            title: "Page 1",
+            fields: ["showFields", "name", "email"],
+          },
         ],
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { showFields: false } })
+        useForma({ spec, initialData: { showFields: false } }),
       );
 
       // All required fields are hidden, only showFields is visible (not required)
@@ -467,8 +493,8 @@ describe("canProceed", () => {
         ],
       });
 
-      const { result } = renderHook(() =>
-        useForma({ spec, initialData: { name: "John" } }) // Only page 1 is valid
+      const { result } = renderHook(
+        () => useForma({ spec, initialData: { name: "John" } }), // Only page 1 is valid
       );
 
       // Page 1 should be valid
@@ -500,7 +526,7 @@ describe("canProceed", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { price: 10, quantity: 2 } })
+        useForma({ spec, initialData: { price: 10, quantity: 2 } }),
       );
 
       // Computed fields don't block - only real fields do
@@ -515,14 +541,10 @@ describe("canProceed", () => {
         fields: {
           name: { type: "text", label: "Name", required: true },
         },
-        pages: [
-          { id: "page1", title: "Page 1", fields: ["name"] },
-        ],
+        pages: [{ id: "page1", title: "Page 1", fields: ["name"] }],
       });
 
-      const { result } = renderHook(() =>
-        useForma({ spec, initialData: {} })
-      );
+      const { result } = renderHook(() => useForma({ spec, initialData: {} }));
 
       // Both should return the same result
       expect(result.current.wizard?.canProceed).toBe(false);
@@ -543,13 +565,11 @@ describe("canProceed", () => {
           name: { type: "text", label: "Name", required: true },
           email: { type: "email", label: "Email", required: true },
         },
-        pages: [
-          { id: "page1", title: "Page 1", fields: ["name", "email"] },
-        ],
+        pages: [{ id: "page1", title: "Page 1", fields: ["name", "email"] }],
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: {}, validateOn: "blur" })
+        useForma({ spec, initialData: {}, validateOn: "blur" }),
       );
 
       // Fields not touched yet - errors exist but not visible to user
@@ -574,14 +594,10 @@ describe("canProceed", () => {
         fields: {
           name: { type: "text", label: "Name", required: true },
         },
-        pages: [
-          { id: "page1", title: "Page 1", fields: ["name"] },
-        ],
+        pages: [{ id: "page1", title: "Page 1", fields: ["name"] }],
       });
 
-      const { result } = renderHook(() =>
-        useForma({ spec, initialData: {} })
-      );
+      const { result } = renderHook(() => useForma({ spec, initialData: {} }));
 
       expect(result.current.wizard?.canProceed).toBe(false);
 
@@ -606,13 +622,15 @@ describe("canProceed", () => {
           email: { type: "email", label: "Email", required: true },
         },
         pages: [
-          { id: "page1", title: "Page 1", fields: ["firstName", "lastName", "email"] },
+          {
+            id: "page1",
+            title: "Page 1",
+            fields: ["firstName", "lastName", "email"],
+          },
         ],
       });
 
-      const { result } = renderHook(() =>
-        useForma({ spec, initialData: {} })
-      );
+      const { result } = renderHook(() => useForma({ spec, initialData: {} }));
 
       expect(result.current.wizard?.canProceed).toBe(false);
 
@@ -644,18 +662,18 @@ describe("canProceed", () => {
         fields: {
           name: { type: "text", label: "Name", required: true },
         },
-        pages: [
-          { id: "page1", title: "Page 1", fields: ["name"] },
-        ],
+        pages: [{ id: "page1", title: "Page 1", fields: ["name"] }],
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { name: "John" } })
+        useForma({ spec, initialData: { name: "John" } }),
       );
 
       // No errors - should be able to proceed
       expect(result.current.wizard?.canProceed).toBe(true);
-      expect(result.current.errors.filter(e => e.severity === "error")).toHaveLength(0);
+      expect(
+        result.current.errors.filter((e) => e.severity === "error"),
+      ).toHaveLength(0);
     });
   });
 
@@ -669,12 +687,17 @@ describe("canProceed", () => {
         },
         pages: [
           { id: "page1", title: "Page 1", fields: ["showPage2", "page1Field"] },
-          { id: "page2", title: "Page 2", fields: ["page2Field"], visibleWhen: "showPage2 = true" },
+          {
+            id: "page2",
+            title: "Page 2",
+            fields: ["page2Field"],
+            visibleWhen: "showPage2 = true",
+          },
         ],
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { showPage2: true } })
+        useForma({ spec, initialData: { showPage2: true } }),
       );
 
       // Navigate to page 2
@@ -703,14 +726,23 @@ describe("canProceed", () => {
           page3Field: { type: "text", label: "Page 3 Field" },
         },
         pages: [
-          { id: "page1", title: "Page 1", fields: ["skipMiddle", "page1Field"] },
-          { id: "page2", title: "Page 2", fields: ["page2Field"], visibleWhen: "skipMiddle = false" },
+          {
+            id: "page1",
+            title: "Page 1",
+            fields: ["skipMiddle", "page1Field"],
+          },
+          {
+            id: "page2",
+            title: "Page 2",
+            fields: ["page2Field"],
+            visibleWhen: "skipMiddle = false",
+          },
           { id: "page3", title: "Page 3", fields: ["page3Field"] },
         ],
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { skipMiddle: true } })
+        useForma({ spec, initialData: { skipMiddle: true } }),
       );
 
       // With skipMiddle=true, page2 is hidden
@@ -734,13 +766,22 @@ describe("canProceed", () => {
           optionalField: { type: "text", label: "Optional" },
         },
         pages: [
-          { id: "main", title: "Main", fields: ["showOptional", "requiredField"] },
-          { id: "optional", title: "Optional", fields: ["optionalField"], visibleWhen: "showOptional = true" },
+          {
+            id: "main",
+            title: "Main",
+            fields: ["showOptional", "requiredField"],
+          },
+          {
+            id: "optional",
+            title: "Optional",
+            fields: ["optionalField"],
+            visibleWhen: "showOptional = true",
+          },
         ],
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { showOptional: false } })
+        useForma({ spec, initialData: { showOptional: false } }),
       );
 
       // All pages are returned

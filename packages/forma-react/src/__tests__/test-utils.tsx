@@ -3,7 +3,11 @@
  */
 
 import { render, type RenderOptions } from "@testing-library/react";
-import type { Forma, FieldDefinition, PageDefinition } from "@fogpipe/forma-core";
+import type {
+  Forma,
+  FieldDefinition,
+  PageDefinition,
+} from "@fogpipe/forma-core";
 import type {
   ComponentMap,
   TextComponentProps,
@@ -24,7 +28,7 @@ export function createTestSpec(
     computed?: Record<string, { expression: string }>;
     pages?: PageDefinition[];
     referenceData?: Record<string, unknown>;
-  } = {}
+  } = {},
 ): Forma {
   const { fields = {}, fieldOrder, computed, pages, referenceData } = options;
 
@@ -33,10 +37,22 @@ export function createTestSpec(
   const schemaRequired: string[] = [];
 
   for (const [name, field] of Object.entries(fields)) {
-    const { type, required, options: fieldOptions, items, ...rest } = field as Record<string, unknown>;
+    const {
+      type,
+      required,
+      options: fieldOptions,
+      items,
+      ...rest
+    } = field as Record<string, unknown>;
 
     let schemaType = type;
-    if (type === "text" || type === "email" || type === "url" || type === "textarea" || type === "password") {
+    if (
+      type === "text" ||
+      type === "email" ||
+      type === "url" ||
+      type === "textarea" ||
+      type === "password"
+    ) {
       schemaType = "string";
     }
     if (type === "select") {
@@ -86,7 +102,8 @@ export function createTestSpec(
     void __; // Mark as intentionally unused
     fieldDefs[name] = {
       type: type as FieldDefinition["type"],
-      label: (rest.label as string) || name.charAt(0).toUpperCase() + name.slice(1),
+      label:
+        (rest.label as string) || name.charAt(0).toUpperCase() + name.slice(1),
       ...rest,
     } as FieldDefinition;
   }
@@ -205,7 +222,9 @@ export function createTestComponentMap(): ComponentMap {
   };
 
   // Multiselect fields
-  const MultiSelectComponent = ({ field: props }: MultiSelectComponentProps) => {
+  const MultiSelectComponent = ({
+    field: props,
+  }: MultiSelectComponentProps) => {
     const { name, field, value, options, onChange, onBlur, disabled } = props;
     const displayValue = (value || []).join(",");
     return (
@@ -288,7 +307,7 @@ export function createTestComponentMap(): ComponentMap {
  */
 export function renderWithProviders(
   ui: React.ReactElement,
-  options?: Omit<RenderOptions, "wrapper">
+  options?: Omit<RenderOptions, "wrapper">,
 ) {
   return render(ui, { ...options });
 }

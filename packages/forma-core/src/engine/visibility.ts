@@ -46,7 +46,7 @@ export interface OptionsVisibilityResult {
  */
 function filterOptionsByContext(
   options: readonly SelectOption[],
-  context: EvaluationContext
+  context: EvaluationContext,
 ): SelectOption[] {
   return options.filter((option) => {
     if (!option.visibleWhen) return true;
@@ -67,7 +67,7 @@ function processArrayItemOptions(
   fieldDef: ArrayFieldDefinition,
   arrayData: readonly unknown[],
   baseContext: EvaluationContext,
-  result: Record<string, SelectOption[]>
+  result: Record<string, SelectOption[]>,
 ): void {
   if (!fieldDef.itemFields) return;
 
@@ -79,10 +79,19 @@ function processArrayItemOptions(
       itemIndex: i,
     };
 
-    for (const [itemFieldName, itemFieldDef] of Object.entries(fieldDef.itemFields)) {
-      if (isSelectionField(itemFieldDef) && itemFieldDef.options && itemFieldDef.options.length > 0) {
+    for (const [itemFieldName, itemFieldDef] of Object.entries(
+      fieldDef.itemFields,
+    )) {
+      if (
+        isSelectionField(itemFieldDef) &&
+        itemFieldDef.options &&
+        itemFieldDef.options.length > 0
+      ) {
         const itemFieldPath = `${arrayPath}[${i}].${itemFieldName}`;
-        result[itemFieldPath] = filterOptionsByContext(itemFieldDef.options, itemContext);
+        result[itemFieldPath] = filterOptionsByContext(
+          itemFieldDef.options,
+          itemContext,
+        );
       }
     }
   }
@@ -113,7 +122,7 @@ function processArrayItemOptions(
 export function getVisibility(
   data: Record<string, unknown>,
   spec: Forma,
-  options: VisibilityOptions = {}
+  options: VisibilityOptions = {},
 ): VisibilityResult {
   const computed = options.computed ?? calculate(data, spec);
 
@@ -143,7 +152,7 @@ function evaluateFieldVisibility(
   fieldDef: FieldDefinition,
   data: Record<string, unknown>,
   context: EvaluationContext,
-  result: VisibilityResult
+  result: VisibilityResult,
 ): void {
   if (fieldDef.visibleWhen) {
     result[path] = evaluateBoolean(fieldDef.visibleWhen, context);
@@ -171,7 +180,7 @@ function evaluateArrayItemVisibility(
   fieldDef: ArrayFieldDefinition,
   arrayData: unknown[],
   baseContext: EvaluationContext,
-  result: VisibilityResult
+  result: VisibilityResult,
 ): void {
   if (!fieldDef.itemFields) return;
 
@@ -183,11 +192,16 @@ function evaluateArrayItemVisibility(
       itemIndex: i,
     };
 
-    for (const [fieldName, itemFieldDef] of Object.entries(fieldDef.itemFields)) {
+    for (const [fieldName, itemFieldDef] of Object.entries(
+      fieldDef.itemFields,
+    )) {
       const itemFieldPath = `${arrayPath}[${i}].${fieldName}`;
 
       if (itemFieldDef.visibleWhen) {
-        result[itemFieldPath] = evaluateBoolean(itemFieldDef.visibleWhen, itemContext);
+        result[itemFieldPath] = evaluateBoolean(
+          itemFieldDef.visibleWhen,
+          itemContext,
+        );
       } else {
         result[itemFieldPath] = true;
       }
@@ -204,7 +218,7 @@ export function isFieldVisible(
   fieldPath: string,
   data: Record<string, unknown>,
   spec: Forma,
-  options: VisibilityOptions = {}
+  options: VisibilityOptions = {},
 ): boolean {
   const fieldDef = spec.fields[fieldPath];
   if (!fieldDef) {
@@ -235,7 +249,7 @@ export function isFieldVisible(
 export function getPageVisibility(
   data: Record<string, unknown>,
   spec: Forma,
-  options: VisibilityOptions = {}
+  options: VisibilityOptions = {},
 ): Record<string, boolean> {
   if (!spec.pages) {
     return {};
@@ -294,7 +308,7 @@ export function getPageVisibility(
 export function getOptionsVisibility(
   data: Record<string, unknown>,
   spec: Forma,
-  options: VisibilityOptions = {}
+  options: VisibilityOptions = {},
 ): OptionsVisibilityResult {
   const computed = options.computed ?? calculate(data, spec);
   const result: Record<string, SelectOption[]> = {};
@@ -310,7 +324,11 @@ export function getOptionsVisibility(
     if (!fieldDef) continue;
 
     // Top-level fields with options
-    if (isSelectionField(fieldDef) && fieldDef.options && fieldDef.options.length > 0) {
+    if (
+      isSelectionField(fieldDef) &&
+      fieldDef.options &&
+      fieldDef.options.length > 0
+    ) {
       result[fieldPath] = filterOptionsByContext(fieldDef.options, baseContext);
     }
 
@@ -318,7 +336,13 @@ export function getOptionsVisibility(
     if (isArrayField(fieldDef) && fieldDef.itemFields) {
       const arrayData = data[fieldPath];
       if (Array.isArray(arrayData)) {
-        processArrayItemOptions(fieldPath, fieldDef, arrayData, baseContext, result);
+        processArrayItemOptions(
+          fieldPath,
+          fieldDef,
+          arrayData,
+          baseContext,
+          result,
+        );
       }
     }
   }
@@ -360,7 +384,7 @@ export function getVisibleOptions(
     computed?: Record<string, unknown>;
     item?: Record<string, unknown>;
     itemIndex?: number;
-  } = {}
+  } = {},
 ): SelectOption[] {
   if (!options || options.length === 0) return [];
 

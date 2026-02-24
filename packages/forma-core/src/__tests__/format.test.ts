@@ -157,7 +157,9 @@ describe("format module", () => {
 
       it("formats date strings", () => {
         const result = formatValue("2024-03-15", "date");
-        expect(result).toMatch(/3\/15\/2024|15\/3\/2024|3\/14\/2024|14\/3\/2024/);
+        expect(result).toMatch(
+          /3\/15\/2024|15\/3\/2024|3\/14\/2024|14\/3\/2024/,
+        );
       });
 
       it("falls back to string for invalid dates", () => {
@@ -189,23 +191,34 @@ describe("format module", () => {
     describe("nullDisplay option", () => {
       it("uses nullDisplay for null values", () => {
         expect(formatValue(null, undefined, { nullDisplay: "—" })).toBe("—");
-        expect(formatValue(null, "decimal(2)", { nullDisplay: "N/A" })).toBe("N/A");
+        expect(formatValue(null, "decimal(2)", { nullDisplay: "N/A" })).toBe(
+          "N/A",
+        );
       });
 
       it("uses nullDisplay for undefined values", () => {
-        expect(formatValue(undefined, undefined, { nullDisplay: "—" })).toBe("—");
-        expect(formatValue(undefined, "currency", { nullDisplay: "-" })).toBe("-");
+        expect(formatValue(undefined, undefined, { nullDisplay: "—" })).toBe(
+          "—",
+        );
+        expect(formatValue(undefined, "currency", { nullDisplay: "-" })).toBe(
+          "-",
+        );
       });
 
       it("does not affect non-null values", () => {
-        expect(formatValue(123, "decimal(2)", { nullDisplay: "—" })).toBe("123.00");
+        expect(formatValue(123, "decimal(2)", { nullDisplay: "—" })).toBe(
+          "123.00",
+        );
         expect(formatValue(0, "decimal(2)", { nullDisplay: "—" })).toBe("0.00");
       });
     });
 
     describe("locale option", () => {
       it("respects locale for currency formatting", () => {
-        const result = formatValue(1234.56, "currency", { locale: "de-DE", currency: "EUR" });
+        const result = formatValue(1234.56, "currency", {
+          locale: "de-DE",
+          currency: "EUR",
+        });
         // German locale uses comma for decimals
         expect(result).toContain("1.234,56");
       });

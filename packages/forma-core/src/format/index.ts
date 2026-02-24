@@ -112,7 +112,7 @@ export function parseDecimalFormat(format: string): number | null {
 export function formatValue(
   value: unknown,
   format?: string,
-  options?: FormatOptions
+  options?: FormatOptions,
 ): string {
   const { locale = "en-US", currency = "USD", nullDisplay } = options ?? {};
 

@@ -24,6 +24,7 @@ If any check fails, STOP and report the errors. Do NOT attempt to auto-fix for r
 Run `./scripts/get-release-info.sh`
 
 This outputs:
+
 - FROM_TAG: The starting point (previous release or first commit)
 - TO_REF: The ending point (HEAD)
 - IS_FIRST_RELEASE: Whether this is the first release
@@ -89,15 +90,19 @@ Write release notes to `./temp-release-notes.md`:
 ## What's Changed
 
 ### Breaking Changes
+
 - (only if any)
 
 ### New Features
+
 - (only if any)
 
 ### Bug Fixes
+
 - (only if any)
 
 ### Other Changes
+
 - (only if any)
 
 **Full Changelog**: <REPO_URL>/compare/<FROM_TAG>...v<new-version>
@@ -110,6 +115,7 @@ Only include sections that have content.
 Run `./scripts/create-release.sh <new-version> ./temp-release-notes.md`
 
 This will:
+
 1. Update root package.json version
 2. Update packages/forma-core/package.json version
 3. Update packages/forma-react/package.json version and @fogpipe/forma-core dependency
@@ -119,6 +125,7 @@ This will:
 7. Create GitHub release with the notes
 
 The tag push will trigger the GitHub Actions publish workflow to:
+
 1. Run all quality checks again
 2. Publish @fogpipe/forma-core to GitHub Packages
 3. Publish @fogpipe/forma-react to GitHub Packages
@@ -130,6 +137,7 @@ Run `rm -f ./temp-release-notes.md`
 ## Output
 
 Report the results:
+
 - New version number
 - GitHub release URL
 - Note that the publish workflow has been triggered

@@ -6,10 +6,10 @@ Forma is a specification language for defining dynamic forms that combines JSON 
 
 ## Packages
 
-| Package | Description | npm |
-|---------|-------------|-----|
-| [@fogpipe/forma-core](./packages/forma-core) | Core runtime: types, FEEL evaluation, form state engines | [![npm](https://img.shields.io/npm/v/@fogpipe/forma-core)](https://www.npmjs.com/package/@fogpipe/forma-core) |
-| [@fogpipe/forma-react](./packages/forma-react) | Headless React form renderer | [![npm](https://img.shields.io/npm/v/@fogpipe/forma-react)](https://www.npmjs.com/package/@fogpipe/forma-react) |
+| Package                                        | Description                                              | npm                                                                                                             |
+| ---------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| [@fogpipe/forma-core](./packages/forma-core)   | Core runtime: types, FEEL evaluation, form state engines | [![npm](https://img.shields.io/npm/v/@fogpipe/forma-core)](https://www.npmjs.com/package/@fogpipe/forma-core)   |
+| [@fogpipe/forma-react](./packages/forma-react) | Headless React form renderer                             | [![npm](https://img.shields.io/npm/v/@fogpipe/forma-react)](https://www.npmjs.com/package/@fogpipe/forma-react) |
 
 ## Features
 
@@ -35,19 +35,19 @@ npm install @fogpipe/forma-react
 ### Define a Form
 
 ```typescript
-import type { Forma } from '@fogpipe/forma-core';
+import type { Forma } from "@fogpipe/forma-core";
 
 const registrationForm: Forma = {
   meta: {
     title: "User Registration",
-    description: "Create a new account"
+    description: "Create a new account",
   },
   fields: [
     {
       id: "email",
       type: "email",
       label: "Email Address",
-      required: true
+      required: true,
     },
     {
       id: "age",
@@ -55,14 +55,14 @@ const registrationForm: Forma = {
       label: "Age",
       required: true,
       min: 18,
-      max: 120
+      max: 120,
     },
     {
       id: "hasLicense",
       type: "boolean",
       label: "Do you have a driver's license?",
       // Only show if user is 16 or older
-      visible: "age >= 16"
+      visible: "age >= 16",
     },
     {
       id: "licenseNumber",
@@ -71,31 +71,31 @@ const registrationForm: Forma = {
       // Required only if user has a license
       required: "hasLicense = true",
       // Only visible if user has a license
-      visible: "hasLicense = true"
-    }
+      visible: "hasLicense = true",
+    },
   ],
   computed: [
     {
       name: "isAdult",
       expression: "age >= 18",
-      label: "Adult Status"
-    }
-  ]
+      label: "Adult Status",
+    },
+  ],
 };
 ```
 
 ### Render with React
 
 ```tsx
-import { FormRenderer } from '@fogpipe/forma-react';
-import { myComponents } from './components';
+import { FormRenderer } from "@fogpipe/forma-react";
+import { myComponents } from "./components";
 
 function App() {
   return (
     <FormRenderer
       spec={registrationForm}
       components={myComponents}
-      onSubmit={(data) => console.log('Submitted:', data)}
+      onSubmit={(data) => console.log("Submitted:", data)}
     />
   );
 }
@@ -108,14 +108,14 @@ import {
   getVisibility,
   getRequired,
   validate,
-  calculate
-} from '@fogpipe/forma-core';
+  calculate,
+} from "@fogpipe/forma-core";
 
 const formData = {
   email: "user@example.com",
   age: 25,
   hasLicense: true,
-  licenseNumber: "ABC123"
+  licenseNumber: "ABC123",
 };
 
 // Check which fields are visible
@@ -141,24 +141,38 @@ Forma uses FEEL expressions for dynamic behavior:
 
 ```typescript
 // Visibility - show field conditionally
-{ visible: "age >= 18" }
-{ visible: "country = \"US\"" }
-{ visible: "items.length > 0" }
+{
+  visible: "age >= 18";
+}
+{
+  visible: 'country = "US"';
+}
+{
+  visible: "items.length > 0";
+}
 
 // Required - make field required conditionally
-{ required: "hasInsurance = true" }
-{ required: "orderTotal > 100" }
+{
+  required: "hasInsurance = true";
+}
+{
+  required: "orderTotal > 100";
+}
 
 // Computed fields - calculate values
-{ expression: "quantity * unitPrice" }
-{ expression: "if income > 50000 then \"premium\" else \"standard\"" }
+{
+  expression: "quantity * unitPrice";
+}
+{
+  expression: 'if income > 50000 then "premium" else "standard"';
+}
 
 // Validation rules
 {
   validation: [
     { rule: "value >= 0", message: "Must be positive" },
-    { rule: "value <= 100", message: "Cannot exceed 100" }
-  ]
+    { rule: "value <= 100", message: "Cannot exceed 100" },
+  ];
 }
 ```
 

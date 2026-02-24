@@ -14,6 +14,7 @@ Extend the Forma specification with presentation variants, display fields, appea
 The Forma spec is currently data-focused - it defines what data to collect and how to validate it. This task adds the **presentation layer** to the spec itself, enabling forms with visual hierarchy, computed result display, input decoration, and readonly states.
 
 **Research basis:**
+
 - `formidable/docs/research/forma-ui-layer-analysis.md` (type vs variant design)
 - `formidable/docs/research/form-js-deep-dive.md` (competitive gap analysis vs bpmn-io/form-js)
 
@@ -28,6 +29,7 @@ The Forma spec is currently data-focused - it defines what data to collect and h
 Currently `type` is optional on `FieldDefinition` (inferred from JSON Schema). This changes to **required** so TypeScript can use it as a discriminant for the union.
 
 **Rationale:**
+
 - The AI always generates `type` explicitly
 - Inference-from-schema adds runtime complexity for unclear benefit
 - Required `type` enables compile-time enforcement of which properties are valid on which field types
@@ -93,8 +95,14 @@ interface FieldDefinitionBase {
  * rather than inside variantConfig.
  */
 interface AdornableFieldDefinition extends FieldDefinitionBase {
-  type: "text" | "email" | "url" | "password" | "textarea"
-     | "number" | "integer";
+  type:
+    | "text"
+    | "email"
+    | "url"
+    | "password"
+    | "textarea"
+    | "number"
+    | "integer";
   /** Text/symbol displayed before input (e.g., "$", "https://") */
   prefix?: string;
   /** Text/symbol displayed after input (e.g., "USD", "kg", "%") */
@@ -144,8 +152,13 @@ interface ObjectFieldDefinition extends FieldDefinitionBase {
  * Omits properties that are meaningless on display fields:
  * readonlyWhen, validations, requiredWhen, enabledWhen, placeholder.
  */
-interface DisplayFieldDefinition extends Omit<FieldDefinitionBase,
-  "readonlyWhen" | "validations" | "requiredWhen" | "enabledWhen" | "placeholder"
+interface DisplayFieldDefinition extends Omit<
+  FieldDefinitionBase,
+  | "readonlyWhen"
+  | "validations"
+  | "requiredWhen"
+  | "enabledWhen"
+  | "placeholder"
 > {
   type: "display";
   /** Static content (plain text or markdown). For text, heading, alert, callout. */
@@ -198,15 +211,15 @@ type FieldDefinition =
 
 ### 1.3 Type Group Summary
 
-| Group | Types | Unique properties |
-|-------|-------|-------------------|
-| **Adornable** | text, email, url, password, textarea, number, integer | `prefix`, `suffix` |
-| **Selection** | select, multiselect | `options` |
-| **Simple** | boolean, date, datetime | (none beyond base) |
-| **Array** | array | `itemFields`, `minItems`, `maxItems` |
-| **Object** | object | (none beyond base) |
-| **Display** | display | `content`, `source`, `format`. Omits: `readonlyWhen`, `validations`, `requiredWhen`, `enabledWhen`, `placeholder` |
-| **Computed** | computed | (none beyond base) |
+| Group         | Types                                                 | Unique properties                                                                                                 |
+| ------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Adornable** | text, email, url, password, textarea, number, integer | `prefix`, `suffix`                                                                                                |
+| **Selection** | select, multiselect                                   | `options`                                                                                                         |
+| **Simple**    | boolean, date, datetime                               | (none beyond base)                                                                                                |
+| **Array**     | array                                                 | `itemFields`, `minItems`, `maxItems`                                                                              |
+| **Object**    | object                                                | (none beyond base)                                                                                                |
+| **Display**   | display                                               | `content`, `source`, `format`. Omits: `readonlyWhen`, `validations`, `requiredWhen`, `enabledWhen`, `placeholder` |
+| **Computed**  | computed                                              | (none beyond base)                                                                                                |
 
 ### 1.4 Type Guard Helpers
 
@@ -214,18 +227,31 @@ Export convenience type guards for common narrowing patterns:
 
 ```typescript
 /** Check if field supports prefix/suffix adorners */
-function isAdornableField(field: FieldDefinition): field is AdornableFieldDefinition {
-  return ["text", "email", "url", "password", "textarea", "number", "integer"]
-    .includes(field.type);
+function isAdornableField(
+  field: FieldDefinition,
+): field is AdornableFieldDefinition {
+  return [
+    "text",
+    "email",
+    "url",
+    "password",
+    "textarea",
+    "number",
+    "integer",
+  ].includes(field.type);
 }
 
 /** Check if field is a display-only field (no data) */
-function isDisplayField(field: FieldDefinition): field is DisplayFieldDefinition {
+function isDisplayField(
+  field: FieldDefinition,
+): field is DisplayFieldDefinition {
   return field.type === "display";
 }
 
 /** Check if field is a selection field (has options) */
-function isSelectionField(field: FieldDefinition): field is SelectionFieldDefinition {
+function isSelectionField(
+  field: FieldDefinition,
+): field is SelectionFieldDefinition {
   return field.type === "select" || field.type === "multiselect";
 }
 
@@ -259,7 +285,7 @@ export type FieldType =
   | "array"
   | "object"
   | "computed"
-  | "display";   // NEW
+  | "display"; // NEW
 ```
 
 ---
@@ -282,7 +308,10 @@ Follows the same pattern as `visibility.ts` and `enabled.ts`:
 export function evaluateReadonly(
   data: Record<string, unknown>,
   forma: Forma,
-  options?: { referenceData?: Record<string, unknown>; computed?: Record<string, unknown> }
+  options?: {
+    referenceData?: Record<string, unknown>;
+    computed?: Record<string, unknown>;
+  },
 ): Record<string, boolean>;
 
 /**
@@ -290,7 +319,7 @@ export function evaluateReadonly(
  */
 export function evaluateFieldReadonly(
   fieldDef: FieldDefinition,
-  context: EvaluationContext
+  context: EvaluationContext,
 ): boolean;
 ```
 
@@ -298,10 +327,10 @@ export function evaluateFieldReadonly(
 
 These serve different UX purposes:
 
-| Property | Visual state | Can interact? | Data submitted? | Use case |
-|----------|-------------|---------------|-----------------|----------|
-| `enabledWhen: "false"` | Greyed out / dimmed | No | No (typically excluded) | Field not applicable in this context |
-| `readonlyWhen: "true"` | Normal appearance, no edit cursor | No | **Yes** (value preserved) | Showing pre-filled data the user shouldn't change |
+| Property               | Visual state                      | Can interact? | Data submitted?           | Use case                                          |
+| ---------------------- | --------------------------------- | ------------- | ------------------------- | ------------------------------------------------- |
+| `enabledWhen: "false"` | Greyed out / dimmed               | No            | No (typically excluded)   | Field not applicable in this context              |
+| `readonlyWhen: "true"` | Normal appearance, no edit cursor | No            | **Yes** (value preserved) | Showing pre-filled data the user shouldn't change |
 
 Example: An insurance form where the policy number is pre-filled and readonly, but the user can still see and submit it. vs. a "spouse details" section that's disabled entirely when `maritalStatus != "married"`.
 
@@ -313,27 +342,28 @@ The `display` type supports these variants:
 
 ### 3.1 Static Content Variants
 
-| Variant | Purpose | Key properties | Rendering |
-|---------|---------|---------------|-----------|
-| `text` (default) | Paragraph text, instructions | `content` (markdown) | Rendered markdown paragraph |
-| `heading` | Section header | `content`, `variantConfig.level` (1-4) | `<h2>`-`<h5>` element |
-| `divider` | Horizontal rule | none | `<hr>` element |
-| `spacer` | Vertical whitespace | `variantConfig.height` (sm/md/lg) | Empty `<div>` with height |
-| `image` | Static image | `content` (URL), `variantConfig.alt`, `variantConfig.maxHeight` | `<img>` element |
+| Variant          | Purpose                      | Key properties                                                  | Rendering                   |
+| ---------------- | ---------------------------- | --------------------------------------------------------------- | --------------------------- |
+| `text` (default) | Paragraph text, instructions | `content` (markdown)                                            | Rendered markdown paragraph |
+| `heading`        | Section header               | `content`, `variantConfig.level` (1-4)                          | `<h2>`-`<h5>` element       |
+| `divider`        | Horizontal rule              | none                                                            | `<hr>` element              |
+| `spacer`         | Vertical whitespace          | `variantConfig.height` (sm/md/lg)                               | Empty `<div>` with height   |
+| `image`          | Static image                 | `content` (URL), `variantConfig.alt`, `variantConfig.maxHeight` | `<img>` element             |
 
 ### 3.2 Dynamic Display Variants (Computed Output)
 
-| Variant | Purpose | Key properties | Rendering |
-|---------|---------|---------------|-----------|
-| `metric` | Single computed value | `source`, `format`, `variantConfig.unit`, `.size`, `.highlight` | Card with label + formatted value |
-| `metric-range` | Min/max range | `source`, `variantConfig.minLabel`, `.maxLabel`, `.unit`, `.showBar` | Range visualization |
-| `alert` | Warning/info message | `source` or `content`, `variantConfig.severity` (info/warning/error/success) | Colored alert box |
-| `callout` | Highlighted info | `source` or `content`, `variantConfig.icon` | Bordered callout section |
-| `summary` | Key-value pairs | `source` (object or array) | Structured list/table |
+| Variant        | Purpose               | Key properties                                                               | Rendering                         |
+| -------------- | --------------------- | ---------------------------------------------------------------------------- | --------------------------------- |
+| `metric`       | Single computed value | `source`, `format`, `variantConfig.unit`, `.size`, `.highlight`              | Card with label + formatted value |
+| `metric-range` | Min/max range         | `source`, `variantConfig.minLabel`, `.maxLabel`, `.unit`, `.showBar`         | Range visualization               |
+| `alert`        | Warning/info message  | `source` or `content`, `variantConfig.severity` (info/warning/error/success) | Colored alert box                 |
+| `callout`      | Highlighted info      | `source` or `content`, `variantConfig.icon`                                  | Bordered callout section          |
+| `summary`      | Key-value pairs       | `source` (object or array)                                                   | Structured list/table             |
 
 ### 3.3 Display Field Examples
 
 **Static content:**
+
 ```json
 {
   "instructions": {
@@ -355,6 +385,7 @@ The `display` type supports these variants:
 ```
 
 **Dynamic computed output:**
+
 ```json
 {
   "totalPrice": {
@@ -384,6 +415,7 @@ The `display` type supports these variants:
 ### 4.1 Design Decision: Why Top-Level, Not `variantConfig`
 
 Adorners are **cross-variant** - a `$` prefix applies equally to `variant: "input"`, `variant: "stepper"`, and `variant: "slider"` for a number field. They're a property of the field itself, not a variant-specific detail. Putting them in `variantConfig` would:
+
 - Lose type safety (variantConfig is `Record<string, unknown>`)
 - Require duplicating them across variant configs
 - Break the principle: "variantConfig is for variant-specific settings"
@@ -423,17 +455,23 @@ With the discriminated union, adorners are **compile-time enforced**:
 ```typescript
 // ✅ Compiles - number is an adornable type
 const price: AdornableFieldDefinition = {
-  type: "number", label: "Price", prefix: "$"
+  type: "number",
+  label: "Price",
+  prefix: "$",
 };
 
 // ❌ Compile error - boolean has no prefix property
 const agree: SimpleFieldDefinition = {
-  type: "boolean", label: "I agree", prefix: "$"  // Property 'prefix' does not exist
+  type: "boolean",
+  label: "I agree",
+  prefix: "$", // Property 'prefix' does not exist
 };
 
 // ❌ Compile error - display has no prefix property
 const heading: DisplayFieldDefinition = {
-  type: "display", content: "Title", prefix: "$"  // Property 'prefix' does not exist
+  type: "display",
+  content: "Title",
+  prefix: "$", // Property 'prefix' does not exist
 };
 ```
 
@@ -445,7 +483,10 @@ const heading: DisplayFieldDefinition = {
 
 ```typescript
 // New component props for display fields
-export interface DisplayFieldProps extends Omit<BaseFieldProps, "value" | "onChange"> {
+export interface DisplayFieldProps extends Omit<
+  BaseFieldProps,
+  "value" | "onChange"
+> {
   fieldType: "display";
   /** Static content (markdown/text) */
   content?: string;
@@ -498,7 +539,7 @@ Add to `FieldProps` union:
 ```typescript
 export type FieldProps =
   // ...existing...
-  | DisplayFieldProps;
+  DisplayFieldProps;
 ```
 
 ### 5.2 Changes to `useForma.ts`
@@ -549,6 +590,7 @@ Fields with `type: "display"` should **NOT** appear in `schema.properties` since
 ### 7.1 Forma Spec Validation
 
 Update structural validation to:
+
 - Allow `display` fields without a corresponding `schema.properties` entry
 - Validate that `display` fields have either `content` or `source` (or a self-sufficient variant like `divider`/`spacer`)
 - Validate that `source` references valid computed field paths (e.g., `computed.fieldName`)
@@ -629,42 +671,55 @@ The Zod validation schema in `@formidable/forma` (the Formidable-specific valida
 ```typescript
 // ✅ Adornable field with prefix
 const price: FieldDefinition = {
-  type: "number", label: "Price", prefix: "$", suffix: "USD"
+  type: "number",
+  label: "Price",
+  prefix: "$",
+  suffix: "USD",
 };
 
 // ✅ Display field with content
 const heading: FieldDefinition = {
-  type: "display", content: "Contact Info", variant: "heading"
+  type: "display",
+  content: "Contact Info",
+  variant: "heading",
 };
 
 // ✅ Select field with options
 const country: FieldDefinition = {
-  type: "select", label: "Country", options: [{ value: "US", label: "United States" }]
+  type: "select",
+  label: "Country",
+  options: [{ value: "US", label: "United States" }],
 };
 
 // ❌ Compile error: prefix not on display
 const bad1: DisplayFieldDefinition = {
-  type: "display", content: "Hi", prefix: "$"
+  type: "display",
+  content: "Hi",
+  prefix: "$",
 };
 
 // ❌ Compile error: options not on number
 const bad2: AdornableFieldDefinition = {
-  type: "number", label: "Age", options: []
+  type: "number",
+  label: "Age",
+  options: [],
 };
 
 // ❌ Compile error: readonlyWhen not on display
 const bad3: DisplayFieldDefinition = {
-  type: "display", content: "Hi", readonlyWhen: "true"
+  type: "display",
+  content: "Hi",
+  readonlyWhen: "true",
 };
 
 // Type narrowing works
 function example(field: FieldDefinition) {
   if (isAdornableField(field)) {
-    field.prefix;  // ✅ accessible
+    field.prefix; // ✅ accessible
   }
   if (isDisplayField(field)) {
     field.content; // ✅ accessible
-    field.prefix;  // ❌ compile error
+    field.prefix; // ❌ compile error
   }
 }
 ```

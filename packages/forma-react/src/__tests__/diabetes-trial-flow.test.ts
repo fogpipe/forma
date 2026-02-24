@@ -79,31 +79,90 @@ function createDiabetesTrialSpec(): Forma {
     },
     fields: {
       studyName: { type: "text", label: "Study Name", enabledWhen: "false" },
-      protocolNumber: { type: "text", label: "Protocol Number", enabledWhen: "false" },
+      protocolNumber: {
+        type: "text",
+        label: "Protocol Number",
+        enabledWhen: "false",
+      },
       screeningId: { type: "text", label: "Screening ID" },
       participantInitials: { type: "text", label: "Participant Initials" },
       dateOfBirth: { type: "date", label: "Date of Birth" },
       inclusionAge: { type: "boolean", label: "Age between 18-65 years" },
-      inclusionDiagnosis: { type: "boolean", label: "Confirmed Type 2 diabetes diagnosis" },
-      inclusionVisits: { type: "boolean", label: "Willing to attend all study visits" },
+      inclusionDiagnosis: {
+        type: "boolean",
+        label: "Confirmed Type 2 diabetes diagnosis",
+      },
+      inclusionVisits: {
+        type: "boolean",
+        label: "Willing to attend all study visits",
+      },
       inclusionConsent: { type: "boolean", label: "Can give informed consent" },
-      exclusionPregnant: { type: "boolean", label: "Pregnant or planning to become pregnant" },
-      exclusionAllergy: { type: "boolean", label: "Allergy to metformin or similar drugs" },
-      exclusionRecentStudy: { type: "boolean", label: "Participated in another drug study in last 30 days" },
-      exclusionKidney: { type: "boolean", label: "History of severe kidney disease" },
-      exclusionSglt2: { type: "boolean", label: "Currently taking SGLT2 inhibitors" },
-      ineligibilityReason: { type: "textarea", label: "Ineligibility Reason", enabledWhen: "false" },
+      exclusionPregnant: {
+        type: "boolean",
+        label: "Pregnant or planning to become pregnant",
+      },
+      exclusionAllergy: {
+        type: "boolean",
+        label: "Allergy to metformin or similar drugs",
+      },
+      exclusionRecentStudy: {
+        type: "boolean",
+        label: "Participated in another drug study in last 30 days",
+      },
+      exclusionKidney: {
+        type: "boolean",
+        label: "History of severe kidney disease",
+      },
+      exclusionSglt2: {
+        type: "boolean",
+        label: "Currently taking SGLT2 inhibitors",
+      },
+      ineligibilityReason: {
+        type: "textarea",
+        label: "Ineligibility Reason",
+        enabledWhen: "false",
+      },
       ineligibilityNotes: { type: "textarea", label: "Additional Notes" },
-      consentPurpose: { type: "boolean", label: "I have read and understand the study purpose" },
-      consentProcedures: { type: "boolean", label: "I understand the procedures I will undergo" },
-      consentRisks: { type: "boolean", label: "I understand the risks involved" },
-      consentBenefits: { type: "boolean", label: "I understand the potential benefits" },
-      consentVoluntary: { type: "boolean", label: "I understand participation is voluntary" },
-      consentDataHandling: { type: "boolean", label: "I understand how my data will be handled" },
-      optionalSamples: { type: "boolean", label: "I consent to storing blood samples" },
-      optionalContact: { type: "boolean", label: "I consent to being contacted about other studies" },
-      optionalGenetic: { type: "boolean", label: "I consent to genetic analysis" },
-      signingOnBehalf: { type: "boolean", label: "Is someone signing on behalf of the participant?" },
+      consentPurpose: {
+        type: "boolean",
+        label: "I have read and understand the study purpose",
+      },
+      consentProcedures: {
+        type: "boolean",
+        label: "I understand the procedures I will undergo",
+      },
+      consentRisks: {
+        type: "boolean",
+        label: "I understand the risks involved",
+      },
+      consentBenefits: {
+        type: "boolean",
+        label: "I understand the potential benefits",
+      },
+      consentVoluntary: {
+        type: "boolean",
+        label: "I understand participation is voluntary",
+      },
+      consentDataHandling: {
+        type: "boolean",
+        label: "I understand how my data will be handled",
+      },
+      optionalSamples: {
+        type: "boolean",
+        label: "I consent to storing blood samples",
+      },
+      optionalContact: {
+        type: "boolean",
+        label: "I consent to being contacted about other studies",
+      },
+      optionalGenetic: {
+        type: "boolean",
+        label: "I consent to genetic analysis",
+      },
+      signingOnBehalf: {
+        type: "boolean",
+        label: "Is someone signing on behalf of the participant?",
+      },
       participantSignatureName: {
         type: "text",
         label: "Participant Signature Name",
@@ -135,9 +194,18 @@ function createDiabetesTrialSpec(): Forma {
         requiredWhen: "signingOnBehalf = true",
       },
       researcherName: { type: "text", label: "Researcher Name" },
-      researcherConfirm: { type: "boolean", label: "I confirm I have properly explained the study" },
-      researcherSignatureDateTime: { type: "datetime", label: "Researcher Signature Date and Time" },
-      witnessRequired: { type: "boolean", label: "Is a witness signature required?" },
+      researcherConfirm: {
+        type: "boolean",
+        label: "I confirm I have properly explained the study",
+      },
+      researcherSignatureDateTime: {
+        type: "datetime",
+        label: "Researcher Signature Date and Time",
+      },
+      witnessRequired: {
+        type: "boolean",
+        label: "Is a witness signature required?",
+      },
       witnessName: {
         type: "text",
         label: "Witness Name",
@@ -163,70 +231,113 @@ function createDiabetesTrialSpec(): Forma {
       },
     },
     fieldOrder: [
-      "studyName", "protocolNumber",
-      "screeningId", "participantInitials", "dateOfBirth",
-      "inclusionAge", "inclusionDiagnosis", "inclusionVisits", "inclusionConsent",
-      "exclusionPregnant", "exclusionAllergy", "exclusionRecentStudy", "exclusionKidney", "exclusionSglt2",
-      "ineligibilityReason", "ineligibilityNotes",
-      "consentPurpose", "consentProcedures", "consentRisks", "consentBenefits", "consentVoluntary", "consentDataHandling",
-      "optionalSamples", "optionalContact", "optionalGenetic",
-      "signingOnBehalf", "participantSignatureName", "participantSignatureDateTime",
-      "larName", "larRelationship", "larSignatureDateTime",
-      "researcherName", "researcherConfirm", "researcherSignatureDateTime",
-      "witnessRequired", "witnessName", "witnessSignatureDateTime",
-      "enrollmentDate", "randomizationNumber", "treatmentGroup",
+      "studyName",
+      "protocolNumber",
+      "screeningId",
+      "participantInitials",
+      "dateOfBirth",
+      "inclusionAge",
+      "inclusionDiagnosis",
+      "inclusionVisits",
+      "inclusionConsent",
+      "exclusionPregnant",
+      "exclusionAllergy",
+      "exclusionRecentStudy",
+      "exclusionKidney",
+      "exclusionSglt2",
+      "ineligibilityReason",
+      "ineligibilityNotes",
+      "consentPurpose",
+      "consentProcedures",
+      "consentRisks",
+      "consentBenefits",
+      "consentVoluntary",
+      "consentDataHandling",
+      "optionalSamples",
+      "optionalContact",
+      "optionalGenetic",
+      "signingOnBehalf",
+      "participantSignatureName",
+      "participantSignatureDateTime",
+      "larName",
+      "larRelationship",
+      "larSignatureDateTime",
+      "researcherName",
+      "researcherConfirm",
+      "researcherSignatureDateTime",
+      "witnessRequired",
+      "witnessName",
+      "witnessSignatureDateTime",
+      "enrollmentDate",
+      "randomizationNumber",
+      "treatmentGroup",
     ],
     computed: {
       // Inclusion checks
       allInclusionAnswered: {
-        expression: "(inclusionAge = true or inclusionAge = false) and (inclusionDiagnosis = true or inclusionDiagnosis = false) and (inclusionVisits = true or inclusionVisits = false) and (inclusionConsent = true or inclusionConsent = false)",
+        expression:
+          "(inclusionAge = true or inclusionAge = false) and (inclusionDiagnosis = true or inclusionDiagnosis = false) and (inclusionVisits = true or inclusionVisits = false) and (inclusionConsent = true or inclusionConsent = false)",
       },
       allInclusionMet: {
-        expression: "inclusionAge = true and inclusionDiagnosis = true and inclusionVisits = true and inclusionConsent = true",
+        expression:
+          "inclusionAge = true and inclusionDiagnosis = true and inclusionVisits = true and inclusionConsent = true",
       },
       // Exclusion checks
       allExclusionAnswered: {
-        expression: "(exclusionPregnant = true or exclusionPregnant = false) and (exclusionAllergy = true or exclusionAllergy = false) and (exclusionRecentStudy = true or exclusionRecentStudy = false) and (exclusionKidney = true or exclusionKidney = false) and (exclusionSglt2 = true or exclusionSglt2 = false)",
+        expression:
+          "(exclusionPregnant = true or exclusionPregnant = false) and (exclusionAllergy = true or exclusionAllergy = false) and (exclusionRecentStudy = true or exclusionRecentStudy = false) and (exclusionKidney = true or exclusionKidney = false) and (exclusionSglt2 = true or exclusionSglt2 = false)",
       },
       anyExclusionMet: {
-        expression: "exclusionPregnant = true or exclusionAllergy = true or exclusionRecentStudy = true or exclusionKidney = true or exclusionSglt2 = true",
+        expression:
+          "exclusionPregnant = true or exclusionAllergy = true or exclusionRecentStudy = true or exclusionKidney = true or exclusionSglt2 = true",
       },
       // Eligibility determination
       eligibilityDetermined: {
-        expression: "computed.allInclusionAnswered = true and computed.allExclusionAnswered = true",
+        expression:
+          "computed.allInclusionAnswered = true and computed.allExclusionAnswered = true",
       },
       eligible: {
-        expression: "computed.eligibilityDetermined = true and computed.allInclusionMet = true and computed.anyExclusionMet = false",
+        expression:
+          "computed.eligibilityDetermined = true and computed.allInclusionMet = true and computed.anyExclusionMet = false",
       },
       ineligible: {
-        expression: "computed.eligibilityDetermined = true and (computed.allInclusionMet = false or computed.anyExclusionMet = true)",
+        expression:
+          "computed.eligibilityDetermined = true and (computed.allInclusionMet = false or computed.anyExclusionMet = true)",
       },
       // Consent checks
       allMainConsentsSigned: {
-        expression: "consentPurpose = true and consentProcedures = true and consentRisks = true and consentBenefits = true and consentVoluntary = true and consentDataHandling = true",
+        expression:
+          "consentPurpose = true and consentProcedures = true and consentRisks = true and consentBenefits = true and consentVoluntary = true and consentDataHandling = true",
       },
       // Signature checks - using null-safe patterns
       hasParticipantSignature: {
-        expression: "signingOnBehalf != true and participantSignatureName != null and participantSignatureDateTime != null",
+        expression:
+          "signingOnBehalf != true and participantSignatureName != null and participantSignatureDateTime != null",
       },
       hasLarSignature: {
-        expression: "signingOnBehalf = true and larName != null and larRelationship != null and larSignatureDateTime != null",
+        expression:
+          "signingOnBehalf = true and larName != null and larRelationship != null and larSignatureDateTime != null",
       },
       hasValidSignature: {
-        expression: "computed.hasParticipantSignature = true or computed.hasLarSignature = true",
+        expression:
+          "computed.hasParticipantSignature = true or computed.hasLarSignature = true",
       },
       hasResearcherSignature: {
-        expression: "researcherName != null and researcherConfirm = true and researcherSignatureDateTime != null",
+        expression:
+          "researcherName != null and researcherConfirm = true and researcherSignatureDateTime != null",
       },
       hasWitnessSignature: {
-        expression: "witnessRequired != true or (witnessName != null and witnessSignatureDateTime != null)",
+        expression:
+          "witnessRequired != true or (witnessName != null and witnessSignatureDateTime != null)",
       },
       allSignaturesComplete: {
-        expression: "computed.hasValidSignature = true and computed.hasResearcherSignature = true and computed.hasWitnessSignature = true",
+        expression:
+          "computed.hasValidSignature = true and computed.hasResearcherSignature = true and computed.hasWitnessSignature = true",
       },
       // Final enrollment gate
       canEnroll: {
-        expression: "computed.eligible = true and computed.allMainConsentsSigned = true and computed.allSignaturesComplete = true",
+        expression:
+          "computed.eligible = true and computed.allMainConsentsSigned = true and computed.allSignaturesComplete = true",
       },
     },
     pages: [
@@ -243,12 +354,23 @@ function createDiabetesTrialSpec(): Forma {
       {
         id: "inclusion-criteria",
         title: "Eligibility Screening - Inclusion Criteria",
-        fields: ["inclusionAge", "inclusionDiagnosis", "inclusionVisits", "inclusionConsent"],
+        fields: [
+          "inclusionAge",
+          "inclusionDiagnosis",
+          "inclusionVisits",
+          "inclusionConsent",
+        ],
       },
       {
         id: "exclusion-criteria",
         title: "Eligibility Screening - Exclusion Criteria",
-        fields: ["exclusionPregnant", "exclusionAllergy", "exclusionRecentStudy", "exclusionKidney", "exclusionSglt2"],
+        fields: [
+          "exclusionPregnant",
+          "exclusionAllergy",
+          "exclusionRecentStudy",
+          "exclusionKidney",
+          "exclusionSglt2",
+        ],
       },
       {
         id: "ineligibility-documentation",
@@ -259,7 +381,14 @@ function createDiabetesTrialSpec(): Forma {
       {
         id: "main-consents",
         title: "Informed Consent - Main Consents",
-        fields: ["consentPurpose", "consentProcedures", "consentRisks", "consentBenefits", "consentVoluntary", "consentDataHandling"],
+        fields: [
+          "consentPurpose",
+          "consentProcedures",
+          "consentRisks",
+          "consentBenefits",
+          "consentVoluntary",
+          "consentDataHandling",
+        ],
         visibleWhen: "computed.eligible = true",
       },
       {
@@ -271,14 +400,30 @@ function createDiabetesTrialSpec(): Forma {
       {
         id: "participant-signature",
         title: "Participant Signature",
-        fields: ["signingOnBehalf", "participantSignatureName", "participantSignatureDateTime", "larName", "larRelationship", "larSignatureDateTime"],
-        visibleWhen: "computed.eligible = true and computed.allMainConsentsSigned = true",
+        fields: [
+          "signingOnBehalf",
+          "participantSignatureName",
+          "participantSignatureDateTime",
+          "larName",
+          "larRelationship",
+          "larSignatureDateTime",
+        ],
+        visibleWhen:
+          "computed.eligible = true and computed.allMainConsentsSigned = true",
       },
       {
         id: "researcher-witness-signatures",
         title: "Researcher and Witness Signatures",
-        fields: ["researcherName", "researcherConfirm", "researcherSignatureDateTime", "witnessRequired", "witnessName", "witnessSignatureDateTime"],
-        visibleWhen: "computed.eligible = true and computed.allMainConsentsSigned = true and computed.hasValidSignature = true",
+        fields: [
+          "researcherName",
+          "researcherConfirm",
+          "researcherSignatureDateTime",
+          "witnessRequired",
+          "witnessName",
+          "witnessSignatureDateTime",
+        ],
+        visibleWhen:
+          "computed.eligible = true and computed.allMainConsentsSigned = true and computed.hasValidSignature = true",
       },
       {
         id: "enrollment-details",
@@ -447,7 +592,9 @@ describe("diabetes trial enrollment wizard", () => {
   });
 
   describe("eligible flow - page visibility", () => {
-    function setupEligibleParticipant(setFieldValue: (field: string, value: unknown) => void) {
+    function setupEligibleParticipant(
+      setFieldValue: (field: string, value: unknown) => void,
+    ) {
       // All inclusion = true
       setFieldValue("inclusionAge", true);
       setFieldValue("inclusionDiagnosis", true);
@@ -524,7 +671,10 @@ describe("diabetes trial enrollment wizard", () => {
       act(() => {
         result.current.setFieldValue("signingOnBehalf", false);
         result.current.setFieldValue("participantSignatureName", "John Doe");
-        result.current.setFieldValue("participantSignatureDateTime", "2024-01-15T10:00:00");
+        result.current.setFieldValue(
+          "participantSignatureDateTime",
+          "2024-01-15T10:00:00",
+        );
       });
 
       expect(result.current.computed?.hasValidSignature).toBe(true);
@@ -547,7 +697,10 @@ describe("diabetes trial enrollment wizard", () => {
         // Participant signature
         result.current.setFieldValue("signingOnBehalf", false);
         result.current.setFieldValue("participantSignatureName", "John Doe");
-        result.current.setFieldValue("participantSignatureDateTime", "2024-01-15T10:00:00");
+        result.current.setFieldValue(
+          "participantSignatureDateTime",
+          "2024-01-15T10:00:00",
+        );
       });
 
       // Enrollment page not yet visible
@@ -557,7 +710,10 @@ describe("diabetes trial enrollment wizard", () => {
       act(() => {
         result.current.setFieldValue("researcherName", "Dr. Smith");
         result.current.setFieldValue("researcherConfirm", true);
-        result.current.setFieldValue("researcherSignatureDateTime", "2024-01-15T10:30:00");
+        result.current.setFieldValue(
+          "researcherSignatureDateTime",
+          "2024-01-15T10:30:00",
+        );
         result.current.setFieldValue("witnessRequired", false);
       });
 
@@ -629,7 +785,9 @@ describe("diabetes trial enrollment wizard", () => {
   });
 
   describe("signature flow variations", () => {
-    function setupReadyForSignature(setFieldValue: (field: string, value: unknown) => void) {
+    function setupReadyForSignature(
+      setFieldValue: (field: string, value: unknown) => void,
+    ) {
       // Eligible
       setFieldValue("inclusionAge", true);
       setFieldValue("inclusionDiagnosis", true);
@@ -684,7 +842,9 @@ describe("diabetes trial enrollment wizard", () => {
 
       // Participant fields hidden
       expect(result.current.visibility.participantSignatureName).toBe(false);
-      expect(result.current.visibility.participantSignatureDateTime).toBe(false);
+      expect(result.current.visibility.participantSignatureDateTime).toBe(
+        false,
+      );
     });
 
     it("should show witness fields when witness required", () => {
@@ -722,7 +882,10 @@ describe("diabetes trial enrollment wizard", () => {
         result.current.setFieldValue("signingOnBehalf", true);
         result.current.setFieldValue("larName", "Jane Doe");
         result.current.setFieldValue("larRelationship", "Spouse");
-        result.current.setFieldValue("larSignatureDateTime", "2024-01-15T10:00:00");
+        result.current.setFieldValue(
+          "larSignatureDateTime",
+          "2024-01-15T10:00:00",
+        );
       });
 
       expect(result.current.computed?.hasLarSignature).toBe(true);
@@ -744,7 +907,9 @@ describe("diabetes trial enrollment wizard", () => {
         result.current.wizard?.nextPage();
       });
       expect(result.current.wizard?.currentPageIndex).toBe(1);
-      expect(result.current.wizard?.currentPage?.id).toBe("participant-information");
+      expect(result.current.wizard?.currentPage?.id).toBe(
+        "participant-information",
+      );
 
       // Continue to inclusion
       act(() => {
@@ -776,7 +941,9 @@ describe("diabetes trial enrollment wizard", () => {
       // With auto-initialized booleans, visible pages are:
       // study-info (0), participant-info (1), inclusion (2), exclusion (3), ineligibility-documentation (4)
       // Pages 5-9 are for eligible flow and still hidden
-      const visiblePages = result.current.wizard?.pages.filter(p => p.visible);
+      const visiblePages = result.current.wizard?.pages.filter(
+        (p) => p.visible,
+      );
       expect(visiblePages?.length).toBe(5);
 
       // Not on last visible page anymore (ineligibility page is visible)
@@ -786,7 +953,9 @@ describe("diabetes trial enrollment wizard", () => {
       act(() => {
         result.current.wizard?.goToPage(4);
       });
-      expect(result.current.wizard?.currentPage?.id).toBe("ineligibility-documentation");
+      expect(result.current.wizard?.currentPage?.id).toBe(
+        "ineligibility-documentation",
+      );
       expect(result.current.wizard?.isLastPage).toBe(true);
     });
   });

@@ -2,7 +2,12 @@
  * Type definitions for forma-react components
  */
 
-import type { Forma, FieldDefinition, FieldError, SelectOption } from "@fogpipe/forma-core";
+import type {
+  Forma,
+  FieldDefinition,
+  FieldError,
+  SelectOption,
+} from "@fogpipe/forma-core";
 
 /**
  * Base props shared by all field components
@@ -52,7 +57,10 @@ export interface BaseFieldProps {
 /**
  * Props for text-based fields (text, email, password, url, textarea)
  */
-export interface TextFieldProps extends Omit<BaseFieldProps, "value" | "onChange"> {
+export interface TextFieldProps extends Omit<
+  BaseFieldProps,
+  "value" | "onChange"
+> {
   fieldType: "text" | "email" | "password" | "url" | "textarea";
   value: string;
   onChange: (value: string) => void;
@@ -61,7 +69,10 @@ export interface TextFieldProps extends Omit<BaseFieldProps, "value" | "onChange
 /**
  * Props for number fields
  */
-export interface NumberFieldProps extends Omit<BaseFieldProps, "value" | "onChange"> {
+export interface NumberFieldProps extends Omit<
+  BaseFieldProps,
+  "value" | "onChange"
+> {
   fieldType: "number";
   value: number | null;
   onChange: (value: number | null) => void;
@@ -73,7 +84,10 @@ export interface NumberFieldProps extends Omit<BaseFieldProps, "value" | "onChan
 /**
  * Props for integer fields
  */
-export interface IntegerFieldProps extends Omit<BaseFieldProps, "value" | "onChange"> {
+export interface IntegerFieldProps extends Omit<
+  BaseFieldProps,
+  "value" | "onChange"
+> {
   fieldType: "integer";
   value: number | null;
   onChange: (value: number | null) => void;
@@ -85,7 +99,10 @@ export interface IntegerFieldProps extends Omit<BaseFieldProps, "value" | "onCha
 /**
  * Props for boolean fields
  */
-export interface BooleanFieldProps extends Omit<BaseFieldProps, "value" | "onChange"> {
+export interface BooleanFieldProps extends Omit<
+  BaseFieldProps,
+  "value" | "onChange"
+> {
   fieldType: "boolean";
   value: boolean;
   onChange: (value: boolean) => void;
@@ -94,7 +111,10 @@ export interface BooleanFieldProps extends Omit<BaseFieldProps, "value" | "onCha
 /**
  * Props for date fields
  */
-export interface DateFieldProps extends Omit<BaseFieldProps, "value" | "onChange"> {
+export interface DateFieldProps extends Omit<
+  BaseFieldProps,
+  "value" | "onChange"
+> {
   fieldType: "date";
   value: string | null;
   onChange: (value: string | null) => void;
@@ -103,7 +123,10 @@ export interface DateFieldProps extends Omit<BaseFieldProps, "value" | "onChange
 /**
  * Props for datetime fields
  */
-export interface DateTimeFieldProps extends Omit<BaseFieldProps, "value" | "onChange"> {
+export interface DateTimeFieldProps extends Omit<
+  BaseFieldProps,
+  "value" | "onChange"
+> {
   fieldType: "datetime";
   value: string | null;
   onChange: (value: string | null) => void;
@@ -112,7 +135,10 @@ export interface DateTimeFieldProps extends Omit<BaseFieldProps, "value" | "onCh
 /**
  * Props for select fields (single selection)
  */
-export interface SelectFieldProps extends Omit<BaseFieldProps, "value" | "onChange"> {
+export interface SelectFieldProps extends Omit<
+  BaseFieldProps,
+  "value" | "onChange"
+> {
   fieldType: "select";
   value: string | null;
   onChange: (value: string | null) => void;
@@ -122,7 +148,10 @@ export interface SelectFieldProps extends Omit<BaseFieldProps, "value" | "onChan
 /**
  * Props for multi-select fields
  */
-export interface MultiSelectFieldProps extends Omit<BaseFieldProps, "value" | "onChange"> {
+export interface MultiSelectFieldProps extends Omit<
+  BaseFieldProps,
+  "value" | "onChange"
+> {
   fieldType: "multiselect";
   value: string[];
   onChange: (value: string[]) => void;
@@ -189,7 +218,10 @@ export interface ArrayHelpers {
   /** Swap items at two indices */
   swap: (indexA: number, indexB: number) => void;
   /** Get field props for an item field */
-  getItemFieldProps: (index: number, fieldName: string) => ArrayItemFieldPropsResult;
+  getItemFieldProps: (
+    index: number,
+    fieldName: string,
+  ) => ArrayItemFieldPropsResult;
   /** Minimum number of items allowed */
   minItems: number;
   /** Maximum number of items allowed */
@@ -203,7 +235,10 @@ export interface ArrayHelpers {
 /**
  * Props for array fields
  */
-export interface ArrayFieldProps extends Omit<BaseFieldProps, "value" | "onChange"> {
+export interface ArrayFieldProps extends Omit<
+  BaseFieldProps,
+  "value" | "onChange"
+> {
   fieldType: "array";
   value: unknown[];
   onChange: (value: unknown[]) => void;
@@ -217,7 +252,10 @@ export interface ArrayFieldProps extends Omit<BaseFieldProps, "value" | "onChang
 /**
  * Props for object fields
  */
-export interface ObjectFieldProps extends Omit<BaseFieldProps, "value" | "onChange"> {
+export interface ObjectFieldProps extends Omit<
+  BaseFieldProps,
+  "value" | "onChange"
+> {
   fieldType: "object";
   value: Record<string, unknown>;
   onChange: (value: Record<string, unknown>) => void;
@@ -236,7 +274,10 @@ export interface ComputedFieldProps extends Omit<BaseFieldProps, "onChange"> {
 /**
  * Props for array item fields (within array context)
  */
-export interface ArrayItemFieldProps extends Omit<BaseFieldProps, "value" | "onChange"> {
+export interface ArrayItemFieldProps extends Omit<
+  BaseFieldProps,
+  "value" | "onChange"
+> {
   /** The field type */
   fieldType: string;
   /** Current value */
@@ -252,7 +293,10 @@ export interface ArrayItemFieldProps extends Omit<BaseFieldProps, "value" | "onC
 /**
  * Props for display fields (read-only presentation content)
  */
-export interface DisplayFieldProps extends Omit<BaseFieldProps, "value" | "onChange"> {
+export interface DisplayFieldProps extends Omit<
+  BaseFieldProps,
+  "value" | "onChange"
+> {
   fieldType: "display";
   /** Static content (markdown/text) */
   content?: string;

@@ -48,7 +48,7 @@ import type {
  */
 export function calculate(
   data: Record<string, unknown>,
-  spec: Forma
+  spec: Forma,
 ): Record<string, unknown> {
   const result = calculateWithErrors(data, spec);
   return result.values;
@@ -65,7 +65,7 @@ export function calculate(
  */
 export function calculateWithErrors(
   data: Record<string, unknown>,
-  spec: Forma
+  spec: Forma,
 ): CalculationResult {
   if (!spec.computed) {
     return { values: {}, errors: [] };
@@ -87,7 +87,7 @@ export function calculateWithErrors(
       fieldDef,
       data,
       values, // Pass already-computed values for dependencies
-      spec.referenceData // Pass reference data for lookups
+      spec.referenceData, // Pass reference data for lookups
     );
 
     if (result.success) {
@@ -130,7 +130,7 @@ function evaluateComputedField(
   fieldDef: ComputedField,
   data: Record<string, unknown>,
   computedSoFar: Record<string, unknown>,
-  referenceData?: Record<string, unknown>
+  referenceData?: Record<string, unknown>,
 ): ComputeResult {
   // Check if any referenced computed field is null - propagate null to dependents
   // This prevents issues like: bmi is null, but bmiCategory still evaluates to "obese"
@@ -162,7 +162,7 @@ function evaluateComputedField(
 
   // Treat NaN and Infinity as null - prevents unexpected behavior in conditional expressions
   // (e.g., NaN < 18.5 is false, causing fallthrough in if-else chains)
-  if (typeof result.value === "number" && (!Number.isFinite(result.value))) {
+  if (typeof result.value === "number" && !Number.isFinite(result.value)) {
     return {
       success: true,
       value: null,
@@ -200,14 +200,17 @@ function findComputedReferences(expression: string): string[] {
  * evaluated first.
  */
 function getComputationOrder(
-  computed: Record<string, ComputedField>
+  computed: Record<string, ComputedField>,
 ): string[] {
   const fieldNames = Object.keys(computed);
 
   // Build dependency graph
   const deps = new Map<string, Set<string>>();
   for (const name of fieldNames) {
-    deps.set(name, findComputedDependencies(computed[name].expression, fieldNames));
+    deps.set(
+      name,
+      findComputedDependencies(computed[name].expression, fieldNames),
+    );
   }
 
   // Topological sort
@@ -249,7 +252,7 @@ function getComputationOrder(
  */
 function findComputedDependencies(
   expression: string,
-  availableFields: string[]
+  availableFields: string[],
 ): Set<string> {
   const deps = new Set<string>();
 
@@ -283,7 +286,7 @@ export function getFormattedValue(
   fieldName: string,
   data: Record<string, unknown>,
   spec: Forma,
-  options?: FormatOptions
+  options?: FormatOptions,
 ): string | null {
   if (!spec.computed?.[fieldName]) {
     return null;
@@ -319,7 +322,7 @@ export function getFormattedValue(
 export function calculateField(
   fieldName: string,
   data: Record<string, unknown>,
-  spec: Forma
+  spec: Forma,
 ): unknown {
   const computed = calculate(data, spec);
   return computed[fieldName] ?? null;

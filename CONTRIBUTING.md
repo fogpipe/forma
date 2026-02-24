@@ -39,6 +39,7 @@ Please be respectful and constructive in all interactions. We welcome contributo
 ### Branch Naming
 
 Use descriptive branch names:
+
 - `feat/add-date-range-field` - New features
 - `fix/validation-error-message` - Bug fixes
 - `docs/update-readme` - Documentation
@@ -71,6 +72,7 @@ test: add tests for array field helpers
 ```
 
 Types:
+
 - `feat` - New feature
 - `fix` - Bug fix
 - `docs` - Documentation
@@ -138,6 +140,7 @@ cd packages/forma-core && npm run test
 - TypeScript strict mode
 
 Run formatters before committing:
+
 ```bash
 npm run format
 npm run lint
@@ -153,6 +156,7 @@ git push origin v1.0.0
 ```
 
 This triggers the publish workflow which:
+
 1. Runs all quality checks
 2. Updates package versions
 3. Publishes to npm

@@ -23,33 +23,33 @@ npm install @fogpipe/forma-core
 ### Define a Forma Specification
 
 ```typescript
-import type { Forma } from '@fogpipe/forma-core';
+import type { Forma } from "@fogpipe/forma-core";
 
 const form: Forma = {
   meta: {
-    title: "Contact Form"
+    title: "Contact Form",
   },
   fields: [
     {
       id: "name",
       type: "text",
       label: "Full Name",
-      required: true
+      required: true,
     },
     {
       id: "email",
       type: "email",
       label: "Email",
-      required: true
+      required: true,
     },
     {
       id: "phone",
       type: "text",
       label: "Phone Number",
       // Only required if email is not provided
-      required: "email = null or email = \"\""
-    }
-  ]
+      required: 'email = null or email = ""',
+    },
+  ],
 };
 ```
 
@@ -61,8 +61,8 @@ import {
   getRequired,
   getEnabled,
   validate,
-  calculate
-} from '@fogpipe/forma-core';
+  calculate,
+} from "@fogpipe/forma-core";
 
 const data = { name: "John", email: "john@example.com" };
 
@@ -78,7 +78,7 @@ const enabled = getEnabled(data, form);
 // Validate form data
 const result = validate(data, form);
 if (!result.valid) {
-  console.log('Errors:', result.errors);
+  console.log("Errors:", result.errors);
 }
 
 // Calculate computed values
@@ -88,10 +88,10 @@ const computed = calculate(data, form);
 ### FEEL Expression Evaluation
 
 ```typescript
-import { evaluate, evaluateBoolean } from '@fogpipe/forma-core/feel';
+import { evaluate, evaluateBoolean } from "@fogpipe/forma-core/feel";
 
 const context = {
-  data: { age: 25, country: "US" }
+  data: { age: 25, country: "US" },
 };
 
 // Evaluate any expression

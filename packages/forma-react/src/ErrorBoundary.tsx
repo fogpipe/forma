@@ -14,7 +14,9 @@ export interface FormaErrorBoundaryProps {
   /** Child components to render */
   children: React.ReactNode;
   /** Custom fallback UI to show when an error occurs */
-  fallback?: React.ReactNode | ((error: Error, reset: () => void) => React.ReactNode);
+  fallback?:
+    | React.ReactNode
+    | ((error: Error, reset: () => void) => React.ReactNode);
   /** Callback when an error is caught */
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
   /** Key to reset the error boundary (change this to reset) */
@@ -32,7 +34,13 @@ interface FormaErrorBoundaryState {
 /**
  * Default fallback component shown when an error occurs
  */
-function DefaultErrorFallback({ error, onReset }: { error: Error; onReset: () => void }) {
+function DefaultErrorFallback({
+  error,
+  onReset,
+}: {
+  error: Error;
+  onReset: () => void;
+}) {
   return (
     <div className="forma-error-boundary" role="alert">
       <h3>Something went wrong</h3>
@@ -83,10 +91,7 @@ export class FormaErrorBoundary extends React.Component<
 
   componentDidUpdate(prevProps: FormaErrorBoundaryProps): void {
     // Reset error state when resetKey changes
-    if (
-      this.state.hasError &&
-      prevProps.resetKey !== this.props.resetKey
-    ) {
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
       this.setState({ hasError: false, error: null });
     }
   }
@@ -107,7 +112,9 @@ export class FormaErrorBoundary extends React.Component<
         return fallback;
       }
 
-      return <DefaultErrorFallback error={this.state.error} onReset={this.reset} />;
+      return (
+        <DefaultErrorFallback error={this.state.error} onReset={this.reset} />
+      );
     }
 
     return this.props.children;

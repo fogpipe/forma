@@ -3,17 +3,22 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { getOptionsVisibility, getVisibleOptions } from "../engine/visibility.js";
+import {
+  getOptionsVisibility,
+  getVisibleOptions,
+} from "../engine/visibility.js";
 import type { Forma, SelectOption } from "../types.js";
 
 /**
  * Helper to create a minimal Forma spec for testing
  */
-function createTestSpec(options: {
-  fields?: Record<string, unknown>;
-  computed?: Record<string, { expression: string }>;
-  referenceData?: Record<string, unknown>;
-} = {}): Forma {
+function createTestSpec(
+  options: {
+    fields?: Record<string, unknown>;
+    computed?: Record<string, { expression: string }>;
+    referenceData?: Record<string, unknown>;
+  } = {},
+): Forma {
   const { fields = {}, computed, referenceData } = options;
 
   // Build fieldOrder from fields keys
@@ -53,7 +58,11 @@ describe("getOptionsVisibility", () => {
             type: "select",
             options: [
               { value: "junior", label: "Junior" },
-              { value: "senior", label: "Senior", visibleWhen: "experience >= 5" },
+              {
+                value: "senior",
+                label: "Senior",
+                visibleWhen: "experience >= 5",
+              },
             ],
           },
         },
@@ -92,9 +101,21 @@ describe("getOptionsVisibility", () => {
           position: {
             type: "select",
             options: [
-              { value: "dev_fe", label: "Frontend Dev", visibleWhen: 'department = "eng"' },
-              { value: "dev_be", label: "Backend Dev", visibleWhen: 'department = "eng"' },
-              { value: "recruiter", label: "Recruiter", visibleWhen: 'department = "hr"' },
+              {
+                value: "dev_fe",
+                label: "Frontend Dev",
+                visibleWhen: 'department = "eng"',
+              },
+              {
+                value: "dev_be",
+                label: "Backend Dev",
+                visibleWhen: 'department = "eng"',
+              },
+              {
+                value: "recruiter",
+                label: "Recruiter",
+                visibleWhen: 'department = "hr"',
+              },
             ],
           },
         },
@@ -102,11 +123,14 @@ describe("getOptionsVisibility", () => {
 
       // Engineering department
       const engResult = getOptionsVisibility({ department: "eng" }, spec);
-      expect(engResult["position"].map(o => o.value)).toEqual(["dev_fe", "dev_be"]);
+      expect(engResult["position"].map((o) => o.value)).toEqual([
+        "dev_fe",
+        "dev_be",
+      ]);
 
       // HR department
       const hrResult = getOptionsVisibility({ department: "hr" }, spec);
-      expect(hrResult["position"].map(o => o.value)).toEqual(["recruiter"]);
+      expect(hrResult["position"].map((o) => o.value)).toEqual(["recruiter"]);
     });
 
     it("should use computed values in expressions", () => {
@@ -116,7 +140,11 @@ describe("getOptionsVisibility", () => {
             type: "select",
             options: [
               { value: "standard", label: "Standard" },
-              { value: "express", label: "Express", visibleWhen: "computed.total >= 50" },
+              {
+                value: "express",
+                label: "Express",
+                visibleWhen: "computed.total >= 50",
+              },
             ],
           },
         },
@@ -127,11 +155,14 @@ describe("getOptionsVisibility", () => {
 
       // Total = 40, only standard
       const lowResult = getOptionsVisibility({ quantity: 2, price: 20 }, spec);
-      expect(lowResult["shipping"].map(o => o.value)).toEqual(["standard"]);
+      expect(lowResult["shipping"].map((o) => o.value)).toEqual(["standard"]);
 
       // Total = 100, both options
       const highResult = getOptionsVisibility({ quantity: 5, price: 20 }, spec);
-      expect(highResult["shipping"].map(o => o.value)).toEqual(["standard", "express"]);
+      expect(highResult["shipping"].map((o) => o.value)).toEqual([
+        "standard",
+        "express",
+      ]);
     });
 
     it("should accept pre-computed values", () => {
@@ -141,14 +172,20 @@ describe("getOptionsVisibility", () => {
             type: "select",
             options: [
               { value: "basic", label: "Basic" },
-              { value: "premium", label: "Premium", visibleWhen: "computed.score >= 100" },
+              {
+                value: "premium",
+                label: "Premium",
+                visibleWhen: "computed.score >= 100",
+              },
             ],
           },
         },
       });
 
-      const result = getOptionsVisibility({}, spec, { computed: { score: 150 } });
-      expect(result["tier"].map(o => o.value)).toEqual(["basic", "premium"]);
+      const result = getOptionsVisibility({}, spec, {
+        computed: { score: 150 },
+      });
+      expect(result["tier"].map((o) => o.value)).toEqual(["basic", "premium"]);
     });
   });
 
@@ -169,8 +206,16 @@ describe("getOptionsVisibility", () => {
               addon: {
                 type: "select",
                 options: [
-                  { value: "warranty", label: "Warranty", visibleWhen: 'item.category = "electronics"' },
-                  { value: "gift_wrap", label: "Gift Wrap", visibleWhen: 'item.category = "clothing"' },
+                  {
+                    value: "warranty",
+                    label: "Warranty",
+                    visibleWhen: 'item.category = "electronics"',
+                  },
+                  {
+                    value: "gift_wrap",
+                    label: "Gift Wrap",
+                    visibleWhen: 'item.category = "clothing"',
+                  },
                   { value: "insurance", label: "Insurance" },
                 ],
               },
@@ -180,19 +225,22 @@ describe("getOptionsVisibility", () => {
       });
 
       const data = {
-        items: [
-          { category: "electronics" },
-          { category: "clothing" },
-        ],
+        items: [{ category: "electronics" }, { category: "clothing" }],
       };
 
       const result = getOptionsVisibility(data, spec);
 
       // First item (electronics): warranty + insurance
-      expect(result["items[0].addon"].map(o => o.value)).toEqual(["warranty", "insurance"]);
+      expect(result["items[0].addon"].map((o) => o.value)).toEqual([
+        "warranty",
+        "insurance",
+      ]);
 
       // Second item (clothing): gift_wrap + insurance
-      expect(result["items[1].addon"].map(o => o.value)).toEqual(["gift_wrap", "insurance"]);
+      expect(result["items[1].addon"].map((o) => o.value)).toEqual([
+        "gift_wrap",
+        "insurance",
+      ]);
 
       // Category field has all options (no visibleWhen)
       expect(result["items[0].category"]).toHaveLength(2);
@@ -209,7 +257,11 @@ describe("getOptionsVisibility", () => {
                 type: "select",
                 options: [
                   { value: "member", label: "Member" },
-                  { value: "lead", label: "Team Lead", visibleWhen: "itemIndex = 0" },
+                  {
+                    value: "lead",
+                    label: "Team Lead",
+                    visibleWhen: "itemIndex = 0",
+                  },
                 ],
               },
             },
@@ -224,11 +276,14 @@ describe("getOptionsVisibility", () => {
       const result = getOptionsVisibility(data, spec);
 
       // First item can be lead
-      expect(result["members[0].role"].map(o => o.value)).toEqual(["member", "lead"]);
+      expect(result["members[0].role"].map((o) => o.value)).toEqual([
+        "member",
+        "lead",
+      ]);
 
       // Other items can only be member
-      expect(result["members[1].role"].map(o => o.value)).toEqual(["member"]);
-      expect(result["members[2].role"].map(o => o.value)).toEqual(["member"]);
+      expect(result["members[1].role"].map((o) => o.value)).toEqual(["member"]);
+      expect(result["members[2].role"].map((o) => o.value)).toEqual(["member"]);
     });
 
     it("should combine form data with item context", () => {
@@ -242,8 +297,16 @@ describe("getOptionsVisibility", () => {
                 type: "select",
                 options: [
                   { value: "standard", label: "Standard" },
-                  { value: "express", label: "Express", visibleWhen: "isPremium = true" },
-                  { value: "priority", label: "Priority", visibleWhen: 'isPremium = true and item.value > 100' },
+                  {
+                    value: "express",
+                    label: "Express",
+                    visibleWhen: "isPremium = true",
+                  },
+                  {
+                    value: "priority",
+                    label: "Priority",
+                    visibleWhen: "isPremium = true and item.value > 100",
+                  },
                 ],
               },
             },
@@ -252,25 +315,42 @@ describe("getOptionsVisibility", () => {
       });
 
       // Not premium
-      const basicResult = getOptionsVisibility({
-        isPremium: false,
-        orders: [{ value: 50 }, { value: 200 }],
-      }, spec);
+      const basicResult = getOptionsVisibility(
+        {
+          isPremium: false,
+          orders: [{ value: 50 }, { value: 200 }],
+        },
+        spec,
+      );
 
-      expect(basicResult["orders[0].shipping"].map(o => o.value)).toEqual(["standard"]);
-      expect(basicResult["orders[1].shipping"].map(o => o.value)).toEqual(["standard"]);
+      expect(basicResult["orders[0].shipping"].map((o) => o.value)).toEqual([
+        "standard",
+      ]);
+      expect(basicResult["orders[1].shipping"].map((o) => o.value)).toEqual([
+        "standard",
+      ]);
 
       // Premium with different order values
-      const premiumResult = getOptionsVisibility({
-        isPremium: true,
-        orders: [{ value: 50 }, { value: 200 }],
-      }, spec);
+      const premiumResult = getOptionsVisibility(
+        {
+          isPremium: true,
+          orders: [{ value: 50 }, { value: 200 }],
+        },
+        spec,
+      );
 
       // Low value order: standard + express
-      expect(premiumResult["orders[0].shipping"].map(o => o.value)).toEqual(["standard", "express"]);
+      expect(premiumResult["orders[0].shipping"].map((o) => o.value)).toEqual([
+        "standard",
+        "express",
+      ]);
 
       // High value order: standard + express + priority
-      expect(premiumResult["orders[1].shipping"].map(o => o.value)).toEqual(["standard", "express", "priority"]);
+      expect(premiumResult["orders[1].shipping"].map((o) => o.value)).toEqual([
+        "standard",
+        "express",
+        "priority",
+      ]);
     });
 
     it("should handle empty arrays", () => {
@@ -291,7 +371,9 @@ describe("getOptionsVisibility", () => {
       const result = getOptionsVisibility({ items: [] }, spec);
 
       // No item paths should exist
-      expect(Object.keys(result).filter(k => k.startsWith("items["))).toHaveLength(0);
+      expect(
+        Object.keys(result).filter((k) => k.startsWith("items[")),
+      ).toHaveLength(0);
     });
 
     it("should handle missing array data", () => {
@@ -312,7 +394,9 @@ describe("getOptionsVisibility", () => {
       const result = getOptionsVisibility({}, spec);
 
       // No item paths should exist
-      expect(Object.keys(result).filter(k => k.startsWith("items["))).toHaveLength(0);
+      expect(
+        Object.keys(result).filter((k) => k.startsWith("items[")),
+      ).toHaveLength(0);
     });
   });
 
@@ -324,7 +408,11 @@ describe("getOptionsVisibility", () => {
             type: "select",
             options: [
               { value: "valid", label: "Valid" },
-              { value: "invalid", label: "Invalid", visibleWhen: "not valid FEEL !!!" },
+              {
+                value: "invalid",
+                label: "Invalid",
+                visibleWhen: "not valid FEEL !!!",
+              },
             ],
           },
         },
@@ -332,7 +420,7 @@ describe("getOptionsVisibility", () => {
 
       const result = getOptionsVisibility({}, spec);
 
-      expect(result["status"].map(o => o.value)).toEqual(["valid"]);
+      expect(result["status"].map((o) => o.value)).toEqual(["valid"]);
     });
   });
 
@@ -344,7 +432,11 @@ describe("getOptionsVisibility", () => {
             type: "select",
             options: [
               { value: "basic", label: "Basic" },
-              { value: "enterprise", label: "Enterprise", visibleWhen: "ref.features.enterpriseEnabled = true" },
+              {
+                value: "enterprise",
+                label: "Enterprise",
+                visibleWhen: "ref.features.enterpriseEnabled = true",
+              },
             ],
           },
         },
@@ -355,7 +447,10 @@ describe("getOptionsVisibility", () => {
 
       const result = getOptionsVisibility({}, spec);
 
-      expect(result["plan"].map(o => o.value)).toEqual(["basic", "enterprise"]);
+      expect(result["plan"].map((o) => o.value)).toEqual([
+        "basic",
+        "enterprise",
+      ]);
     });
   });
 });
@@ -381,15 +476,21 @@ describe("getVisibleOptions", () => {
     it("should filter options based on visibleWhen", () => {
       const options: SelectOption[] = [
         { value: "always", label: "Always" },
-        { value: "conditional", label: "Conditional", visibleWhen: "show = true" },
+        {
+          value: "conditional",
+          label: "Conditional",
+          visibleWhen: "show = true",
+        },
       ];
       const spec = createTestSpec();
 
-      expect(getVisibleOptions(options, { show: false }, spec).map(o => o.value))
-        .toEqual(["always"]);
+      expect(
+        getVisibleOptions(options, { show: false }, spec).map((o) => o.value),
+      ).toEqual(["always"]);
 
-      expect(getVisibleOptions(options, { show: true }, spec).map(o => o.value))
-        .toEqual(["always", "conditional"]);
+      expect(
+        getVisibleOptions(options, { show: true }, spec).map((o) => o.value),
+      ).toEqual(["always", "conditional"]);
     });
 
     it("should return empty array for undefined/empty options", () => {
@@ -413,7 +514,11 @@ describe("getVisibleOptions", () => {
   describe("with item context", () => {
     it("should use item data in expressions", () => {
       const options: SelectOption[] = [
-        { value: "warranty", label: "Warranty", visibleWhen: 'item.type = "electronics"' },
+        {
+          value: "warranty",
+          label: "Warranty",
+          visibleWhen: 'item.type = "electronics"',
+        },
         { value: "shipping", label: "Shipping" },
       ];
       const spec = createTestSpec();
@@ -421,12 +526,15 @@ describe("getVisibleOptions", () => {
       const electronicsResult = getVisibleOptions(options, {}, spec, {
         item: { type: "electronics" },
       });
-      expect(electronicsResult.map(o => o.value)).toEqual(["warranty", "shipping"]);
+      expect(electronicsResult.map((o) => o.value)).toEqual([
+        "warranty",
+        "shipping",
+      ]);
 
       const otherResult = getVisibleOptions(options, {}, spec, {
         item: { type: "clothing" },
       });
-      expect(otherResult.map(o => o.value)).toEqual(["shipping"]);
+      expect(otherResult.map((o) => o.value)).toEqual(["shipping"]);
     });
 
     it("should use itemIndex in expressions", () => {
@@ -436,11 +544,17 @@ describe("getVisibleOptions", () => {
       ];
       const spec = createTestSpec();
 
-      expect(getVisibleOptions(options, {}, spec, { itemIndex: 0, item: {} }).map(o => o.value))
-        .toEqual(["lead", "member"]);
+      expect(
+        getVisibleOptions(options, {}, spec, { itemIndex: 0, item: {} }).map(
+          (o) => o.value,
+        ),
+      ).toEqual(["lead", "member"]);
 
-      expect(getVisibleOptions(options, {}, spec, { itemIndex: 1, item: {} }).map(o => o.value))
-        .toEqual(["member"]);
+      expect(
+        getVisibleOptions(options, {}, spec, { itemIndex: 1, item: {} }).map(
+          (o) => o.value,
+        ),
+      ).toEqual(["member"]);
     });
   });
 
@@ -453,14 +567,17 @@ describe("getVisibleOptions", () => {
       ];
       const spec = createTestSpec();
 
-      expect(getVisibleOptions(options, { years: 1 }, spec).map(o => o.value))
-        .toEqual(["junior"]);
+      expect(
+        getVisibleOptions(options, { years: 1 }, spec).map((o) => o.value),
+      ).toEqual(["junior"]);
 
-      expect(getVisibleOptions(options, { years: 5 }, spec).map(o => o.value))
-        .toEqual(["mid"]);
+      expect(
+        getVisibleOptions(options, { years: 5 }, spec).map((o) => o.value),
+      ).toEqual(["mid"]);
 
-      expect(getVisibleOptions(options, { years: 10 }, spec).map(o => o.value))
-        .toEqual(["senior"]);
+      expect(
+        getVisibleOptions(options, { years: 10 }, spec).map((o) => o.value),
+      ).toEqual(["senior"]);
     });
 
     it("should evaluate string equality", () => {
@@ -470,8 +587,9 @@ describe("getVisibleOptions", () => {
       ];
       const spec = createTestSpec();
 
-      expect(getVisibleOptions(options, { type: "alpha" }, spec).map(o => o.value))
-        .toEqual(["a"]);
+      expect(
+        getVisibleOptions(options, { type: "alpha" }, spec).map((o) => o.value),
+      ).toEqual(["a"]);
     });
 
     it("should evaluate boolean expressions", () => {
@@ -481,11 +599,17 @@ describe("getVisibleOptions", () => {
       ];
       const spec = createTestSpec();
 
-      expect(getVisibleOptions(options, { isPremium: false }, spec).map(o => o.value))
-        .toEqual(["basic"]);
+      expect(
+        getVisibleOptions(options, { isPremium: false }, spec).map(
+          (o) => o.value,
+        ),
+      ).toEqual(["basic"]);
 
-      expect(getVisibleOptions(options, { isPremium: true }, spec).map(o => o.value))
-        .toEqual(["premium", "basic"]);
+      expect(
+        getVisibleOptions(options, { isPremium: true }, spec).map(
+          (o) => o.value,
+        ),
+      ).toEqual(["premium", "basic"]);
     });
   });
 
@@ -497,11 +621,13 @@ describe("getVisibleOptions", () => {
       ];
       const spec = createTestSpec();
 
-      expect(getVisibleOptions(options, { level: 1 }, spec).map(o => o.value))
-        .toEqual([1]);
+      expect(
+        getVisibleOptions(options, { level: 1 }, spec).map((o) => o.value),
+      ).toEqual([1]);
 
-      expect(getVisibleOptions(options, { level: 2 }, spec).map(o => o.value))
-        .toEqual([1, 2]);
+      expect(
+        getVisibleOptions(options, { level: 2 }, spec).map((o) => o.value),
+      ).toEqual([1, 2]);
     });
 
     it("should preserve option order", () => {
@@ -512,19 +638,25 @@ describe("getVisibleOptions", () => {
       ];
       const spec = createTestSpec();
 
-      expect(getVisibleOptions(options, { show: true }, spec).map(o => o.value))
-        .toEqual(["z", "a", "m"]);
+      expect(
+        getVisibleOptions(options, { show: true }, spec).map((o) => o.value),
+      ).toEqual(["z", "a", "m"]);
     });
 
     it("should hide options with invalid FEEL", () => {
       const options: SelectOption[] = [
         { value: "valid", label: "Valid" },
-        { value: "invalid", label: "Invalid", visibleWhen: "this is broken !!!" },
+        {
+          value: "invalid",
+          label: "Invalid",
+          visibleWhen: "this is broken !!!",
+        },
       ];
       const spec = createTestSpec();
 
-      expect(getVisibleOptions(options, {}, spec).map(o => o.value))
-        .toEqual(["valid"]);
+      expect(getVisibleOptions(options, {}, spec).map((o) => o.value)).toEqual([
+        "valid",
+      ]);
     });
   });
 });

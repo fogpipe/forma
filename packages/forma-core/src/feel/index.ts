@@ -110,7 +110,7 @@ function buildFeelContext(ctx: EvaluationContext): Record<string, unknown> {
  */
 export function evaluate<T = unknown>(
   expression: FEELExpression,
-  context: EvaluationContext
+  context: EvaluationContext,
 ): EvaluationOutcome<T> {
   try {
     const feelContext = buildFeelContext(context);
@@ -140,13 +140,13 @@ export function evaluate<T = unknown>(
  */
 export function evaluateBoolean(
   expression: FEELExpression,
-  context: EvaluationContext
+  context: EvaluationContext,
 ): boolean {
   const result = evaluate<boolean>(expression, context);
 
   if (!result.success) {
     console.warn(
-      `FEEL expression error: ${result.error}\nExpression: ${result.expression}`
+      `FEEL expression error: ${result.error}\nExpression: ${result.expression}`,
     );
     return false;
   }
@@ -166,14 +166,14 @@ export function evaluateBoolean(
   if (result.value === null || result.value === undefined) {
     console.warn(
       `[forma] FEEL expression returned null (treating as false): "${expression}"\n` +
-        `This often means a referenced field is undefined. See docs for null-safe patterns.`
+        `This often means a referenced field is undefined. See docs for null-safe patterns.`,
     );
     return false;
   }
 
   if (typeof result.value !== "boolean") {
     console.warn(
-      `FEEL expression did not return boolean: ${expression}\nGot: ${typeof result.value}`
+      `FEEL expression did not return boolean: ${expression}\nGot: ${typeof result.value}`,
     );
     return false;
   }
@@ -192,20 +192,20 @@ export function evaluateBoolean(
  */
 export function evaluateNumber(
   expression: FEELExpression,
-  context: EvaluationContext
+  context: EvaluationContext,
 ): number | null {
   const result = evaluate<number>(expression, context);
 
   if (!result.success) {
     console.warn(
-      `FEEL expression error: ${result.error}\nExpression: ${result.expression}`
+      `FEEL expression error: ${result.error}\nExpression: ${result.expression}`,
     );
     return null;
   }
 
   if (typeof result.value !== "number") {
     console.warn(
-      `FEEL expression did not return number: ${expression}\nGot: ${typeof result.value}`
+      `FEEL expression did not return number: ${expression}\nGot: ${typeof result.value}`,
     );
     return null;
   }
@@ -222,20 +222,20 @@ export function evaluateNumber(
  */
 export function evaluateString(
   expression: FEELExpression,
-  context: EvaluationContext
+  context: EvaluationContext,
 ): string | null {
   const result = evaluate<string>(expression, context);
 
   if (!result.success) {
     console.warn(
-      `FEEL expression error: ${result.error}\nExpression: ${result.expression}`
+      `FEEL expression error: ${result.error}\nExpression: ${result.expression}`,
     );
     return null;
   }
 
   if (typeof result.value !== "string") {
     console.warn(
-      `FEEL expression did not return string: ${expression}\nGot: ${typeof result.value}`
+      `FEEL expression did not return string: ${expression}\nGot: ${typeof result.value}`,
     );
     return null;
   }
@@ -258,7 +258,7 @@ export function evaluateString(
  */
 export function evaluateBooleanBatch(
   expressions: Record<string, FEELExpression>,
-  context: EvaluationContext
+  context: EvaluationContext,
 ): Record<string, boolean> {
   const results: Record<string, boolean> = {};
 
