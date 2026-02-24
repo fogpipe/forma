@@ -73,6 +73,7 @@ export interface JSONSchemaString extends JSONSchemaBase {
   pattern?: string;
   format?: "date" | "date-time" | "email" | "uri" | "uuid";
   enum?: string[];
+  default?: string;
 }
 
 export interface JSONSchemaNumber extends JSONSchemaBase {
@@ -82,6 +83,7 @@ export interface JSONSchemaNumber extends JSONSchemaBase {
   exclusiveMinimum?: number;
   exclusiveMaximum?: number;
   multipleOf?: number;
+  default?: number;
 }
 
 export interface JSONSchemaInteger extends JSONSchemaBase {
@@ -89,10 +91,12 @@ export interface JSONSchemaInteger extends JSONSchemaBase {
   minimum?: number;
   maximum?: number;
   multipleOf?: number;
+  default?: number;
 }
 
 export interface JSONSchemaBoolean extends JSONSchemaBase {
   type: "boolean";
+  default?: boolean;
 }
 
 export interface JSONSchemaArray extends JSONSchemaBase {
@@ -111,6 +115,7 @@ export interface JSONSchemaObject extends JSONSchemaBase {
 export interface JSONSchemaEnum extends JSONSchemaBase {
   type: "string";
   enum: string[];
+  default?: string;
 }
 
 // ============================================================================
@@ -205,6 +210,20 @@ export interface FieldDefinitionBase {
   variant?: string;
   /** Variant-specific configuration */
   variantConfig?: Record<string, unknown>;
+
+  // Default value
+
+  /**
+   * Default value for this field when the form initializes.
+   * Applied by the renderer during state initialization.
+   * Ignored on display fields (enforced by Zod validation layer).
+   *
+   * Resolution order (highest to lowest priority):
+   * 1. initialData prop (runtime)
+   * 2. defaultValue (from spec)
+   * 3. Implicit type defaults (boolean → false, etc.)
+   */
+  defaultValue?: unknown;
 }
 
 /**
@@ -215,8 +234,14 @@ export interface FieldDefinitionBase {
  * rather than inside variantConfig.
  */
 export interface AdornableFieldDefinition extends FieldDefinitionBase {
-  type: "text" | "email" | "url" | "password" | "textarea"
-     | "number" | "integer";
+  type:
+    | "text"
+    | "email"
+    | "url"
+    | "password"
+    | "textarea"
+    | "number"
+    | "integer";
   /** Text/symbol displayed before input (e.g., "$", "https://") */
   prefix?: string;
   /** Text/symbol displayed after input (e.g., "USD", "kg", "%") */
@@ -319,26 +344,40 @@ export type FieldDefinition =
 
 /** Adornable field types that support prefix/suffix */
 const ADORNABLE_TYPES: ReadonlySet<FieldType> = new Set([
-  "text", "email", "url", "password", "textarea", "number", "integer",
+  "text",
+  "email",
+  "url",
+  "password",
+  "textarea",
+  "number",
+  "integer",
 ]);
 
 /** Check if field supports prefix/suffix adorners */
-export function isAdornableField(field: FieldDefinition): field is AdornableFieldDefinition {
+export function isAdornableField(
+  field: FieldDefinition,
+): field is AdornableFieldDefinition {
   return ADORNABLE_TYPES.has(field.type);
 }
 
 /** Check if field is a display-only field (no data) */
-export function isDisplayField(field: FieldDefinition): field is DisplayFieldDefinition {
+export function isDisplayField(
+  field: FieldDefinition,
+): field is DisplayFieldDefinition {
   return field.type === "display";
 }
 
 /** Check if field is a selection field (has options) */
-export function isSelectionField(field: FieldDefinition): field is SelectionFieldDefinition {
+export function isSelectionField(
+  field: FieldDefinition,
+): field is SelectionFieldDefinition {
   return field.type === "select" || field.type === "multiselect";
 }
 
 /** Check if field is an array field */
-export function isArrayField(field: FieldDefinition): field is ArrayFieldDefinition {
+export function isArrayField(
+  field: FieldDefinition,
+): field is ArrayFieldDefinition {
   return field.type === "array";
 }
 

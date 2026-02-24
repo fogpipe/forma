@@ -214,7 +214,9 @@ function createDefaultItem(
 ): Record<string, unknown> {
   const item: Record<string, unknown> = {};
   for (const [fieldName, fieldDef] of Object.entries(itemFields)) {
-    if (fieldDef.type === "boolean") {
+    if (fieldDef.defaultValue !== undefined) {
+      item[fieldName] = fieldDef.defaultValue;
+    } else if (fieldDef.type === "boolean") {
       item[fieldName] = false;
     } else if (fieldDef.type === "number" || fieldDef.type === "integer") {
       item[fieldName] = null;

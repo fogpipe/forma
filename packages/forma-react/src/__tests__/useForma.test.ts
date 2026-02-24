@@ -38,12 +38,141 @@ describe("useForma", () => {
       });
 
       const initialData = { name: "John", age: 25 };
-      const { result } = renderHook(() =>
-        useForma({ spec, initialData })
-      );
+      const { result } = renderHook(() => useForma({ spec, initialData }));
 
       expect(result.current.data).toEqual(initialData);
       expect(result.current.isDirty).toBe(false);
+    });
+
+    it("should initialize with defaultValue from field definitions", () => {
+      const spec = createTestSpec({
+        fields: {
+          country: {
+            type: "select",
+            defaultValue: "us",
+            options: [
+              { value: "us", label: "US" },
+              { value: "ca", label: "CA" },
+            ],
+          },
+          age: { type: "number", defaultValue: 25 },
+          name: { type: "text" },
+        },
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+
+      expect(result.current.data.country).toBe("us");
+      expect(result.current.data.age).toBe(25);
+      expect(result.current.data.name).toBeUndefined();
+    });
+
+    it("should let initialData override defaultValue", () => {
+      const spec = createTestSpec({
+        fields: {
+          country: {
+            type: "select",
+            defaultValue: "us",
+            options: [
+              { value: "us", label: "US" },
+              { value: "ca", label: "CA" },
+            ],
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        useForma({ spec, initialData: { country: "ca" } }),
+      );
+
+      expect(result.current.data.country).toBe("ca");
+    });
+
+    it("should let defaultValue=true override implicit boolean false", () => {
+      const spec = createTestSpec({
+        fields: {
+          agree: { type: "boolean", defaultValue: true },
+          optIn: { type: "boolean" },
+        },
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+
+      expect(result.current.data.agree).toBe(true);
+      expect(result.current.data.optIn).toBe(false);
+    });
+
+    it("should apply defaultValue for number and string fields", () => {
+      const spec = createTestSpec({
+        fields: {
+          quantity: { type: "integer", defaultValue: 5 },
+          price: { type: "number", defaultValue: 9.99 },
+          notes: { type: "textarea", defaultValue: "N/A" },
+        },
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+
+      expect(result.current.data.quantity).toBe(5);
+      expect(result.current.data.price).toBe(9.99);
+      expect(result.current.data.notes).toBe("N/A");
+    });
+
+    it("should not apply defaultValue for display fields in data", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", defaultValue: "John" },
+          header: { type: "display", content: "Header" },
+        },
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+
+      expect(result.current.data.name).toBe("John");
+      // display fields don't produce data entries
+      expect(result.current.data.header).toBeUndefined();
+    });
+
+    it("should preserve defaultValue after resetForm", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", defaultValue: "Default" },
+        },
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+
+      expect(result.current.data.name).toBe("Default");
+
+      act(() => {
+        result.current.setFieldValue("name", "Changed");
+      });
+      expect(result.current.data.name).toBe("Changed");
+
+      act(() => {
+        result.current.resetForm();
+      });
+      expect(result.current.data.name).toBe("Default");
+    });
+
+    it("should apply defaultValue for multiselect as array", () => {
+      const spec = createTestSpec({
+        fields: {
+          tags: {
+            type: "multiselect",
+            defaultValue: ["a", "b"],
+            options: [
+              { value: "a", label: "A" },
+              { value: "b", label: "B" },
+              { value: "c", label: "C" },
+            ],
+          },
+        },
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+
+      expect(result.current.data.tags).toEqual(["a", "b"]);
     });
 
     it("should merge referenceData from options with spec", () => {
@@ -56,7 +185,7 @@ describe("useForma", () => {
         useForma({
           spec,
           referenceData: { added: { b: 2 } },
-        })
+        }),
       );
 
       expect(result.current.spec.referenceData).toEqual({
@@ -127,7 +256,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { items: [{ name: "A" }] } })
+        useForma({ spec, initialData: { items: [{ name: "A" }] } }),
       );
 
       act(() => {
@@ -172,7 +301,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { name: "Test" } })
+        useForma({ spec, initialData: { name: "Test" } }),
       );
 
       const props = result.current.getFieldProps("name");
@@ -295,7 +424,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { tags: ["a", "b"] } })
+        useForma({ spec, initialData: { tags: ["a", "b"] } }),
       );
 
       const props = result.current.getSelectFieldProps("tags");
@@ -322,7 +451,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { hasLicense: false } })
+        useForma({ spec, initialData: { hasLicense: false } }),
       );
 
       // Initially hidden
@@ -348,7 +477,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { age: 14 } })
+        useForma({ spec, initialData: { age: 14 } }),
       );
 
       expect(result.current.visibility.canDrive).toBe(false);
@@ -378,7 +507,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { employmentStatus: "unemployed" } })
+        useForma({ spec, initialData: { employmentStatus: "unemployed" } }),
       );
 
       expect(result.current.getFieldProps("employerName").required).toBe(false);
@@ -408,7 +537,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { isEditable: false } })
+        useForma({ spec, initialData: { isEditable: false } }),
       );
 
       expect(result.current.getFieldProps("notes").enabled).toBe(false);
@@ -438,7 +567,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { quantity: 5, price: 10 } })
+        useForma({ spec, initialData: { quantity: 5, price: 10 } }),
       );
 
       expect(result.current.computed.total).toBe(50);
@@ -456,7 +585,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { a: 1, b: 2 } })
+        useForma({ spec, initialData: { a: 1, b: 2 } }),
       );
 
       expect(result.current.computed.sum).toBe(3);
@@ -504,7 +633,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, validateOn: "blur" })
+        useForma({ spec, validateOn: "blur" }),
       );
 
       // Errors exist but not shown
@@ -520,11 +649,13 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, validateOn: "change" })
+        useForma({ spec, validateOn: "change" }),
       );
 
       // Errors shown immediately
-      expect(result.current.getFieldProps("name").errors.length).toBeGreaterThan(0);
+      expect(
+        result.current.getFieldProps("name").errors.length,
+      ).toBeGreaterThan(0);
     });
 
     it("should validate custom validation rules", () => {
@@ -540,7 +671,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { age: 16 } })
+        useForma({ spec, initialData: { age: 16 } }),
       );
 
       // Touch the field to show errors
@@ -549,7 +680,9 @@ describe("useForma", () => {
       });
 
       const errors = result.current.getFieldProps("age").errors;
-      expect(errors.some((e) => e.message === "Must be 18 or older")).toBe(true);
+      expect(errors.some((e) => e.message === "Must be 18 or older")).toBe(
+        true,
+      );
     });
 
     it("should clear isSubmitted when data changes", () => {
@@ -583,7 +716,7 @@ describe("useForma", () => {
         });
 
         const { result } = renderHook(() =>
-          useForma({ spec, validationDebounceMs: 100 })
+          useForma({ spec, validationDebounceMs: 100 }),
         );
 
         // Initially invalid (required field empty)
@@ -619,7 +752,7 @@ describe("useForma", () => {
         });
 
         const { result } = renderHook(() =>
-          useForma({ spec, validationDebounceMs: 500, onSubmit })
+          useForma({ spec, validationDebounceMs: 500, onSubmit }),
         );
 
         // Fill the field
@@ -647,7 +780,7 @@ describe("useForma", () => {
         });
 
         const { result } = renderHook(() =>
-          useForma({ spec, validationDebounceMs: 100, onSubmit })
+          useForma({ spec, validationDebounceMs: 100, onSubmit }),
         );
 
         // Submit without filling required field
@@ -667,7 +800,7 @@ describe("useForma", () => {
         });
 
         const { result } = renderHook(() =>
-          useForma({ spec, validationDebounceMs: 0 })
+          useForma({ spec, validationDebounceMs: 0 }),
         );
 
         expect(result.current.isValid).toBe(false);
@@ -698,7 +831,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { items: [] } })
+        useForma({ spec, initialData: { items: [] } }),
       );
 
       const helpers = result.current.getArrayHelpers("items");
@@ -718,7 +851,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { items: [] } })
+        useForma({ spec, initialData: { items: [] } }),
       );
 
       act(() => {
@@ -737,7 +870,7 @@ describe("useForma", () => {
         useForma({
           spec,
           initialData: { items: [{ name: "A" }, { name: "B" }, { name: "C" }] },
-        })
+        }),
       );
 
       act(() => {
@@ -756,7 +889,7 @@ describe("useForma", () => {
         useForma({
           spec,
           initialData: { items: [{ name: "A" }, { name: "B" }, { name: "C" }] },
-        })
+        }),
       );
 
       act(() => {
@@ -779,7 +912,7 @@ describe("useForma", () => {
         useForma({
           spec,
           initialData: { items: [{ name: "A" }, { name: "B" }] },
-        })
+        }),
       );
 
       act(() => {
@@ -798,7 +931,7 @@ describe("useForma", () => {
         useForma({
           spec,
           initialData: { items: [{ name: "A" }, { name: "C" }] },
-        })
+        }),
       );
 
       act(() => {
@@ -823,7 +956,7 @@ describe("useForma", () => {
         useForma({
           spec,
           initialData: { items: [{ name: "Only" }] },
-        })
+        }),
       );
 
       const helpers = result.current.getArrayHelpers("items");
@@ -849,7 +982,7 @@ describe("useForma", () => {
         useForma({
           spec,
           initialData: { items: [{ name: "A" }, { name: "B" }] },
-        })
+        }),
       );
 
       const helpers = result.current.getArrayHelpers("items");
@@ -880,10 +1013,12 @@ describe("useForma", () => {
         useForma({
           spec,
           initialData: { items: [{ name: "Test Item" }] },
-        })
+        }),
       );
 
-      const itemProps = result.current.getArrayHelpers("items").getItemFieldProps(0, "name");
+      const itemProps = result.current
+        .getArrayHelpers("items")
+        .getItemFieldProps(0, "name");
 
       expect(itemProps.name).toBe("items[0].name");
       expect(itemProps.value).toBe("Test Item");
@@ -1022,12 +1157,17 @@ describe("useForma", () => {
         },
         pages: [
           { id: "page1", title: "Step 1", fields: ["showPage2", "field1"] },
-          { id: "page2", title: "Step 2", fields: ["field2"], visibleWhen: "showPage2 = true" },
+          {
+            id: "page2",
+            title: "Step 2",
+            fields: ["field2"],
+            visibleWhen: "showPage2 = true",
+          },
         ],
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { showPage2: false } })
+        useForma({ spec, initialData: { showPage2: false } }),
       );
 
       // Page 2 should be hidden
@@ -1039,7 +1179,9 @@ describe("useForma", () => {
         result.current.setFieldValue("showPage2", true);
       });
 
-      const page2After = result.current.wizard?.pages.find((p) => p.id === "page2");
+      const page2After = result.current.wizard?.pages.find(
+        (p) => p.id === "page2",
+      );
       expect(page2After?.visible).toBe(true);
     });
 
@@ -1058,7 +1200,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { name: "Test" }, onSubmit })
+        useForma({ spec, initialData: { name: "Test" }, onSubmit }),
       );
 
       await act(async () => {
@@ -1074,9 +1216,7 @@ describe("useForma", () => {
         fields: { name: { type: "text", required: true } },
       });
 
-      const { result } = renderHook(() =>
-        useForma({ spec, onSubmit })
-      );
+      const { result } = renderHook(() => useForma({ spec, onSubmit }));
 
       await act(async () => {
         await result.current.submitForm();
@@ -1088,14 +1228,14 @@ describe("useForma", () => {
 
     it("should track isSubmitting state during async submit", async () => {
       const onSubmit = vi.fn(
-        (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 100))
+        (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 100)),
       );
       const spec = createTestSpec({
         fields: { name: { type: "text" } },
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { name: "Test" }, onSubmit })
+        useForma({ spec, initialData: { name: "Test" }, onSubmit }),
       );
 
       let submitPromise: Promise<void>;
@@ -1118,7 +1258,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { name: "Original" } })
+        useForma({ spec, initialData: { name: "Original" } }),
       );
 
       act(() => {
@@ -1144,9 +1284,7 @@ describe("useForma", () => {
         fields: { name: { type: "text" } },
       });
 
-      const { result } = renderHook(() =>
-        useForma({ spec, onChange })
-      );
+      const { result } = renderHook(() => useForma({ spec, onChange }));
 
       act(() => {
         result.current.setFieldValue("name", "New Value");
@@ -1154,7 +1292,7 @@ describe("useForma", () => {
 
       expect(onChange).toHaveBeenCalledWith(
         { name: "New Value" },
-        expect.any(Object) // computed values
+        expect.any(Object), // computed values
       );
     });
 
@@ -1165,7 +1303,7 @@ describe("useForma", () => {
       });
 
       renderHook(() =>
-        useForma({ spec, initialData: { name: "Initial" }, onChange })
+        useForma({ spec, initialData: { name: "Initial" }, onChange }),
       );
 
       expect(onChange).not.toHaveBeenCalled();
@@ -1197,7 +1335,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { acceptTerms: true } })
+        useForma({ spec, initialData: { acceptTerms: true } }),
       );
 
       expect(result.current.data.acceptTerms).toBe(true);
@@ -1226,7 +1364,9 @@ describe("useForma", () => {
             type: "boolean",
             label: "I accept the terms",
             required: true,
-            validations: [{ rule: "value = true", message: "You must accept the terms" }],
+            validations: [
+              { rule: "value = true", message: "You must accept the terms" },
+            ],
           },
         },
       });
@@ -1332,12 +1472,14 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { age: -5 } })
+        useForma({ spec, initialData: { age: -5 } }),
       );
 
       const fieldErrors = result.current.validateField("age");
 
-      expect(fieldErrors.some((e) => e.message === "Must be positive")).toBe(true);
+      expect(fieldErrors.some((e) => e.message === "Must be positive")).toBe(
+        true,
+      );
     });
   });
 
@@ -1360,7 +1502,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { name: "", items: [{ title: "" }] } })
+        useForma({ spec, initialData: { name: "", items: [{ title: "" }] } }),
       );
 
       // Edit root field
@@ -1378,7 +1520,9 @@ describe("useForma", () => {
 
       // Both values should be preserved
       expect(result.current.data.name).toBe("John");
-      expect((result.current.data.items as Array<{ title: string }>)[0].title).toBe("First Item");
+      expect(
+        (result.current.data.items as Array<{ title: string }>)[0].title,
+      ).toBe("First Item");
     });
 
     it("should preserve array item changes when editing root fields", () => {
@@ -1393,7 +1537,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { name: "", items: [{ title: "" }] } })
+        useForma({ spec, initialData: { name: "", items: [{ title: "" }] } }),
       );
 
       // Edit array item field first
@@ -1402,7 +1546,9 @@ describe("useForma", () => {
         const itemProps = helpers.getItemFieldProps(0, "title");
         itemProps.onChange("First Item");
       });
-      expect((result.current.data.items as Array<{ title: string }>)[0].title).toBe("First Item");
+      expect(
+        (result.current.data.items as Array<{ title: string }>)[0].title,
+      ).toBe("First Item");
 
       // Now edit root field
       act(() => {
@@ -1411,7 +1557,9 @@ describe("useForma", () => {
 
       // Both values should be preserved
       expect(result.current.data.name).toBe("John");
-      expect((result.current.data.items as Array<{ title: string }>)[0].title).toBe("First Item");
+      expect(
+        (result.current.data.items as Array<{ title: string }>)[0].title,
+      ).toBe("First Item");
     });
 
     it("should preserve data when alternating between root and array item edits", () => {
@@ -1435,9 +1583,12 @@ describe("useForma", () => {
           initialData: {
             name: "",
             email: "",
-            items: [{ title: "", value: null }, { title: "", value: null }],
+            items: [
+              { title: "", value: null },
+              { title: "", value: null },
+            ],
           },
-        })
+        }),
       );
 
       // Sequence of edits alternating between root and array fields
@@ -1468,9 +1619,15 @@ describe("useForma", () => {
       const data = result.current.data;
       expect(data.name).toBe("Alice");
       expect(data.email).toBe("alice@example.com");
-      expect((data.items as Array<{ title: string; value: number }>)[0].title).toBe("Item 1");
-      expect((data.items as Array<{ title: string; value: number }>)[0].value).toBe(100);
-      expect((data.items as Array<{ title: string; value: number }>)[1].title).toBe("Item 2");
+      expect(
+        (data.items as Array<{ title: string; value: number }>)[0].title,
+      ).toBe("Item 1");
+      expect(
+        (data.items as Array<{ title: string; value: number }>)[0].value,
+      ).toBe(100);
+      expect(
+        (data.items as Array<{ title: string; value: number }>)[1].title,
+      ).toBe("Item 2");
     });
 
     it("should preserve item data when adding new items", () => {
@@ -1484,7 +1641,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { items: [] } })
+        useForma({ spec, initialData: { items: [] } }),
       );
 
       // Add first item
@@ -1498,7 +1655,9 @@ describe("useForma", () => {
         const helpers = result.current.getArrayHelpers("items");
         helpers.getItemFieldProps(0, "name").onChange("First");
       });
-      expect((result.current.data.items as Array<{ name: string }>)[0].name).toBe("First");
+      expect(
+        (result.current.data.items as Array<{ name: string }>)[0].name,
+      ).toBe("First");
 
       // Add second item - first item should keep its value
       act(() => {
@@ -1506,8 +1665,12 @@ describe("useForma", () => {
         helpers.push({ name: "" });
       });
 
-      expect((result.current.data.items as Array<{ name: string }>)[0].name).toBe("First");
-      expect((result.current.data.items as Array<{ name: string }>).length).toBe(2);
+      expect(
+        (result.current.data.items as Array<{ name: string }>)[0].name,
+      ).toBe("First");
+      expect(
+        (result.current.data.items as Array<{ name: string }>).length,
+      ).toBe(2);
 
       // Edit second item - first item should still keep its value
       act(() => {
@@ -1515,8 +1678,12 @@ describe("useForma", () => {
         helpers.getItemFieldProps(1, "name").onChange("Second");
       });
 
-      expect((result.current.data.items as Array<{ name: string }>)[0].name).toBe("First");
-      expect((result.current.data.items as Array<{ name: string }>)[1].name).toBe("Second");
+      expect(
+        (result.current.data.items as Array<{ name: string }>)[0].name,
+      ).toBe("First");
+      expect(
+        (result.current.data.items as Array<{ name: string }>)[1].name,
+      ).toBe("Second");
     });
 
     it("should preserve data when editing different array items in sequence", () => {
@@ -1535,7 +1702,7 @@ describe("useForma", () => {
           initialData: {
             items: [{ name: "" }, { name: "" }, { name: "" }],
           },
-        })
+        }),
       );
 
       // Edit items in sequence: 0, 2, 1, 0 again
@@ -1581,7 +1748,7 @@ describe("useForma", () => {
           initialData: {
             items: [{ name: "First" }, { name: "Second" }, { name: "Third" }],
           },
-        })
+        }),
       );
 
       // Remove middle item
@@ -1618,7 +1785,7 @@ describe("useForma", () => {
       });
 
       const { result } = renderHook(() =>
-        useForma({ spec, initialData: { items: [{ name: "" }] } })
+        useForma({ spec, initialData: { items: [{ name: "" }] } }),
       );
 
       // Rapidly edit the same field multiple times
@@ -1642,7 +1809,9 @@ describe("useForma", () => {
         helpers.getItemFieldProps(0, "name").onChange("abcd");
       });
 
-      expect((result.current.data.items as Array<{ name: string }>)[0].name).toBe("abcd");
+      expect(
+        (result.current.data.items as Array<{ name: string }>)[0].name,
+      ).toBe("abcd");
     });
 
     it("should preserve multiple root fields when editing array items", () => {
@@ -1667,7 +1836,7 @@ describe("useForma", () => {
             email: "john@example.com",
             items: [{ name: "" }],
           },
-        })
+        }),
       );
 
       // Edit array item
@@ -1680,7 +1849,9 @@ describe("useForma", () => {
       expect(result.current.data.firstName).toBe("John");
       expect(result.current.data.lastName).toBe("Doe");
       expect(result.current.data.email).toBe("john@example.com");
-      expect((result.current.data.items as Array<{ name: string }>)[0].name).toBe("Item Name");
+      expect(
+        (result.current.data.items as Array<{ name: string }>)[0].name,
+      ).toBe("Item Name");
     });
   });
 });

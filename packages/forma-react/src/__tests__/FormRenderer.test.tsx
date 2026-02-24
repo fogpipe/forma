@@ -75,6 +75,60 @@ describe("FormRenderer", () => {
       expect(input).toHaveValue("John Doe");
     });
 
+    it("should render with defaultValue pre-populated", () => {
+      const spec = createTestSpec({
+        fields: {
+          country: {
+            type: "select",
+            label: "Country",
+            defaultValue: "us",
+            options: [
+              { value: "us", label: "United States" },
+              { value: "ca", label: "Canada" },
+            ],
+          },
+          quantity: {
+            type: "number",
+            label: "Quantity",
+            defaultValue: 5,
+          },
+        },
+      });
+
+      render(
+        <FormRenderer spec={spec} components={createTestComponentMap()} />,
+      );
+
+      const select = screen.getByRole("combobox");
+      expect(select).toHaveValue("us");
+
+      const numberInput = screen.getByRole("spinbutton");
+      expect(numberInput).toHaveValue(5);
+    });
+
+    it("should let initialData override defaultValue in rendered output", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: {
+            type: "text",
+            label: "Name",
+            defaultValue: "Default Name",
+          },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ name: "Override" }}
+          components={createTestComponentMap()}
+        />,
+      );
+
+      const input = screen.getByRole("textbox");
+      expect(input).toHaveValue("Override");
+    });
+
     it("should use custom layout component", () => {
       const spec = createTestSpec({
         fields: { name: { type: "text" } },

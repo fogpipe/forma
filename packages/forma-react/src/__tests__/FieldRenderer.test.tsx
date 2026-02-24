@@ -7,7 +7,7 @@
  * - Field type rendering
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { FormRenderer } from "../FormRenderer.js";
@@ -19,6 +19,7 @@ import type {
   JSONSchemaInteger,
 } from "@fogpipe/forma-core";
 import type {
+  ArrayComponentProps,
   ComponentMap,
   LayoutProps,
   NumberComponentProps,
@@ -376,6 +377,132 @@ describe("FieldRenderer", () => {
         expect(capturedProps!.min).toBe(0);
         expect(capturedProps!.max).toBe(5);
         expect(capturedProps!.step).toBe(0.5);
+      });
+    });
+  });
+
+  // ============================================================================
+  // Array Item Default Values
+  // ============================================================================
+
+  describe("array item default values", () => {
+    /**
+     * Create a component map where the array add button calls push()
+     * without arguments, triggering createDefaultItem() in FieldRenderer.
+     */
+    function createDefaultItemComponentMap(): ComponentMap {
+      const base = createTestComponentMap();
+      return {
+        ...base,
+        array: ({ field: props }: { field: ArrayComponentProps["field"] }) => {
+          const { name, field, value, helpers } = props;
+          const items = (value || []) as unknown[];
+          return (
+            <div data-testid={`field-${name}`}>
+              <label>{field.label}</label>
+              <div>
+                {items.map((_, index) => (
+                  <div key={index} data-testid={`array-item-${name}-${index}`}>
+                    Item {index}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => helpers.push()}
+                data-testid={`add-${name}`}
+              >
+                Add
+              </button>
+            </div>
+          );
+        },
+      };
+    }
+
+    it("should use defaultValue from itemFields when adding array items", async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      const spec = createTestSpec({
+        fields: {
+          items: {
+            type: "array",
+            label: "Items",
+            itemFields: {
+              name: { type: "text", defaultValue: "New Item" },
+              quantity: { type: "integer", defaultValue: 1 },
+              active: { type: "boolean", defaultValue: true },
+            },
+          },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ items: [] }}
+          components={createDefaultItemComponentMap()}
+          onChange={onChange}
+        />,
+      );
+
+      const addButton = screen.getByTestId("add-items");
+      await user.click(addButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("array-item-items-0")).toBeInTheDocument();
+      });
+
+      // Verify onChange was called with default values from itemFields
+      const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1];
+      const data = lastCall[0];
+      expect(data.items).toHaveLength(1);
+      expect(data.items[0]).toEqual({
+        name: "New Item",
+        quantity: 1,
+        active: true,
+      });
+    });
+
+    it("should fall back to type defaults when itemFields lack defaultValue", async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      const spec = createTestSpec({
+        fields: {
+          items: {
+            type: "array",
+            label: "Items",
+            itemFields: {
+              name: { type: "text" },
+              count: { type: "number" },
+              enabled: { type: "boolean" },
+            },
+          },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ items: [] }}
+          components={createDefaultItemComponentMap()}
+          onChange={onChange}
+        />,
+      );
+
+      const addButton = screen.getByTestId("add-items");
+      await user.click(addButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("array-item-items-0")).toBeInTheDocument();
+      });
+
+      const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1];
+      const data = lastCall[0];
+      expect(data.items[0]).toEqual({
+        name: "",
+        count: null,
+        enabled: false,
       });
     });
   });

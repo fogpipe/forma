@@ -238,6 +238,23 @@ function getDefaultBooleanValues(spec: Forma): Record<string, boolean> {
 }
 
 /**
+ * Get default values from field definitions.
+ * Collects `defaultValue` from each field that specifies one.
+ * These are applied after boolean defaults but before initialData,
+ * so explicit defaults override type-implicit defaults,
+ * and runtime initialData overrides everything.
+ */
+function getFieldDefaults(spec: Forma): Record<string, unknown> {
+  const defaults: Record<string, unknown> = {};
+  for (const [fieldPath, fieldDef] of Object.entries(spec.fields)) {
+    if (fieldDef.defaultValue !== undefined) {
+      defaults[fieldPath] = fieldDef.defaultValue;
+    }
+  }
+  return defaults;
+}
+
+/**
  * Main Forma hook
  */
 export function useForma(options: UseFormaOptions): UseFormaReturn {
@@ -264,7 +281,11 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   }, [inputSpec, referenceData]);
 
   const [state, dispatch] = useReducer(formReducer, {
-    data: { ...getDefaultBooleanValues(spec), ...initialData }, // Boolean defaults merged UNDER initialData
+    data: {
+      ...getDefaultBooleanValues(spec),
+      ...getFieldDefaults(spec),
+      ...initialData,
+    },
     touched: {},
     isSubmitting: false,
     isSubmitted: false,
@@ -448,8 +469,15 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
   }, [immediateValidation, onSubmit, state.data]);
 
   const resetForm = useCallback(() => {
-    dispatch({ type: "RESET", initialData });
-  }, [initialData]);
+    dispatch({
+      type: "RESET",
+      initialData: {
+        ...getDefaultBooleanValues(spec),
+        ...getFieldDefaults(spec),
+        ...initialData,
+      },
+    });
+  }, [spec, initialData]);
 
   // Wizard helpers
   const wizard = useMemo((): WizardHelpers | null => {
