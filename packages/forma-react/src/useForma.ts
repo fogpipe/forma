@@ -1084,6 +1084,16 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     ],
   );
 
+  // Stable reference for imperative event subscription — only depends on the
+  // emitter ref, so consumers can safely use it as a useEffect dependency.
+  const on = useCallback(
+    <K extends keyof FormaEventMap>(
+      event: K,
+      listener: (payload: FormaEventMap[K]) => void | Promise<void>,
+    ) => emitterRef.current.on(event, listener),
+    [],
+  );
+
   return useMemo(
     (): UseFormaReturn => ({
       data: state.data,
@@ -1108,10 +1118,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       validateForm,
       submitForm,
       resetForm,
-      on: <K extends keyof FormaEventMap>(
-        event: K,
-        listener: (payload: FormaEventMap[K]) => void | Promise<void>,
-      ) => emitterRef.current.on(event, listener),
+      on,
       getFieldProps,
       getSelectFieldProps,
       getArrayHelpers,
@@ -1139,6 +1146,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       validateForm,
       submitForm,
       resetForm,
+      on,
       getFieldProps,
       getSelectFieldProps,
       getArrayHelpers,
