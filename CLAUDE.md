@@ -14,7 +14,7 @@ Forma is a declarative form specification language with FEEL (Friendly Enough Ex
 **VERY IMPORTANT:** After making any code modifications, always run quality checks to verify everything works:
 
 ```bash
-turbo run lint check-types build test
+turbo run lint check-types check-types:test build test
 ```
 
 Do this immediately after changes - don't wait until the end. Fix any issues before proceeding.
@@ -100,7 +100,7 @@ FEEL expressions have access to:
 **Always run before committing:**
 
 ```bash
-turbo run lint check-types build test
+turbo run lint check-types check-types:test build test
 ```
 
 This runs all quality checks across the monorepo with proper caching. All checks must pass before merging.

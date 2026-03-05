@@ -476,6 +476,13 @@ export type { UseFormaReturn as FormState } from "./useForma.js";
 export type { UseFormaOptions } from "./useForma.js";
 export type { PageState, WizardHelpers } from "./useForma.js";
 
+// Re-export event types
+export type {
+  FormaEventMap,
+  FormaEvents,
+  FormaEventListener,
+} from "./events.js";
+
 // Re-export ValidationResult for convenience
 export type { ValidationResult } from "@fogpipe/forma-core";
 

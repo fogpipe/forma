@@ -95,4 +95,9 @@ export type {
   LayoutProps,
   FieldWrapperProps,
   PageWrapperProps,
+
+  // Event types
+  FormaEventMap,
+  FormaEvents,
+  FormaEventListener,
 } from "./types.js";

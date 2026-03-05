@@ -193,6 +193,69 @@ function WizardForm({ spec }: { spec: Forma }) {
 }
 ```
 
+## Event System
+
+The event system lets you observe form lifecycle events for side effects like analytics, data injection, and external state sync. Events do not trigger React re-renders.
+
+### Available Events
+
+| Event          | Description                                             |
+| -------------- | ------------------------------------------------------- |
+| `fieldChanged` | Fires after a field value changes                       |
+| `preSubmit`    | Fires before validation; `data` is mutable              |
+| `postSubmit`   | Fires after submission (success, error, or invalid)     |
+| `pageChanged`  | Fires when wizard page changes                          |
+| `formReset`    | Fires after `resetForm()` completes                     |
+
+### Declarative Registration
+
+Pass listeners via the `on` option — callbacks are stable (ref-based):
+
+```tsx
+const forma = useForma({
+  spec,
+  onSubmit: handleSubmit,
+  on: {
+    fieldChanged: (event) => {
+      analytics.track("field_changed", { path: event.path, source: event.source });
+    },
+    preSubmit: async (event) => {
+      event.data.token = await getCSRFToken();
+    },
+    postSubmit: (event) => {
+      if (event.success) router.push("/thank-you");
+    },
+  },
+});
+```
+
+### Imperative Registration
+
+Register listeners dynamically — returns an unsubscribe function:
+
+```tsx
+const forma = useForma({ spec, onSubmit: handleSubmit });
+
+useEffect(() => {
+  const unsubscribe = forma.on("fieldChanged", (event) => {
+    console.log(`${event.path}: ${event.previousValue} → ${event.value}`);
+  });
+  return unsubscribe;
+}, [forma]);
+```
+
+### Event Payloads
+
+**`fieldChanged`**: `{ path, value, previousValue, source }` where `source` is `'user' | 'reset' | 'setValues'`
+
+**`preSubmit`**: `{ data, computed }` — mutate `data` to inject fields before validation
+
+**`postSubmit`**: `{ data, success, error?, validationErrors? }`
+
+**`pageChanged`**: `{ fromIndex, toIndex, page }`
+
+**`formReset`**: `{}` (no payload)
+
 ## API Reference
 
 ### FormRenderer Props
@@ -239,15 +302,16 @@ formRef.current?.setValues({ name: "John" });
 
 ### useForma Methods
 
-| Method                            | Description             |
-| --------------------------------- | ----------------------- |
-| `setFieldValue(path, value)`      | Set field value         |
-| `setFieldTouched(path, touched?)` | Mark field as touched   |
-| `setValues(values)`               | Set multiple values     |
-| `validateField(path)`             | Validate single field   |
-| `validateForm()`                  | Validate entire form    |
-| `submitForm()`                    | Submit the form         |
-| `resetForm()`                     | Reset to initial values |
+| Method                            | Description                          |
+| --------------------------------- | ------------------------------------ |
+| `setFieldValue(path, value)`      | Set field value                      |
+| `setFieldTouched(path, touched?)` | Mark field as touched                |
+| `setValues(values)`               | Set multiple values                  |
+| `validateField(path)`             | Validate single field                |
+| `validateForm()`                  | Validate entire form                 |
+| `submitForm()`                    | Submit the form                      |
+| `resetForm()`                     | Reset to initial values              |
+| `on(event, listener)`             | Register event listener; returns unsubscribe |
 
 ### useForma Options
 
@@ -260,6 +324,7 @@ formRef.current?.setValues({ name: "John" });
 | `validateOn`           | `"change" \| "blur" \| "submit"` | `"blur"` | When to validate          |
 | `referenceData`        | `Record<string, unknown>`        | -        | Additional reference data |
 | `validationDebounceMs` | `number`                         | `0`      | Debounce validation (ms)  |
+| `on`                   | `FormaEvents`                    | -        | Declarative event listeners |
 
 ## Error Boundary
 

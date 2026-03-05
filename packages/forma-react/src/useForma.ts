@@ -25,6 +25,8 @@ import type {
   GetSelectFieldPropsResult,
   GetArrayHelpersResult,
 } from "./types.js";
+import { FormaEventEmitter } from "./events.js";
+import type { FormaEventMap, FormaEvents } from "./events.js";
 import {
   getVisibility,
   getRequired,
@@ -62,6 +64,12 @@ export interface UseFormaOptions {
    * Set to 0 (default) for immediate validation.
    */
   validationDebounceMs?: number;
+  /**
+   * Declarative event listeners for form lifecycle events.
+   * Listeners are stable for the lifetime of the hook — the latest
+   * callback is always invoked via refs, without causing dependency changes.
+   */
+  on?: FormaEvents;
 }
 
 /**
@@ -167,6 +175,15 @@ export interface UseFormaReturn {
   /** Reset the form */
   resetForm: () => void;
 
+  /**
+   * Register an imperative event listener. Returns an unsubscribe function.
+   * Multiple listeners per event are supported; they fire in registration order.
+   */
+  on: <K extends keyof FormaEventMap>(
+    event: K,
+    listener: (payload: FormaEventMap[K]) => void | Promise<void>,
+  ) => () => void;
+
   // Helper methods for getting field props
   /** Get props for any field */
   getFieldProps: (path: string) => GetFieldPropsResult;
@@ -266,6 +283,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     validateOn = "blur",
     referenceData,
     validationDebounceMs = 0,
+    on: onEvents,
   } = options;
 
   // Merge referenceData from options with spec.referenceData
@@ -299,6 +317,42 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
 
   // Track if we've initialized (to avoid calling onChange on first render)
   const hasInitialized = useRef(false);
+
+  // ── Event system ──────────────────────────────────────────────────────
+  const emitterRef = useRef(new FormaEventEmitter());
+  const onEventsRef = useRef(onEvents);
+  onEventsRef.current = onEvents;
+  const pendingEventsRef = useRef<
+    Array<{ event: keyof FormaEventMap; payload: unknown }>
+  >([]);
+  const isFiringEventsRef = useRef(false);
+
+  // Cleanup emitter on unmount
+  useEffect(() => {
+    const emitter = emitterRef.current;
+    return () => {
+      emitter.clear();
+    };
+  }, []);
+
+  // Helper: fire an event to both declarative `on` handlers and imperative listeners
+  const fireEvent = useCallback(
+    <K extends keyof FormaEventMap>(
+      event: K,
+      payload: FormaEventMap[K],
+    ) => {
+      // Declarative handler (via ref for latest callback)
+      try {
+        const handler = onEventsRef.current?.[event];
+        if (handler) (handler as (p: FormaEventMap[K]) => void)(payload);
+      } catch (error) {
+        console.error(`[forma] Error in "${event}" event handler:`, error);
+      }
+      // Imperative listeners
+      emitterRef.current.fire(event, payload);
+    },
+    [],
+  );
 
   // Calculate computed values
   const computed = useMemo(
@@ -425,24 +479,62 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     [state.data],
   );
 
+  // Helper to get value at nested path
+  // Uses stateDataRef to always access current state, avoiding stale closure issues
+  const getValueAtPath = useCallback((path: string): unknown => {
+    // Handle array index notation: "items[0].name" -> ["items", "0", "name"]
+    const parts = path.replace(/\[(\d+)\]/g, ".$1").split(".");
+    let value: unknown = stateDataRef.current;
+    for (const part of parts) {
+      if (value === null || value === undefined) return undefined;
+      value = (value as Record<string, unknown>)[part];
+    }
+    return value;
+  }, []); // No dependencies - uses ref for current state
+
+  // Queue a fieldChanged event (captures previousValue from current state ref)
+  const queueFieldChangedEvent = useCallback(
+    (
+      path: string,
+      value: unknown,
+      source: "user" | "reset" | "setValues",
+    ) => {
+      if (isFiringEventsRef.current) return; // recursion guard
+      const previousValue = getValueAtPath(path);
+      if (previousValue === value) return; // no actual change
+      pendingEventsRef.current.push({
+        event: "fieldChanged",
+        payload: { path, value, previousValue, source },
+      });
+    },
+    [getValueAtPath],
+  );
+
   // Actions
   const setFieldValue = useCallback(
     (path: string, value: unknown) => {
+      queueFieldChangedEvent(path, value, "user");
       setNestedValue(path, value);
       if (validateOn === "change") {
         dispatch({ type: "SET_FIELD_TOUCHED", field: path, touched: true });
       }
     },
-    [validateOn, setNestedValue],
+    [validateOn, setNestedValue, queueFieldChangedEvent],
   );
 
   const setFieldTouched = useCallback((path: string, touched = true) => {
     dispatch({ type: "SET_FIELD_TOUCHED", field: path, touched });
   }, []);
 
-  const setValues = useCallback((values: Record<string, unknown>) => {
-    dispatch({ type: "SET_VALUES", values });
-  }, []);
+  const setValues = useCallback(
+    (values: Record<string, unknown>) => {
+      for (const [key, value] of Object.entries(values)) {
+        queueFieldChangedEvent(key, value, "setValues");
+      }
+      dispatch({ type: "SET_VALUES", values });
+    },
+    [queueFieldChangedEvent],
+  );
 
   const validateField = useCallback(
     (path: string): FieldError[] => {
@@ -457,26 +549,96 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
 
   const submitForm = useCallback(async () => {
     dispatch({ type: "SET_SUBMITTING", isSubmitting: true });
+
+    const submissionData = { ...state.data };
+    let postSubmitPayload: FormaEventMap["postSubmit"] | undefined;
+
     try {
-      // Always use immediate validation on submit to ensure accurate result
-      if (immediateValidation.valid && onSubmit) {
-        await onSubmit(state.data);
+      // Fire preSubmit (async, inline — listeners can mutate submissionData)
+      const preSubmitPayload = {
+        data: submissionData,
+        computed: { ...computed },
+      };
+      // Declarative handler
+      const declarativePreSubmit = onEventsRef.current?.preSubmit;
+      if (declarativePreSubmit) {
+        await declarativePreSubmit(preSubmitPayload);
       }
+      // Imperative listeners
+      if (emitterRef.current.hasListeners("preSubmit")) {
+        await emitterRef.current.fireAsync("preSubmit", preSubmitPayload);
+      }
+
+      // Always use immediate validation on submit to ensure accurate result
+      if (!immediateValidation.valid) {
+        postSubmitPayload = {
+          data: submissionData,
+          success: false,
+          validationErrors: immediateValidation.errors,
+        };
+      } else if (onSubmit) {
+        try {
+          await onSubmit(submissionData);
+          postSubmitPayload = { data: submissionData, success: true };
+        } catch (error) {
+          postSubmitPayload = {
+            data: submissionData,
+            success: false,
+            error:
+              error instanceof Error ? error : new Error(String(error)),
+          };
+        }
+      } else {
+        postSubmitPayload = { data: submissionData, success: true };
+      }
+
       dispatch({ type: "SET_SUBMITTED", isSubmitted: true });
     } finally {
       dispatch({ type: "SET_SUBMITTING", isSubmitting: false });
+      // Fire postSubmit after state updates
+      if (postSubmitPayload) {
+        fireEvent("postSubmit", postSubmitPayload);
+      }
     }
-  }, [immediateValidation, onSubmit, state.data]);
+  }, [immediateValidation, onSubmit, state.data, computed, fireEvent]);
 
   const resetForm = useCallback(() => {
-    dispatch({
-      type: "RESET",
-      initialData: {
-        ...getDefaultBooleanValues(spec),
-        ...getFieldDefaults(spec),
-        ...initialData,
-      },
-    });
+    const resetData = {
+      ...getDefaultBooleanValues(spec),
+      ...getFieldDefaults(spec),
+      ...initialData,
+    };
+
+    // Queue fieldChanged for each field that actually changes
+    if (!isFiringEventsRef.current) {
+      const currentData = stateDataRef.current;
+      const allKeys = new Set([
+        ...Object.keys(currentData),
+        ...Object.keys(resetData),
+      ]);
+      for (const key of allKeys) {
+        const currentVal = currentData[key];
+        const resetVal = resetData[key];
+        if (currentVal !== resetVal) {
+          pendingEventsRef.current.push({
+            event: "fieldChanged",
+            payload: {
+              path: key,
+              value: resetVal,
+              previousValue: currentVal,
+              source: "reset" as const,
+            },
+          });
+        }
+      }
+      // Queue formReset (fires after fieldChanged events)
+      pendingEventsRef.current.push({
+        event: "formReset",
+        payload: {} as FormaEventMap["formReset"],
+      });
+    }
+
+    dispatch({ type: "RESET", initialData: resetData });
   }, [spec, initialData]);
 
   // Wizard helpers
@@ -519,18 +681,45 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       currentPageIndex: clampedPageIndex,
       currentPage,
       goToPage: (index: number) => {
-        // Clamp to valid range
         const validIndex = Math.min(Math.max(0, index), maxPageIndex);
-        dispatch({ type: "SET_PAGE", page: validIndex });
+        if (validIndex !== clampedPageIndex) {
+          dispatch({ type: "SET_PAGE", page: validIndex });
+          const newPage = visiblePages[validIndex];
+          if (newPage) {
+            fireEvent("pageChanged", {
+              fromIndex: clampedPageIndex,
+              toIndex: validIndex,
+              page: newPage,
+            });
+          }
+        }
       },
       nextPage: () => {
         if (hasNextPage) {
-          dispatch({ type: "SET_PAGE", page: clampedPageIndex + 1 });
+          const toIndex = clampedPageIndex + 1;
+          dispatch({ type: "SET_PAGE", page: toIndex });
+          const newPage = visiblePages[toIndex];
+          if (newPage) {
+            fireEvent("pageChanged", {
+              fromIndex: clampedPageIndex,
+              toIndex,
+              page: newPage,
+            });
+          }
         }
       },
       previousPage: () => {
         if (hasPreviousPage) {
-          dispatch({ type: "SET_PAGE", page: clampedPageIndex - 1 });
+          const toIndex = clampedPageIndex - 1;
+          dispatch({ type: "SET_PAGE", page: toIndex });
+          const newPage = visiblePages[toIndex];
+          if (newPage) {
+            fireEvent("pageChanged", {
+              fromIndex: clampedPageIndex,
+              toIndex,
+              page: newPage,
+            });
+          }
         }
       },
       hasNextPage,
@@ -567,53 +756,63 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
         return pageErrors.length === 0;
       },
     };
-  }, [spec, state.data, state.currentPage, computed, validation, visibility]);
+  }, [spec, state.data, state.currentPage, computed, validation, visibility, fireEvent]);
 
-  // Helper to get value at nested path
-  // Uses stateDataRef to always access current state, avoiding stale closure issues
-  const getValueAtPath = useCallback((path: string): unknown => {
-    // Handle array index notation: "items[0].name" -> ["items", "0", "name"]
-    const parts = path.replace(/\[(\d+)\]/g, ".$1").split(".");
-    let value: unknown = stateDataRef.current;
-    for (const part of parts) {
-      if (value === null || value === undefined) return undefined;
-      value = (value as Record<string, unknown>)[part];
+  // Flush pending events after render (fieldChanged, formReset)
+  useEffect(() => {
+    const events = pendingEventsRef.current;
+    if (events.length === 0) return;
+    pendingEventsRef.current = [];
+
+    isFiringEventsRef.current = true;
+    try {
+      for (const pending of events) {
+        fireEvent(
+          pending.event as keyof FormaEventMap,
+          pending.payload as FormaEventMap[keyof FormaEventMap],
+        );
+      }
+    } finally {
+      isFiringEventsRef.current = false;
     }
-    return value;
-  }, []); // No dependencies - uses ref for current state
+  });
 
   // Helper to set value at nested path
   // Uses stateDataRef to always access current state, avoiding stale closure issues
-  const setValueAtPath = useCallback((path: string, value: unknown): void => {
-    // For nested paths, we need to build the nested structure
-    const parts = path.replace(/\[(\d+)\]/g, ".$1").split(".");
-    if (parts.length === 1) {
-      dispatch({ type: "SET_FIELD_VALUE", field: path, value });
-      return;
-    }
-
-    // Build nested object from CURRENT state via ref (not stale closure)
-    const newData = { ...stateDataRef.current };
-    let current: Record<string, unknown> = newData;
-
-    for (let i = 0; i < parts.length - 1; i++) {
-      const part = parts[i];
-      const nextPart = parts[i + 1];
-      const isNextArrayIndex = /^\d+$/.test(nextPart);
-
-      if (current[part] === undefined) {
-        current[part] = isNextArrayIndex ? [] : {};
-      } else if (Array.isArray(current[part])) {
-        current[part] = [...(current[part] as unknown[])];
-      } else {
-        current[part] = { ...(current[part] as Record<string, unknown>) };
+  const setValueAtPath = useCallback(
+    (path: string, value: unknown): void => {
+      queueFieldChangedEvent(path, value, "user");
+      // For nested paths, we need to build the nested structure
+      const parts = path.replace(/\[(\d+)\]/g, ".$1").split(".");
+      if (parts.length === 1) {
+        dispatch({ type: "SET_FIELD_VALUE", field: path, value });
+        return;
       }
-      current = current[part] as Record<string, unknown>;
-    }
 
-    current[parts[parts.length - 1]] = value;
-    dispatch({ type: "SET_VALUES", values: newData });
-  }, []); // No dependencies - uses ref for current state
+      // Build nested object from CURRENT state via ref (not stale closure)
+      const newData = { ...stateDataRef.current };
+      let current: Record<string, unknown> = newData;
+
+      for (let i = 0; i < parts.length - 1; i++) {
+        const part = parts[i];
+        const nextPart = parts[i + 1];
+        const isNextArrayIndex = /^\d+$/.test(nextPart);
+
+        if (current[part] === undefined) {
+          current[part] = isNextArrayIndex ? [] : {};
+        } else if (Array.isArray(current[part])) {
+          current[part] = [...(current[part] as unknown[])];
+        } else {
+          current[part] = { ...(current[part] as Record<string, unknown>) };
+        }
+        current = current[part] as Record<string, unknown>;
+      }
+
+      current[parts[parts.length - 1]] = value;
+      dispatch({ type: "SET_VALUES", values: newData });
+    },
+    [queueFieldChangedEvent],
+  );
 
   // Memoized onChange/onBlur handlers for fields
   const fieldHandlers = useRef<
@@ -909,6 +1108,10 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       validateForm,
       submitForm,
       resetForm,
+      on: <K extends keyof FormaEventMap>(
+        event: K,
+        listener: (payload: FormaEventMap[K]) => void | Promise<void>,
+      ) => emitterRef.current.on(event, listener),
       getFieldProps,
       getSelectFieldProps,
       getArrayHelpers,
