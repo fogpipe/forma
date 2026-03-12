@@ -245,6 +245,8 @@ export interface ArrayFieldProps extends Omit<
   helpers: ArrayHelpers;
   /** Item field definitions keyed by field name */
   itemFields: Record<string, FieldDefinition>;
+  /** Explicit ordering for itemFields (jsonb does not preserve object key order) */
+  itemFieldOrder?: string[];
   minItems?: number;
   maxItems?: number;
 }

@@ -508,6 +508,113 @@ describe("FieldRenderer", () => {
   });
 
   // ============================================================================
+  // itemFieldOrder Propagation
+  // ============================================================================
+
+  describe("itemFieldOrder propagation", () => {
+    it("should pass itemFieldOrder to array field props", () => {
+      let capturedProps: ArrayComponentProps["field"] | null = null;
+
+      const spec: Forma = {
+        version: "1.0",
+        meta: { id: "test", title: "Test" },
+        schema: {
+          type: "object",
+          properties: {
+            medications: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  dosage: { type: "string" },
+                  frequency: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        fields: {
+          medications: {
+            type: "array",
+            label: "Medications",
+            itemFields: {
+              name: { type: "text", label: "Name" },
+              dosage: { type: "text", label: "Dosage" },
+              frequency: { type: "text", label: "Frequency" },
+            },
+            itemFieldOrder: ["frequency", "name", "dosage"],
+          },
+        },
+        fieldOrder: ["medications"],
+      };
+
+      const components: ComponentMap = {
+        ...createTestComponentMap(),
+        array: ({ field: props }: ArrayComponentProps) => {
+          capturedProps = props;
+          return <div data-testid="array-field">array</div>;
+        },
+      };
+
+      render(<FormRenderer spec={spec} components={components} />);
+
+      expect(capturedProps).not.toBeNull();
+      expect(capturedProps!.itemFieldOrder).toEqual([
+        "frequency",
+        "name",
+        "dosage",
+      ]);
+    });
+
+    it("should leave itemFieldOrder undefined when not specified", () => {
+      let capturedProps: ArrayComponentProps["field"] | null = null;
+
+      const spec: Forma = {
+        version: "1.0",
+        meta: { id: "test", title: "Test" },
+        schema: {
+          type: "object",
+          properties: {
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        fields: {
+          items: {
+            type: "array",
+            label: "Items",
+            itemFields: {
+              name: { type: "text", label: "Name" },
+            },
+          },
+        },
+        fieldOrder: ["items"],
+      };
+
+      const components: ComponentMap = {
+        ...createTestComponentMap(),
+        array: ({ field: props }: ArrayComponentProps) => {
+          capturedProps = props;
+          return <div data-testid="array-field">array</div>;
+        },
+      };
+
+      render(<FormRenderer spec={spec} components={components} />);
+
+      expect(capturedProps).not.toBeNull();
+      expect(capturedProps!.itemFieldOrder).toBeUndefined();
+    });
+  });
+
+  // ============================================================================
   // FieldRenderer Visibility Wrapper Stability
   // ============================================================================
 

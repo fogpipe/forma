@@ -271,6 +271,8 @@ export interface ArrayFieldDefinition extends FieldDefinitionBase {
   type: "array";
   /** Field definitions for each array item. Use `item.fieldName` in FEEL. */
   itemFields?: Record<string, FieldDefinition>;
+  /** Explicit ordering for itemFields (jsonb does not preserve object key order). */
+  itemFieldOrder?: string[];
   /** Minimum number of items (overrides schema) */
   minItems?: number;
   /** Maximum number of items (overrides schema) */

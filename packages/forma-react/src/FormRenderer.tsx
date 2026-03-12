@@ -479,6 +479,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
             onChange: baseProps.onChange as (value: unknown[]) => void,
             helpers,
             itemFields: itemFieldDefs,
+            itemFieldOrder: fieldDef.itemFieldOrder,
             minItems,
             maxItems,
           } as ArrayFieldProps;
