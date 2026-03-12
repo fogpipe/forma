@@ -185,6 +185,22 @@ forma-react depends on forma-core types. If you see type errors:
 
 Or just run `turbo run build` at root - Turbo handles the order.
 
+### Stale Workspace Dependency Resolution
+
+**Common pitfall:** If forma-react's `check-types` fails with errors about missing properties that **do** exist in forma-core's source (e.g., `Property 'X' does not exist on type 'Y'`), the workspace symlink may be resolving to a stale installed version instead of the current source.
+
+**Diagnosis:** Run `npx tsc --traceResolution 2>&1 | grep "Package ID"` from `packages/forma-react/` — if it shows an older version (e.g., `@0.14.0` when workspace is `0.15.0`), the link is stale.
+
+**Fix:**
+
+```bash
+npm install          # Re-link workspace packages
+npm run build -w packages/forma-core   # Rebuild core declarations
+turbo check-types --force              # Force re-check (skip turbo cache)
+```
+
+This typically happens after a version bump when `npm install` hasn't been re-run.
+
 ### Test Failures
 
 Run tests in watch mode for faster iteration:

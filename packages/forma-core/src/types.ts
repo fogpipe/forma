@@ -71,7 +71,7 @@ export interface JSONSchemaString extends JSONSchemaBase {
   minLength?: number;
   maxLength?: number;
   pattern?: string;
-  format?: "date" | "date-time" | "email" | "uri" | "uuid";
+  format?: "date" | "date-time" | "email" | "uri" | "uuid" | "phone";
   enum?: string[];
   default?: string;
 }
@@ -127,6 +127,7 @@ export interface JSONSchemaEnum extends JSONSchemaBase {
  */
 export type FieldType =
   | "text"
+  | "phone"
   | "password"
   | "number"
   | "integer"
@@ -236,6 +237,7 @@ export interface FieldDefinitionBase {
 export interface AdornableFieldDefinition extends FieldDefinitionBase {
   type:
     | "text"
+    | "phone"
     | "email"
     | "url"
     | "password"
@@ -347,6 +349,7 @@ export type FieldDefinition =
 /** Adornable field types that support prefix/suffix */
 const ADORNABLE_TYPES: ReadonlySet<FieldType> = new Set([
   "text",
+  "phone",
   "email",
   "url",
   "password",

@@ -508,6 +508,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
             ...baseProps,
             fieldType: fieldType as
               | "text"
+              | "phone"
               | "email"
               | "password"
               | "url"

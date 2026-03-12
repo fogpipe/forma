@@ -337,6 +337,7 @@ export function FieldRenderer({
       ...baseProps,
       fieldType: fieldType as
         | "text"
+        | "phone"
         | "email"
         | "password"
         | "url"

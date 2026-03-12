@@ -61,7 +61,7 @@ export interface TextFieldProps extends Omit<
   BaseFieldProps,
   "value" | "onChange"
 > {
-  fieldType: "text" | "email" | "password" | "url" | "textarea";
+  fieldType: "text" | "phone" | "email" | "password" | "url" | "textarea";
   value: string;
   onChange: (value: string) => void;
 }
@@ -334,6 +334,7 @@ export type FieldProps =
  */
 export interface ComponentMap {
   text?: React.ComponentType<TextComponentProps>;
+  phone?: React.ComponentType<TextComponentProps>;
   email?: React.ComponentType<TextComponentProps>;
   password?: React.ComponentType<TextComponentProps>;
   url?: React.ComponentType<TextComponentProps>;
