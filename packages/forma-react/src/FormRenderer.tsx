@@ -34,6 +34,7 @@ import type {
   ArrayFieldProps,
   ArrayHelpers,
   DisplayFieldProps,
+  MatrixFieldProps,
 } from "./types.js";
 
 /**
@@ -392,7 +393,8 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
           | NumberFieldProps
           | SelectFieldProps
           | ArrayFieldProps
-          | DisplayFieldProps = baseProps;
+          | DisplayFieldProps
+          | MatrixFieldProps = baseProps;
 
         if (fieldType === "number" || fieldType === "integer") {
           const constraints = getNumberConstraints(schemaProperty);
@@ -483,6 +485,25 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
             minItems,
             maxItems,
           } as ArrayFieldProps;
+        } else if (fieldType === "matrix" && fieldDef.type === "matrix") {
+          const matrixValue =
+            (baseProps.value as Record<string, string | number | string[] | number[]> | null) ?? null;
+          const rows = fieldDef.rows.map((row) => ({
+            id: row.id,
+            label: row.label,
+            visible: formaVisibility[`${fieldPath}.${row.id}`] !== false,
+          }));
+          fieldProps = {
+            ...baseProps,
+            fieldType: "matrix",
+            value: matrixValue,
+            onChange: baseProps.onChange as (
+              value: Record<string, string | number | string[] | number[]>,
+            ) => void,
+            rows,
+            columns: fieldDef.columns,
+            multiSelect: fieldDef.multiSelect ?? false,
+          } as MatrixFieldProps;
         } else if (fieldType === "display" && fieldDef.type === "display") {
           // Display fields (read-only presentation content)
           // Resolve source value if the display field has a source property

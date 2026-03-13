@@ -22,6 +22,7 @@ import type {
   ArrayComponentProps,
   ComponentMap,
   LayoutProps,
+  MatrixComponentProps,
   NumberComponentProps,
   IntegerComponentProps,
 } from "../types.js";
@@ -712,6 +713,187 @@ describe("FieldRenderer", () => {
         );
         expect(visibleWrappers.length).toBeGreaterThan(0);
       });
+    });
+  });
+
+  // ============================================================================
+  // Matrix Field Rendering
+  // ============================================================================
+
+  describe("matrix field rendering", () => {
+    it("should pass matrix props to matrix component", () => {
+      let capturedProps: MatrixComponentProps["field"] | null = null;
+
+      const spec: Forma = {
+        version: "1.0",
+        meta: { id: "test", title: "Test" },
+        schema: {
+          type: "object",
+          properties: {
+            rating: {
+              type: "object",
+              properties: {
+                speed: { type: "integer", enum: [1, 2, 3] },
+                quality: { type: "integer", enum: [1, 2, 3] },
+              },
+            },
+          },
+        },
+        fields: {
+          rating: {
+            type: "matrix",
+            label: "Rating",
+            rows: [
+              { id: "speed", label: "Speed" },
+              { id: "quality", label: "Quality" },
+            ],
+            columns: [
+              { value: 1, label: "Poor" },
+              { value: 2, label: "OK" },
+              { value: 3, label: "Great" },
+            ],
+            multiSelect: false,
+          },
+        },
+        fieldOrder: ["rating"],
+      };
+
+      const components: ComponentMap = {
+        ...createTestComponentMap(),
+        matrix: ({ field: props }: MatrixComponentProps) => {
+          capturedProps = props;
+          return <div data-testid="matrix-field">matrix</div>;
+        },
+      };
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ rating: { speed: 2, quality: 3 } }}
+          components={components}
+        />,
+      );
+
+      expect(capturedProps).not.toBeNull();
+      expect(capturedProps!.fieldType).toBe("matrix");
+      expect(capturedProps!.value).toEqual({ speed: 2, quality: 3 });
+      expect(capturedProps!.rows).toEqual([
+        { id: "speed", label: "Speed", visible: true },
+        { id: "quality", label: "Quality", visible: true },
+      ]);
+      expect(capturedProps!.columns).toEqual([
+        { value: 1, label: "Poor" },
+        { value: 2, label: "OK" },
+        { value: 3, label: "Great" },
+      ]);
+      expect(capturedProps!.multiSelect).toBe(false);
+    });
+
+    it("should compute row visibility from visibleWhen expressions", () => {
+      let capturedProps: MatrixComponentProps["field"] | null = null;
+
+      const spec: Forma = {
+        version: "1.0",
+        meta: { id: "test", title: "Test" },
+        schema: {
+          type: "object",
+          properties: {
+            show_quality: { type: "boolean" },
+            rating: {
+              type: "object",
+              properties: {
+                speed: { type: "integer", enum: [1, 2, 3] },
+                quality: { type: "integer", enum: [1, 2, 3] },
+              },
+            },
+          },
+        },
+        fields: {
+          show_quality: { type: "boolean", label: "Show Quality" },
+          rating: {
+            type: "matrix",
+            label: "Rating",
+            rows: [
+              { id: "speed", label: "Speed" },
+              { id: "quality", label: "Quality", visibleWhen: "show_quality = true" },
+            ],
+            columns: [
+              { value: 1, label: "Poor" },
+              { value: 2, label: "OK" },
+              { value: 3, label: "Great" },
+            ],
+          },
+        },
+        fieldOrder: ["show_quality", "rating"],
+      };
+
+      const components: ComponentMap = {
+        ...createTestComponentMap(),
+        matrix: ({ field: props }: MatrixComponentProps) => {
+          capturedProps = props;
+          return <div data-testid="matrix-field">matrix</div>;
+        },
+      };
+
+      render(
+        <FormRenderer
+          spec={spec}
+          initialData={{ show_quality: false }}
+          components={components}
+        />,
+      );
+
+      expect(capturedProps).not.toBeNull();
+      expect(capturedProps!.rows).toEqual([
+        { id: "speed", label: "Speed", visible: true },
+        { id: "quality", label: "Quality", visible: false },
+      ]);
+    });
+
+    it("should default multiSelect to false when not specified", () => {
+      let capturedProps: MatrixComponentProps["field"] | null = null;
+
+      const spec: Forma = {
+        version: "1.0",
+        meta: { id: "test", title: "Test" },
+        schema: {
+          type: "object",
+          properties: {
+            rating: {
+              type: "object",
+              properties: {
+                a: { type: "integer", enum: [1, 2] },
+              },
+            },
+          },
+        },
+        fields: {
+          rating: {
+            type: "matrix",
+            label: "Rating",
+            rows: [{ id: "a", label: "A" }],
+            columns: [
+              { value: 1, label: "1" },
+              { value: 2, label: "2" },
+            ],
+            // multiSelect not set
+          },
+        },
+        fieldOrder: ["rating"],
+      };
+
+      const components: ComponentMap = {
+        ...createTestComponentMap(),
+        matrix: ({ field: props }: MatrixComponentProps) => {
+          capturedProps = props;
+          return <div data-testid="matrix-field">matrix</div>;
+        },
+      };
+
+      render(<FormRenderer spec={spec} components={components} />);
+
+      expect(capturedProps).not.toBeNull();
+      expect(capturedProps!.multiSelect).toBe(false);
     });
   });
 });

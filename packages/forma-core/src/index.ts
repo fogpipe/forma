@@ -30,6 +30,9 @@ export type {
   ObjectFieldDefinition,
   DisplayFieldDefinition,
   ComputedFieldDefinition,
+  MatrixFieldDefinition,
+  MatrixRow,
+  MatrixColumn,
   FieldDefinition,
   ValidationRule,
   SelectOption,
@@ -57,6 +60,7 @@ export {
   isDisplayField,
   isSelectionField,
   isArrayField,
+  isMatrixField,
   isDataField,
 } from "./types.js";
 

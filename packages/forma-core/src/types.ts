@@ -91,6 +91,7 @@ export interface JSONSchemaInteger extends JSONSchemaBase {
   minimum?: number;
   maximum?: number;
   multipleOf?: number;
+  enum?: number[];
   default?: number;
 }
 
@@ -142,7 +143,8 @@ export type FieldType =
   | "array"
   | "object"
   | "computed"
-  | "display";
+  | "display"
+  | "matrix";
 
 /**
  * Validation rule with FEEL expression
@@ -309,6 +311,48 @@ export interface DisplayFieldDefinition extends FieldDefinitionBase {
 }
 
 /**
+ * Row definition for matrix fields.
+ */
+export interface MatrixRow {
+  /** Unique row identifier (snake_case, used in data keys and FEEL expressions) */
+  id: string;
+  /** Display label for this row */
+  label: string;
+  /** When to show this row */
+  visibleWhen?: FEELExpression;
+}
+
+/**
+ * Column definition for matrix fields.
+ */
+export interface MatrixColumn {
+  /** Column value — use numbers for numeric scales, strings for categorical */
+  value: string | number;
+  /** Display label for this column */
+  label: string;
+}
+
+/**
+ * Matrix/grid fields — a 2D grid where rows are items/statements and
+ * columns are shared response options. Each row produces a single value
+ * (or multiple values in multi-select mode).
+ *
+ * Data shape (single-select): `{ speed: 4, quality: 5, support: 3 }`
+ * Data shape (multi-select): `{ comm: ["beginner", "intermediate"], lead: ["advanced"] }`
+ *
+ * FEEL access: `fieldId.rowId` (e.g., `service_rating.speed >= 4`)
+ */
+export interface MatrixFieldDefinition extends FieldDefinitionBase {
+  type: "matrix";
+  /** Row definitions (items/statements to rate) */
+  rows: MatrixRow[];
+  /** Column definitions (shared response options) */
+  columns: MatrixColumn[];
+  /** Allow multiple selections per row (default: false) */
+  multiSelect?: boolean;
+}
+
+/**
  * Computed fields (read-only calculated values).
  * Note: Computed field definitions live in Forma.computed, not Forma.fields.
  * This type exists for completeness if computed fields appear in the fields map.
@@ -340,7 +384,8 @@ export type FieldDefinition =
   | ArrayFieldDefinition
   | ObjectFieldDefinition
   | DisplayFieldDefinition
-  | ComputedFieldDefinition;
+  | ComputedFieldDefinition
+  | MatrixFieldDefinition;
 
 // ============================================================================
 // Type Guards
@@ -384,6 +429,13 @@ export function isArrayField(
   field: FieldDefinition,
 ): field is ArrayFieldDefinition {
   return field.type === "array";
+}
+
+/** Check if field is a matrix field */
+export function isMatrixField(
+  field: FieldDefinition,
+): field is MatrixFieldDefinition {
+  return field.type === "matrix";
 }
 
 /** Check if field collects data (not display) */

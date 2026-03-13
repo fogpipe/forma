@@ -13,6 +13,7 @@ import type {
   Forma,
   FieldDefinition,
   ArrayFieldDefinition,
+  MatrixFieldDefinition,
   ValidationRule,
   EvaluationContext,
   ValidationResult,
@@ -197,6 +198,24 @@ function validateField(
       onlyVisible,
     );
     errors.push(...arrayErrors);
+  }
+
+  // 5. Matrix validation
+  if (
+    fieldDef.type === "matrix" &&
+    value !== null &&
+    value !== undefined &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  ) {
+    const matrixErrors = validateMatrix(
+      path,
+      value as Record<string, unknown>,
+      fieldDef,
+      visibility,
+      required,
+    );
+    errors.push(...matrixErrors);
   }
 
   return errors;
@@ -681,6 +700,84 @@ function validateArrayItem(
         context,
       );
       errors.push(...customErrors);
+    }
+  }
+
+  return errors;
+}
+
+// ============================================================================
+// Matrix Validation
+// ============================================================================
+
+/**
+ * Validate matrix field values against row/column definitions.
+ * Each row value must be a valid column value (or array of column values if multiSelect).
+ */
+function validateMatrix(
+  path: string,
+  value: Record<string, unknown>,
+  fieldDef: MatrixFieldDefinition,
+  visibility: Record<string, boolean>,
+  required: boolean,
+): FieldError[] {
+  const errors: FieldError[] = [];
+  const label = fieldDef.label ?? path;
+  const validColumnValues = new Set(fieldDef.columns.map((c) => c.value));
+
+  for (const row of fieldDef.rows) {
+    // Skip hidden rows
+    const rowPath = `${path}.${row.id}`;
+    if (visibility[rowPath] === false) {
+      continue;
+    }
+
+    const rowValue = value[row.id];
+
+    // Required: all visible rows must be answered
+    if (required && (rowValue === null || rowValue === undefined)) {
+      errors.push({
+        field: rowPath,
+        message: `${row.label} is required`,
+        severity: "error",
+      });
+      continue;
+    }
+
+    // Skip empty row values for non-required fields
+    if (rowValue === null || rowValue === undefined) {
+      continue;
+    }
+
+    if (fieldDef.multiSelect) {
+      // Multi-select: value should be an array of column values
+      if (!Array.isArray(rowValue)) {
+        errors.push({
+          field: rowPath,
+          message: `${row.label} must be a list of selections`,
+          severity: "error",
+        });
+        continue;
+      }
+      for (const item of rowValue) {
+        if (!validColumnValues.has(item as string | number)) {
+          errors.push({
+            field: rowPath,
+            message: `${row.label} contains an invalid selection`,
+            severity: "error",
+          });
+          break;
+        }
+      }
+    } else {
+      // Single-select: value should be a single column value
+      if (!validColumnValues.has(rowValue as string | number)) {
+        errors.push({
+          field: rowPath,
+          message: `${row.label} has an invalid value for ${label}`,
+          severity: "error",
+        });
+      }
     }
   }
 

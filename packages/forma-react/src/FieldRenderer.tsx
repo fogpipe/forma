@@ -24,6 +24,7 @@ import type {
   ArrayFieldProps,
   ArrayHelpers,
   DisplayFieldProps,
+  MatrixFieldProps,
 } from "./types.js";
 
 /**
@@ -175,7 +176,8 @@ export function FieldRenderer({
     | SelectFieldProps
     | MultiSelectFieldProps
     | ArrayFieldProps
-    | DisplayFieldProps = baseProps;
+    | DisplayFieldProps
+    | MatrixFieldProps = baseProps;
 
   if (fieldType === "number") {
     const constraints = getNumberConstraints(schemaProperty);
@@ -313,6 +315,26 @@ export function FieldRenderer({
       minItems,
       maxItems,
     } as ArrayFieldProps;
+  } else if (fieldType === "matrix" && fieldDef.type === "matrix") {
+    // Matrix fields — compute visible rows from visibility engine
+    const matrixValue =
+      (baseProps.value as Record<string, string | number | string[] | number[]> | null) ?? null;
+    const rows = fieldDef.rows.map((row) => ({
+      id: row.id,
+      label: row.label,
+      visible: forma.visibility[`${fieldPath}.${row.id}`] !== false,
+    }));
+    fieldProps = {
+      ...baseProps,
+      fieldType: "matrix",
+      value: matrixValue,
+      onChange: baseProps.onChange as (
+        value: Record<string, string | number | string[] | number[]>,
+      ) => void,
+      rows,
+      columns: fieldDef.columns,
+      multiSelect: fieldDef.multiSelect ?? false,
+    } as MatrixFieldProps;
   } else if (fieldType === "display" && fieldDef.type === "display") {
     // Display fields (read-only presentation content)
     const sourceValue = fieldDef.source

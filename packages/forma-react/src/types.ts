@@ -6,6 +6,7 @@ import type {
   Forma,
   FieldDefinition,
   FieldError,
+  MatrixColumn,
   SelectOption,
 } from "@fogpipe/forma-core";
 
@@ -312,6 +313,25 @@ export interface DisplayFieldProps extends Omit<
 }
 
 /**
+ * Props for matrix/grid fields
+ */
+export interface MatrixFieldProps extends Omit<
+  BaseFieldProps,
+  "value" | "onChange"
+> {
+  fieldType: "matrix";
+  /** Current matrix value: row ID → selected column value(s) */
+  value: Record<string, string | number | string[] | number[]> | null;
+  onChange: (value: Record<string, string | number | string[] | number[]>) => void;
+  /** Row definitions with visibility state */
+  rows: Array<{ id: string; label: string; visible: boolean }>;
+  /** Column definitions (shared options for all rows) */
+  columns: MatrixColumn[];
+  /** Whether multiple selections per row are allowed */
+  multiSelect: boolean;
+}
+
+/**
  * Union of all field prop types
  */
 export type FieldProps =
@@ -326,7 +346,8 @@ export type FieldProps =
   | ArrayFieldProps
   | ObjectFieldProps
   | ComputedFieldProps
-  | DisplayFieldProps;
+  | DisplayFieldProps
+  | MatrixFieldProps;
 
 /**
  * Map of field types to React components
@@ -350,6 +371,7 @@ export interface ComponentMap {
   object?: React.ComponentType<ObjectComponentProps>;
   computed?: React.ComponentType<ComputedComponentProps>;
   display?: React.ComponentType<DisplayComponentProps>;
+  matrix?: React.ComponentType<MatrixComponentProps>;
   fallback?: React.ComponentType<FieldComponentProps>;
 }
 
@@ -459,6 +481,11 @@ export interface ComputedComponentProps {
 
 export interface DisplayComponentProps {
   field: DisplayFieldProps;
+  spec: Forma;
+}
+
+export interface MatrixComponentProps {
+  field: MatrixFieldProps;
   spec: Forma;
 }
 

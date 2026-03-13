@@ -86,6 +86,8 @@ export type {
   ComputedComponentProps,
   DisplayFieldProps,
   DisplayComponentProps,
+  MatrixFieldProps,
+  MatrixComponentProps,
   ComponentMap,
 
   // Form state

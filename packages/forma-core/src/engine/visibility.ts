@@ -10,11 +10,12 @@ import type {
   Forma,
   FieldDefinition,
   ArrayFieldDefinition,
+  MatrixFieldDefinition,
   EvaluationContext,
   VisibilityResult,
   SelectOption,
 } from "../types.js";
-import { isArrayField, isSelectionField } from "../types.js";
+import { isArrayField, isMatrixField, isSelectionField } from "../types.js";
 import { calculate } from "./calculate.js";
 
 // ============================================================================
@@ -170,6 +171,11 @@ function evaluateFieldVisibility(
       evaluateArrayItemVisibility(path, fieldDef, arrayData, context, result);
     }
   }
+
+  // Matrix row visibility
+  if (isMatrixField(fieldDef) && fieldDef.rows) {
+    evaluateMatrixRowVisibility(path, fieldDef, context, result);
+  }
 }
 
 /**
@@ -205,6 +211,25 @@ function evaluateArrayItemVisibility(
       } else {
         result[itemFieldPath] = true;
       }
+    }
+  }
+}
+
+/**
+ * Evaluate visibility for matrix field rows
+ */
+function evaluateMatrixRowVisibility(
+  matrixPath: string,
+  fieldDef: MatrixFieldDefinition,
+  context: EvaluationContext,
+  result: VisibilityResult,
+): void {
+  for (const row of fieldDef.rows) {
+    const rowPath = `${matrixPath}.${row.id}`;
+    if (row.visibleWhen) {
+      result[rowPath] = evaluateBoolean(row.visibleWhen, context);
+    } else {
+      result[rowPath] = true;
     }
   }
 }
