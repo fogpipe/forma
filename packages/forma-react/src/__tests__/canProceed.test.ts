@@ -915,4 +915,247 @@ describe("canProceed", () => {
       expect(result.current.wizard?.currentPage?.id).toBe("page1");
     });
   });
+
+  describe("handleNext - safe wizard navigation", () => {
+    it("handleNext advances page but does NOT call onSubmit", async () => {
+      const submitHandler = vi.fn();
+
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name" },
+          email: { type: "email", label: "Email" },
+          phone: { type: "text", label: "Phone" },
+        },
+        pages: [
+          { id: "page1", title: "Page 1", fields: ["name"] },
+          { id: "page2", title: "Page 2", fields: ["email"] },
+          { id: "page3", title: "Page 3", fields: ["phone"] },
+        ],
+      });
+
+      const { result } = renderHook(() =>
+        useForma({
+          spec,
+          initialData: {
+            name: "John",
+            email: "john@test.com",
+            phone: "123",
+          },
+          onSubmit: submitHandler,
+        }),
+      );
+
+      // On page 1
+      expect(result.current.wizard?.currentPageIndex).toBe(0);
+      expect(result.current.wizard?.isLastPage).toBe(false);
+
+      // Use handleNext from page 1 → page 2
+      act(() => {
+        result.current.wizard?.handleNext();
+      });
+
+      expect(result.current.wizard?.currentPageIndex).toBe(1);
+      expect(submitHandler).not.toHaveBeenCalled();
+
+      // Use handleNext from page 2 → page 3 (last page)
+      act(() => {
+        result.current.wizard?.handleNext();
+      });
+
+      expect(result.current.wizard?.currentPageIndex).toBe(2);
+      expect(result.current.wizard?.isLastPage).toBe(true);
+      // Critically: onSubmit was NOT called
+      expect(submitHandler).not.toHaveBeenCalled();
+    });
+
+    it("handleNext does nothing on the last page", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name" },
+          email: { type: "email", label: "Email" },
+        },
+        pages: [
+          { id: "page1", title: "Page 1", fields: ["name"] },
+          { id: "page2", title: "Page 2", fields: ["email"] },
+        ],
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+
+      // Navigate to last page
+      act(() => {
+        result.current.wizard?.nextPage();
+      });
+      expect(result.current.wizard?.isLastPage).toBe(true);
+
+      // handleNext on last page — should stay on last page
+      act(() => {
+        result.current.wizard?.handleNext();
+      });
+      expect(result.current.wizard?.currentPageIndex).toBe(1);
+      expect(result.current.wizard?.isLastPage).toBe(true);
+    });
+
+    it("nextPage() from second-to-last page does not trigger submitForm", () => {
+      const submitHandler = vi.fn();
+
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name" },
+          email: { type: "email", label: "Email" },
+          phone: { type: "text", label: "Phone" },
+        },
+        pages: [
+          { id: "page1", title: "Page 1", fields: ["name"] },
+          { id: "page2", title: "Page 2", fields: ["email"] },
+          { id: "page3", title: "Page 3", fields: ["phone"] },
+        ],
+      });
+
+      const { result } = renderHook(() =>
+        useForma({
+          spec,
+          initialData: { name: "John", email: "test@test.com" },
+          onSubmit: submitHandler,
+        }),
+      );
+
+      // Navigate to page 2 (second-to-last)
+      act(() => {
+        result.current.wizard?.nextPage();
+      });
+      expect(result.current.wizard?.currentPageIndex).toBe(1);
+
+      // Navigate from page 2 → page 3 (last)
+      act(() => {
+        result.current.wizard?.nextPage();
+      });
+
+      // Should be on last page but NOT have submitted
+      expect(result.current.wizard?.currentPageIndex).toBe(2);
+      expect(result.current.wizard?.isLastPage).toBe(true);
+      expect(submitHandler).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("untouched required fields", () => {
+    it("canProceed is false when required fields have no initialData", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name", required: true },
+          email: { type: "email", label: "Email", required: true },
+        },
+        pages: [{ id: "page1", title: "Page 1", fields: ["name", "email"] }],
+      });
+
+      // No initialData at all
+      const { result } = renderHook(() => useForma({ spec }));
+
+      // canProceed should be false immediately — fields are untouched and empty
+      expect(result.current.wizard?.canProceed).toBe(false);
+      expect(result.current.touched.name).toBeUndefined();
+      expect(result.current.touched.email).toBeUndefined();
+    });
+
+    it("canProceed is false with explicit empty initialData", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name", required: true },
+          email: { type: "email", label: "Email", required: true },
+        },
+        pages: [{ id: "page1", title: "Page 1", fields: ["name", "email"] }],
+      });
+
+      const { result } = renderHook(() => useForma({ spec, initialData: {} }));
+
+      expect(result.current.wizard?.canProceed).toBe(false);
+    });
+
+    it("canProceed becomes true when user fills all required fields", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name", required: true },
+          email: { type: "email", label: "Email", required: true },
+        },
+        pages: [{ id: "page1", title: "Page 1", fields: ["name", "email"] }],
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+
+      expect(result.current.wizard?.canProceed).toBe(false);
+
+      act(() => {
+        result.current.setFieldValue("name", "John");
+      });
+      // Still false — email is empty
+      expect(result.current.wizard?.canProceed).toBe(false);
+
+      act(() => {
+        result.current.setFieldValue("email", "john@example.com");
+      });
+      expect(result.current.wizard?.canProceed).toBe(true);
+    });
+
+    it("canProceed is false for required number field with undefined value", () => {
+      const spec = createTestSpec({
+        fields: {
+          age: { type: "number", label: "Age", required: true },
+        },
+        pages: [{ id: "page1", title: "Page 1", fields: ["age"] }],
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+
+      expect(result.current.wizard?.canProceed).toBe(false);
+    });
+
+    it("canProceed is false for required select field with no selection", () => {
+      const spec = createTestSpec({
+        fields: {
+          country: {
+            type: "select",
+            label: "Country",
+            required: true,
+            options: [
+              { label: "USA", value: "us" },
+              { label: "Canada", value: "ca" },
+            ],
+          },
+        },
+        pages: [{ id: "page1", title: "Page 1", fields: ["country"] }],
+      });
+
+      const { result } = renderHook(() => useForma({ spec }));
+
+      expect(result.current.wizard?.canProceed).toBe(false);
+    });
+
+    it("touchCurrentPageFields then canProceed still works as expected", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name", required: true },
+        },
+        pages: [{ id: "page1", title: "Page 1", fields: ["name"] }],
+      });
+
+      const { result } = renderHook(() =>
+        useForma({ spec, validateOn: "blur" }),
+      );
+
+      // canProceed is false before touching
+      expect(result.current.wizard?.canProceed).toBe(false);
+
+      // Touch all fields — canProceed should still be false (empty field)
+      act(() => {
+        result.current.wizard?.touchCurrentPageFields();
+      });
+      expect(result.current.wizard?.canProceed).toBe(false);
+
+      // Fill the field
+      act(() => {
+        result.current.setFieldValue("name", "John");
+      });
+      expect(result.current.wizard?.canProceed).toBe(true);
+    });
+  });
 });

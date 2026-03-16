@@ -26,8 +26,13 @@ export interface BaseFieldProps {
   required: boolean;
   /** Whether the field is disabled */
   disabled: boolean;
-  /** Validation errors for this field */
+  /** Validation errors for this field (always populated — use visibleErrors for display) */
   errors: FieldError[];
+  /**
+   * Errors filtered by interaction state (touched or submitted).
+   * Use this for displaying errors in the UI to avoid showing errors on untouched fields.
+   */
+  visibleErrors: FieldError[];
   /** Handler for value changes */
   onChange: (value: unknown) => void;
   /** Handler for blur events */
@@ -322,7 +327,9 @@ export interface MatrixFieldProps extends Omit<
   fieldType: "matrix";
   /** Current matrix value: row ID → selected column value(s) */
   value: Record<string, string | number | string[] | number[]> | null;
-  onChange: (value: Record<string, string | number | string[] | number[]>) => void;
+  onChange: (
+    value: Record<string, string | number | string[] | number[]>,
+  ) => void;
   /** Row definitions with visibility state */
   rows: Array<{ id: string; label: string; visible: boolean }>;
   /** Column definitions (shared options for all rows) */
@@ -380,7 +387,7 @@ export interface ComponentMap {
  */
 export interface LayoutProps {
   children: React.ReactNode;
-  onSubmit: () => void;
+  onSubmit: (e?: React.FormEvent) => void;
   isSubmitting: boolean;
   isValid: boolean;
 }
@@ -552,8 +559,13 @@ export interface GetFieldPropsResult {
   showRequiredIndicator: boolean;
   /** Whether field has been touched */
   touched: boolean;
-  /** Validation errors for this field */
+  /** Validation errors for this field (always populated — use visibleErrors for display) */
   errors: FieldError[];
+  /**
+   * Errors filtered by interaction state (touched or submitted).
+   * Use this for displaying errors in the UI to avoid showing errors on untouched fields.
+   */
+  visibleErrors: FieldError[];
   /** Handler for value changes */
   onChange: (value: unknown) => void;
   /** Handler for blur events */

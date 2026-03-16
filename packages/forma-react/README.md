@@ -199,13 +199,13 @@ The event system lets you observe form lifecycle events for side effects like an
 
 ### Available Events
 
-| Event          | Description                                             |
-| -------------- | ------------------------------------------------------- |
-| `fieldChanged` | Fires after a field value changes                       |
-| `preSubmit`    | Fires before validation; `data` is mutable              |
-| `postSubmit`   | Fires after submission (success, error, or invalid)     |
-| `pageChanged`  | Fires when wizard page changes                          |
-| `formReset`    | Fires after `resetForm()` completes                     |
+| Event          | Description                                         |
+| -------------- | --------------------------------------------------- |
+| `fieldChanged` | Fires after a field value changes                   |
+| `preSubmit`    | Fires before validation; `data` is mutable          |
+| `postSubmit`   | Fires after submission (success, error, or invalid) |
+| `pageChanged`  | Fires when wizard page changes                      |
+| `formReset`    | Fires after `resetForm()` completes                 |
 
 ### Declarative Registration
 
@@ -217,7 +217,10 @@ const forma = useForma({
   onSubmit: handleSubmit,
   on: {
     fieldChanged: (event) => {
-      analytics.track("field_changed", { path: event.path, source: event.source });
+      analytics.track("field_changed", {
+        path: event.path,
+        source: event.source,
+      });
     },
     preSubmit: async (event) => {
       event.data.token = await getCSRFToken();
@@ -302,28 +305,28 @@ formRef.current?.setValues({ name: "John" });
 
 ### useForma Methods
 
-| Method                            | Description                          |
-| --------------------------------- | ------------------------------------ |
-| `setFieldValue(path, value)`      | Set field value                      |
-| `setFieldTouched(path, touched?)` | Mark field as touched                |
-| `setValues(values)`               | Set multiple values                  |
-| `validateField(path)`             | Validate single field                |
-| `validateForm()`                  | Validate entire form                 |
-| `submitForm()`                    | Submit the form                      |
-| `resetForm()`                     | Reset to initial values              |
+| Method                            | Description                                  |
+| --------------------------------- | -------------------------------------------- |
+| `setFieldValue(path, value)`      | Set field value                              |
+| `setFieldTouched(path, touched?)` | Mark field as touched                        |
+| `setValues(values)`               | Set multiple values                          |
+| `validateField(path)`             | Validate single field                        |
+| `validateForm()`                  | Validate entire form                         |
+| `submitForm()`                    | Submit the form                              |
+| `resetForm()`                     | Reset to initial values                      |
 | `on(event, listener)`             | Register event listener; returns unsubscribe |
 
 ### useForma Options
 
-| Option                 | Type                             | Default  | Description               |
-| ---------------------- | -------------------------------- | -------- | ------------------------- |
-| `spec`                 | `Forma`                          | required | The Forma specification   |
-| `initialData`          | `Record<string, unknown>`        | `{}`     | Initial form values       |
-| `onSubmit`             | `(data) => void`                 | -        | Submit handler            |
-| `onChange`             | `(data, computed) => void`       | -        | Change handler            |
-| `validateOn`           | `"change" \| "blur" \| "submit"` | `"blur"` | When to validate          |
-| `referenceData`        | `Record<string, unknown>`        | -        | Additional reference data |
-| `validationDebounceMs` | `number`                         | `0`      | Debounce validation (ms)  |
+| Option                 | Type                             | Default  | Description                 |
+| ---------------------- | -------------------------------- | -------- | --------------------------- |
+| `spec`                 | `Forma`                          | required | The Forma specification     |
+| `initialData`          | `Record<string, unknown>`        | `{}`     | Initial form values         |
+| `onSubmit`             | `(data) => void`                 | -        | Submit handler              |
+| `onChange`             | `(data, computed) => void`       | -        | Change handler              |
+| `validateOn`           | `"change" \| "blur" \| "submit"` | `"blur"` | When to validate            |
+| `referenceData`        | `Record<string, unknown>`        | -        | Additional reference data   |
+| `validationDebounceMs` | `number`                         | `0`      | Debounce validation (ms)    |
 | `on`                   | `FormaEvents`                    | -        | Declarative event listeners |
 
 ## Error Boundary

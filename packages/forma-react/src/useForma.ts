@@ -117,6 +117,12 @@ export interface WizardHelpers {
   goToPage: (index: number) => void;
   nextPage: () => void;
   previousPage: () => void;
+  /**
+   * Safe "Next" handler for wizard navigation.
+   * Advances to the next page if one exists. Never triggers submission.
+   * Use this instead of conditionally calling nextPage/onSubmit in a single button.
+   */
+  handleNext: () => void;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
   canProceed: boolean;
@@ -337,10 +343,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
 
   // Helper: fire an event to both declarative `on` handlers and imperative listeners
   const fireEvent = useCallback(
-    <K extends keyof FormaEventMap>(
-      event: K,
-      payload: FormaEventMap[K],
-    ) => {
+    <K extends keyof FormaEventMap>(event: K, payload: FormaEventMap[K]) => {
       // Declarative handler (via ref for latest callback)
       try {
         const handler = onEventsRef.current?.[event];
@@ -494,11 +497,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
 
   // Queue a fieldChanged event (captures previousValue from current state ref)
   const queueFieldChangedEvent = useCallback(
-    (
-      path: string,
-      value: unknown,
-      source: "user" | "reset" | "setValues",
-    ) => {
+    (path: string, value: unknown, source: "user" | "reset" | "setValues") => {
       if (isFiringEventsRef.current) return; // recursion guard
       const previousValue = getValueAtPath(path);
       if (previousValue === value) return; // no actual change
@@ -584,8 +583,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
           postSubmitPayload = {
             data: submissionData,
             success: false,
-            error:
-              error instanceof Error ? error : new Error(String(error)),
+            error: error instanceof Error ? error : new Error(String(error)),
           };
         }
       } else {
@@ -676,6 +674,21 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
     const hasPreviousPage = clampedPageIndex > 0;
     const isLastPage = clampedPageIndex === visiblePages.length - 1;
 
+    const advanceToNextPage = () => {
+      if (hasNextPage) {
+        const toIndex = clampedPageIndex + 1;
+        dispatch({ type: "SET_PAGE", page: toIndex });
+        const newPage = visiblePages[toIndex];
+        if (newPage) {
+          fireEvent("pageChanged", {
+            fromIndex: clampedPageIndex,
+            toIndex,
+            page: newPage,
+          });
+        }
+      }
+    };
+
     return {
       pages,
       currentPageIndex: clampedPageIndex,
@@ -694,20 +707,7 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
           }
         }
       },
-      nextPage: () => {
-        if (hasNextPage) {
-          const toIndex = clampedPageIndex + 1;
-          dispatch({ type: "SET_PAGE", page: toIndex });
-          const newPage = visiblePages[toIndex];
-          if (newPage) {
-            fireEvent("pageChanged", {
-              fromIndex: clampedPageIndex,
-              toIndex,
-              page: newPage,
-            });
-          }
-        }
-      },
+      nextPage: advanceToNextPage,
       previousPage: () => {
         if (hasPreviousPage) {
           const toIndex = clampedPageIndex - 1;
@@ -722,6 +722,10 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
           }
         }
       },
+      // Same function as nextPage — exposed as a separate name so consumers can
+      // bind a single "Next" button without risk of accidentally triggering submission.
+      // nextPage is already a no-op on the last page.
+      handleNext: advanceToNextPage,
       hasNextPage,
       hasPreviousPage,
       canProceed: (() => {
@@ -756,7 +760,15 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
         return pageErrors.length === 0;
       },
     };
-  }, [spec, state.data, state.currentPage, computed, validation, visibility, fireEvent]);
+  }, [
+    spec,
+    state.data,
+    state.currentPage,
+    computed,
+    validation,
+    visibility,
+    fireEvent,
+  ]);
 
   // Flush pending events after render (fieldChanged, formReset)
   useEffect(() => {
@@ -885,12 +897,12 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
 
       const fieldErrors = validation.errors.filter((e) => e.field === path);
       const isTouched = state.touched[path] ?? false;
-      const showErrors =
+      const shouldShowErrors =
         validateOn === "change" ||
         (validateOn === "blur" && isTouched) ||
         state.isSubmitted;
-      const displayedErrors = showErrors ? fieldErrors : [];
-      const hasErrors = displayedErrors.length > 0;
+      const visibleFieldErrors = shouldShowErrors ? fieldErrors : [];
+      const hasVisibleErrors = visibleFieldErrors.length > 0;
       const isRequired = required[path] ?? false;
 
       // Boolean fields: hide asterisk unless they have validation rules (consent pattern)
@@ -922,12 +934,13 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
         required: isRequired,
         showRequiredIndicator,
         touched: isTouched,
-        errors: displayedErrors,
+        errors: fieldErrors,
+        visibleErrors: visibleFieldErrors,
         onChange: handlers.onChange,
         onBlur: handlers.onBlur,
-        // ARIA accessibility attributes
-        "aria-invalid": hasErrors || undefined,
-        "aria-describedby": hasErrors ? `${path}-error` : undefined,
+        // ARIA accessibility attributes (driven by visibleErrors, not all errors)
+        "aria-invalid": hasVisibleErrors || undefined,
+        "aria-describedby": hasVisibleErrors ? `${path}-error` : undefined,
         "aria-required": isRequired || undefined,
         // Adorner props (only for adornable field types)
         ...adornerProps,
@@ -1020,7 +1033,8 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
           required: false, // TODO: Evaluate item field required
           showRequiredIndicator: false, // Item fields don't show required indicator
           touched: isTouched,
-          errors: showErrors ? fieldErrors : [],
+          errors: fieldErrors,
+          visibleErrors: showErrors ? fieldErrors : [],
           onChange: handlers.onChange,
           onBlur: handlers.onBlur,
           options: visibleOptions,

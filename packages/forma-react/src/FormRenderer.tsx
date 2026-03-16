@@ -86,12 +86,7 @@ export interface FormRendererHandle {
  */
 function DefaultLayout({ children, onSubmit, isSubmitting }: LayoutProps) {
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit();
-      }}
-    >
+    <form onSubmit={onSubmit}>
       {children}
       <button type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Submitting..." : "Submit"}
@@ -242,7 +237,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       layout: Layout = DefaultLayout,
       fieldWrapper: FieldWrapper = DefaultFieldWrapper,
       pageWrapper: PageWrapper = DefaultPageWrapper,
-      validateOn,
+      validateOn = "blur",
     } = props;
 
     const forma = useForma({
@@ -299,6 +294,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       optionsVisibility: formaOptionsVisibility,
       touched: formaTouched,
       errors: formaErrors,
+      isSubmitted: formaIsSubmitted,
       setFieldValue,
       setFieldTouched,
       getArrayHelpers,
@@ -342,6 +338,11 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
 
         const errors = formaErrors.filter((e) => e.field === fieldPath);
         const touched = formaTouched[fieldPath] ?? false;
+        const showErrors =
+          validateOn === "change" ||
+          (validateOn === "blur" && touched) ||
+          formaIsSubmitted;
+        const visibleErrors = showErrors ? errors : [];
         const required = formaRequired[fieldPath] ?? false;
         const disabled = formaEnabled[fieldPath] === false;
 
@@ -367,6 +368,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
           required,
           disabled,
           errors,
+          visibleErrors,
           onChange: (value: unknown) => setFieldValue(fieldPath, value),
           onBlur: () => setFieldTouched(fieldPath),
           // Convenience properties
@@ -487,7 +489,10 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
           } as ArrayFieldProps;
         } else if (fieldType === "matrix" && fieldDef.type === "matrix") {
           const matrixValue =
-            (baseProps.value as Record<string, string | number | string[] | number[]> | null) ?? null;
+            (baseProps.value as Record<
+              string,
+              string | number | string[] | number[]
+            > | null) ?? null;
           const rows = fieldDef.rows.map((row) => ({
             id: row.id,
             label: row.label,
@@ -574,6 +579,8 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
         formaOptionsVisibility,
         formaTouched,
         formaErrors,
+        formaIsSubmitted,
+        validateOn,
         setFieldValue,
         setFieldTouched,
         getArrayHelpers,
@@ -607,10 +614,20 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       return <>{renderedFields}</>;
     }, [spec.pages, forma.wizard, PageWrapper, renderedFields]);
 
+    // Wrap submitForm to always call preventDefault when invoked from a form event.
+    // This prevents page refreshes when consumers put onSubmit on a <form> element.
+    const handleSubmit = useCallback(
+      (e?: React.FormEvent) => {
+        e?.preventDefault();
+        forma.submitForm();
+      },
+      [forma.submitForm],
+    );
+
     return (
       <FormaContext.Provider value={forma}>
         <Layout
-          onSubmit={forma.submitForm}
+          onSubmit={handleSubmit}
           isSubmitting={forma.isSubmitting}
           isValid={forma.isValid}
         >

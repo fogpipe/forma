@@ -612,10 +612,14 @@ describe("useForma", () => {
 
       const { result } = renderHook(() => useForma({ spec }));
 
-      // Initially no errors shown (not touched)
-      expect(result.current.getFieldProps("name").errors).toEqual([]);
+      // errors always contains all validation errors (eager validation)
+      expect(
+        result.current.getFieldProps("name").errors.length,
+      ).toBeGreaterThan(0);
+      // visibleErrors should be empty (not touched, default validateOn=blur)
+      expect(result.current.getFieldProps("name").visibleErrors).toEqual([]);
 
-      // After submit, errors should show
+      // After submit, visibleErrors should show
       act(() => {
         result.current.submitForm();
       });
@@ -636,9 +640,12 @@ describe("useForma", () => {
         useForma({ spec, validateOn: "blur" }),
       );
 
-      // Errors exist but not shown
+      // Errors exist (eager validation) but visibleErrors is empty (not touched)
       expect(result.current.isValid).toBe(false);
-      expect(result.current.getFieldProps("name").errors).toEqual([]);
+      expect(
+        result.current.getFieldProps("name").errors.length,
+      ).toBeGreaterThan(0);
+      expect(result.current.getFieldProps("name").visibleErrors).toEqual([]);
     });
 
     it("should show errors immediately when validateOn: change", () => {
@@ -1852,6 +1859,102 @@ describe("useForma", () => {
       expect(
         (result.current.data.items as Array<{ name: string }>)[0].name,
       ).toBe("Item Name");
+    });
+  });
+
+  // ============================================================================
+  // visibleErrors
+  // ============================================================================
+
+  describe("visibleErrors", () => {
+    it("visibleErrors is empty for untouched required fields (validateOn=blur)", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name", required: true },
+          email: { type: "email", label: "Email", required: true },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        useForma({ spec, validateOn: "blur" }),
+      );
+
+      const nameProps = result.current.getFieldProps("name");
+
+      // errors should contain the required error (validation runs eagerly)
+      expect(nameProps.errors.length).toBeGreaterThan(0);
+      // visibleErrors should be empty (field not touched)
+      expect(nameProps.visibleErrors).toHaveLength(0);
+    });
+
+    it("visibleErrors populates after field is touched", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name", required: true },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        useForma({ spec, validateOn: "blur" }),
+      );
+
+      // Before touch
+      expect(result.current.getFieldProps("name").visibleErrors).toHaveLength(
+        0,
+      );
+
+      // Touch the field
+      act(() => {
+        result.current.setFieldTouched("name");
+      });
+
+      // After touch — errors should be visible
+      const props = result.current.getFieldProps("name");
+      expect(props.visibleErrors.length).toBeGreaterThan(0);
+      expect(props.visibleErrors[0].message).toBeDefined();
+    });
+
+    it("visibleErrors populates after form submission", async () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name", required: true },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        useForma({ spec, validateOn: "blur" }),
+      );
+
+      // Before submit — visibleErrors empty
+      expect(result.current.getFieldProps("name").visibleErrors).toHaveLength(
+        0,
+      );
+
+      // Submit the form (validation will fail)
+      await act(async () => {
+        await result.current.submitForm();
+      });
+
+      // After submit — errors should be visible even without touching
+      expect(
+        result.current.getFieldProps("name").visibleErrors.length,
+      ).toBeGreaterThan(0);
+    });
+
+    it("visibleErrors is always populated when validateOn=change", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name", required: true },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        useForma({ spec, validateOn: "change" }),
+      );
+
+      // With validateOn="change", errors should be visible immediately
+      const props = result.current.getFieldProps("name");
+      expect(props.visibleErrors.length).toBeGreaterThan(0);
     });
   });
 });

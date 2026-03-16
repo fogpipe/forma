@@ -17,11 +17,7 @@ function createMatrixSpec(options: {
   required?: string[];
   data?: Record<string, unknown>;
 }): Forma {
-  const {
-    fieldDef = {},
-    schemaProperties,
-    required = [],
-  } = options;
+  const { fieldDef = {}, schemaProperties, required = [] } = options;
 
   const matrixField: MatrixFieldDefinition = {
     type: "matrix",
@@ -134,7 +130,11 @@ describe("matrix validation", () => {
         },
       });
       const data = {
-        service_rating: { speed: "agree", quality: "disagree", support: "agree" },
+        service_rating: {
+          speed: "agree",
+          quality: "disagree",
+          support: "agree",
+        },
       };
       const result = validate(data, spec);
       expect(result.valid).toBe(true);
@@ -172,7 +172,9 @@ describe("matrix validation", () => {
       const spec = createMatrixSpec({ required: ["service_rating"] });
       const result = validate({}, spec);
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === "service_rating")).toBe(true);
+      expect(result.errors.some((e) => e.field === "service_rating")).toBe(
+        true,
+      );
     });
 
     it("should fail when required and not all visible rows answered", () => {
@@ -214,15 +216,24 @@ describe("matrix validation", () => {
             properties: {
               speed: {
                 type: "array",
-                items: { type: "string", enum: ["beginner", "intermediate", "advanced"] },
+                items: {
+                  type: "string",
+                  enum: ["beginner", "intermediate", "advanced"],
+                },
               },
               quality: {
                 type: "array",
-                items: { type: "string", enum: ["beginner", "intermediate", "advanced"] },
+                items: {
+                  type: "string",
+                  enum: ["beginner", "intermediate", "advanced"],
+                },
               },
               support: {
                 type: "array",
-                items: { type: "string", enum: ["beginner", "intermediate", "advanced"] },
+                items: {
+                  type: "string",
+                  enum: ["beginner", "intermediate", "advanced"],
+                },
               },
             },
           },
@@ -344,7 +355,11 @@ describe("matrix visibility", () => {
       fieldDef: {
         rows: [
           { id: "speed", label: "Speed" },
-          { id: "quality", label: "Quality", visibleWhen: "show_quality = true" },
+          {
+            id: "quality",
+            label: "Quality",
+            visibleWhen: "show_quality = true",
+          },
           { id: "support", label: "Support" },
         ],
       },
@@ -364,7 +379,11 @@ describe("matrix visibility", () => {
       fieldDef: {
         rows: [
           { id: "speed", label: "Speed" },
-          { id: "quality", label: "Quality", visibleWhen: "show_quality = true" },
+          {
+            id: "quality",
+            label: "Quality",
+            visibleWhen: "show_quality = true",
+          },
           { id: "support", label: "Support" },
         ],
       },

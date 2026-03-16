@@ -132,6 +132,9 @@ export function FieldRenderer({
 
   const errors = forma.errors.filter((e) => e.field === fieldPath);
   const touched = forma.touched[fieldPath] ?? false;
+  // FieldRenderer doesn't have access to validateOn (it's a FormRenderer prop),
+  // so it uses the default "blur" behavior: show errors after touch or submit.
+  const visibleErrors = touched || forma.isSubmitted ? errors : [];
   const required = forma.required[fieldPath] ?? false;
   const disabled = forma.enabled[fieldPath] === false;
 
@@ -148,6 +151,7 @@ export function FieldRenderer({
     required,
     disabled,
     errors,
+    visibleErrors,
     onChange: (value: unknown) => forma.setFieldValue(fieldPath, value),
     onBlur: () => forma.setFieldTouched(fieldPath),
     // Convenience properties
@@ -318,7 +322,10 @@ export function FieldRenderer({
   } else if (fieldType === "matrix" && fieldDef.type === "matrix") {
     // Matrix fields — compute visible rows from visibility engine
     const matrixValue =
-      (baseProps.value as Record<string, string | number | string[] | number[]> | null) ?? null;
+      (baseProps.value as Record<
+        string,
+        string | number | string[] | number[]
+      > | null) ?? null;
     const rows = fieldDef.rows.map((row) => ({
       id: row.id,
       label: row.label,
@@ -340,12 +347,13 @@ export function FieldRenderer({
     const sourceValue = fieldDef.source
       ? (forma.data[fieldDef.source] ?? forma.computed[fieldDef.source])
       : undefined;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const {
-      onChange: _onChange,
-      value: _value,
+      onChange: _onChange, // omit from display props
+      value: _value, // omit from display props
       ...displayBaseProps
     } = baseProps;
+    void _onChange;
+    void _value;
     fieldProps = {
       ...displayBaseProps,
       fieldType: "display",

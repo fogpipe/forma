@@ -136,7 +136,10 @@ export class FormaEventEmitter {
    * Fire an event synchronously. Listener errors are caught and logged
    * to prevent one listener from breaking others.
    */
-  fire<K extends keyof FormaEventMap>(event: K, payload: FormaEventMap[K]): void {
+  fire<K extends keyof FormaEventMap>(
+    event: K,
+    payload: FormaEventMap[K],
+  ): void {
     const set = this.listeners.get(event);
     if (!set || set.size === 0) return;
 

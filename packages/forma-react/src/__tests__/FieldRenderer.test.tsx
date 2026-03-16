@@ -815,7 +815,11 @@ describe("FieldRenderer", () => {
             label: "Rating",
             rows: [
               { id: "speed", label: "Speed" },
-              { id: "quality", label: "Quality", visibleWhen: "show_quality = true" },
+              {
+                id: "quality",
+                label: "Quality",
+                visibleWhen: "show_quality = true",
+              },
             ],
             columns: [
               { value: 1, label: "Poor" },

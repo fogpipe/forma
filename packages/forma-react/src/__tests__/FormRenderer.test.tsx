@@ -1386,4 +1386,150 @@ describe("FormRenderer", () => {
       });
     });
   });
+
+  // ============================================================================
+  // onSubmit preventDefault
+  // ============================================================================
+
+  describe("onSubmit preventDefault", () => {
+    it("should call preventDefault when onSubmit is invoked with a form event", async () => {
+      const submitHandler = vi.fn();
+
+      // Custom layout that puts onSubmit directly on a <form> element
+      function CustomLayout({ children, onSubmit }: LayoutProps) {
+        return (
+          <form onSubmit={onSubmit} data-testid="form">
+            {children}
+            <button type="submit">Submit</button>
+          </form>
+        );
+      }
+
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name" },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+          layout={CustomLayout}
+          onSubmit={submitHandler}
+          initialData={{ name: "John" }}
+        />,
+      );
+
+      const form = screen.getByTestId("form");
+
+      // Create a real submit event and spy on preventDefault
+      const preventDefaultSpy = vi.fn();
+      const submitEvent = new Event("submit", {
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(submitEvent, "preventDefault", {
+        value: preventDefaultSpy,
+      });
+
+      await act(async () => {
+        form.dispatchEvent(submitEvent);
+      });
+
+      // preventDefault should have been called by the wrapper
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it("should work when onSubmit is called without an event (programmatic)", async () => {
+      const submitHandler = vi.fn();
+
+      // Custom layout that calls onSubmit programmatically (no event)
+      function CustomLayout({ children, onSubmit }: LayoutProps) {
+        return (
+          <div>
+            {children}
+            <button
+              type="button"
+              onClick={() => onSubmit()}
+              data-testid="submit-btn"
+            >
+              Submit
+            </button>
+          </div>
+        );
+      }
+
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name" },
+        },
+      });
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={createTestComponentMap()}
+          layout={CustomLayout}
+          onSubmit={submitHandler}
+          initialData={{ name: "John" }}
+        />,
+      );
+
+      await act(async () => {
+        screen.getByTestId("submit-btn").click();
+      });
+
+      await waitFor(() => {
+        expect(submitHandler).toHaveBeenCalledWith({ name: "John" });
+      });
+    });
+
+    it("LayoutProps.onSubmit accepts an optional event parameter", () => {
+      // Type-level test: verify the signature compiles
+      const _layout: React.FC<LayoutProps> = ({ onSubmit }) => {
+        return (
+          <form onSubmit={onSubmit}>
+            <button onClick={() => onSubmit()}>Submit</button>
+          </form>
+        );
+      };
+      expect(_layout).toBeDefined();
+    });
+  });
+
+  // ============================================================================
+  // visibleErrors
+  // ============================================================================
+
+  describe("visibleErrors", () => {
+    it("FormRenderer passes visibleErrors to components", () => {
+      const spec = createTestSpec({
+        fields: {
+          name: { type: "text", label: "Name", required: true },
+        },
+      });
+
+      let capturedVisibleErrors: unknown[] | undefined;
+
+      const components = {
+        ...createTestComponentMap(),
+        text: ({ field: props }: { field: { visibleErrors?: unknown[] } }) => {
+          capturedVisibleErrors = props.visibleErrors;
+          return <div data-testid="text-field">text</div>;
+        },
+      };
+
+      render(
+        <FormRenderer
+          spec={spec}
+          components={components as ReturnType<typeof createTestComponentMap>}
+          validateOn="blur"
+        />,
+      );
+
+      // visibleErrors should be an empty array (field not touched, validateOn=blur)
+      expect(capturedVisibleErrors).toEqual([]);
+    });
+  });
 });

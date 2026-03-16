@@ -37,9 +37,15 @@ describe("FormaEventEmitter", () => {
 
   it("should fire multiple listeners in registration order", () => {
     const calls: number[] = [];
-    emitter.on("fieldChanged", () => { calls.push(1); });
-    emitter.on("fieldChanged", () => { calls.push(2); });
-    emitter.on("fieldChanged", () => { calls.push(3); });
+    emitter.on("fieldChanged", () => {
+      calls.push(1);
+    });
+    emitter.on("fieldChanged", () => {
+      calls.push(2);
+    });
+    emitter.on("fieldChanged", () => {
+      calls.push(3);
+    });
 
     emitter.fire("fieldChanged", {
       path: "x",
@@ -582,8 +588,12 @@ describe("formReset event", () => {
         spec,
         initialData: { name: "initial" },
         on: {
-          fieldChanged: () => { events.push("fieldChanged"); },
-          formReset: () => { events.push("formReset"); },
+          fieldChanged: () => {
+            events.push("fieldChanged");
+          },
+          formReset: () => {
+            events.push("formReset");
+          },
         },
       }),
     );
