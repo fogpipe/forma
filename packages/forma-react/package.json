@@ -16,8 +16,22 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       }
-    }
+    },
+    "./defaults": {
+      "import": {
+        "types": "./dist/defaults/index.d.ts",
+        "default": "./dist/defaults/index.js"
+      },
+      "default": {
+        "types": "./dist/defaults/index.d.ts",
+        "default": "./dist/defaults/index.js"
+      }
+    },
+    "./defaults/styles.css": "./dist/defaults/styles/forma-defaults.css"
   },
+  "sideEffects": [
+    "*.css"
+  ],
   "files": [
     "dist",
     "src"

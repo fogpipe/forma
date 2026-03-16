@@ -1,0 +1,696 @@
+/* ==========================================================================
+   Forma Default Component Library — CSS
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   CSS Variables — Semantic Tokens (what consumers override)
+   -------------------------------------------------------------------------- */
+:root {
+  --forma-font-family: system-ui, -apple-system, sans-serif;
+  --forma-font-size: 16px;
+  --forma-line-height: 1.5;
+  --forma-color-primary: #2563eb;
+  --forma-color-primary-hover: #1d4ed8;
+  --forma-color-error: #dc2626;
+  --forma-color-warning: #d97706;
+  --forma-color-border: #d1d5db;
+  --forma-color-border-focus: #2563eb;
+  --forma-color-bg: #ffffff;
+  --forma-color-bg-disabled: #f9fafb;
+  --forma-color-text: #111827;
+  --forma-color-text-muted: #6b7280;
+  --forma-color-text-error: #dc2626;
+  --forma-color-text-warning: #d97706;
+  --forma-radius: 6px;
+  --forma-spacing: 16px;
+  --forma-spacing-sm: 8px;
+  --forma-spacing-xs: 4px;
+  --forma-transition: 150ms ease;
+
+  /* Component tokens — reference semantic, consumers CAN override */
+  --forma-input-bg: var(--forma-color-bg);
+  --forma-input-border: var(--forma-color-border);
+  --forma-input-border-focus: var(--forma-color-border-focus);
+  --forma-input-radius: var(--forma-radius);
+  --forma-input-padding: 0.5rem 0.75rem;
+  --forma-input-font-size: var(--forma-font-size);
+
+  --forma-label-font-size: 0.875rem;
+  --forma-label-font-weight: 500;
+  --forma-label-color: var(--forma-color-text);
+
+  --forma-focus-ring-color: var(--forma-color-border-focus);
+  --forma-focus-ring-width: 2px;
+
+  --forma-error-font-size: 0.8125rem;
+  --forma-error-color: var(--forma-color-text-error);
+  --forma-warning-color: var(--forma-color-text-warning);
+
+  --forma-button-bg: var(--forma-color-primary);
+  --forma-button-bg-hover: var(--forma-color-primary-hover);
+  --forma-button-color: #ffffff;
+  --forma-button-radius: var(--forma-radius);
+  --forma-button-padding: 0.625rem 1.25rem;
+}
+
+/* --------------------------------------------------------------------------
+   Dark Mode
+   -------------------------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --forma-color-bg: #1f2937;
+    --forma-color-text: #f9fafb;
+    --forma-color-text-muted: #9ca3af;
+    --forma-color-border: #4b5563;
+    --forma-color-bg-disabled: #374151;
+  }
+}
+
+[data-theme="dark"] {
+  --forma-color-bg: #1f2937;
+  --forma-color-text: #f9fafb;
+  --forma-color-text-muted: #9ca3af;
+  --forma-color-border: #4b5563;
+  --forma-color-bg-disabled: #374151;
+}
+
+/* --------------------------------------------------------------------------
+   Base / Reset
+   -------------------------------------------------------------------------- */
+.forma-form,
+.forma-wizard {
+  font-family: var(--forma-font-family);
+  font-size: var(--forma-font-size);
+  line-height: var(--forma-line-height);
+  color: var(--forma-color-text);
+}
+
+/* Screen-reader only */
+.forma-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Field Wrapper
+   -------------------------------------------------------------------------- */
+.forma-field {
+  margin-bottom: var(--forma-spacing);
+}
+
+/* .forma-field--required — applied to required fields, no default visual beyond
+   the asterisk. Override to add custom required styling (e.g., left border). */
+
+.forma-field__description {
+  font-size: var(--forma-error-font-size);
+  color: var(--forma-color-text-muted);
+  margin: var(--forma-spacing-xs) 0;
+}
+
+.forma-field__errors {
+  margin-top: var(--forma-spacing-xs);
+}
+
+.forma-field__error {
+  display: block;
+  font-size: var(--forma-error-font-size);
+  color: var(--forma-error-color);
+}
+
+.forma-field--error .forma-input,
+.forma-field--error .forma-textarea,
+.forma-field--error .forma-select {
+  border-color: var(--forma-color-error);
+}
+
+.forma-field--warning .forma-input,
+.forma-field--warning .forma-textarea,
+.forma-field--warning .forma-select {
+  border-color: var(--forma-color-warning);
+}
+
+.forma-field__warning {
+  display: block;
+  font-size: var(--forma-error-font-size);
+  color: var(--forma-warning-color);
+}
+
+/* --------------------------------------------------------------------------
+   Labels
+   -------------------------------------------------------------------------- */
+.forma-label {
+  display: block;
+  font-size: var(--forma-label-font-size);
+  font-weight: var(--forma-label-font-weight);
+  color: var(--forma-label-color);
+  margin-bottom: var(--forma-spacing-xs);
+}
+
+.forma-label__required {
+  color: var(--forma-color-error);
+}
+
+/* --------------------------------------------------------------------------
+   Input
+   -------------------------------------------------------------------------- */
+.forma-input,
+.forma-textarea,
+.forma-select {
+  display: block;
+  width: 100%;
+  padding: var(--forma-input-padding);
+  font-family: inherit;
+  font-size: var(--forma-input-font-size);
+  line-height: var(--forma-line-height);
+  color: var(--forma-color-text);
+  background-color: var(--forma-input-bg);
+  border: 1px solid var(--forma-input-border);
+  border-radius: var(--forma-input-radius);
+  transition:
+    border-color var(--forma-transition),
+    outline-color var(--forma-transition);
+  box-sizing: border-box;
+}
+
+.forma-input:focus-visible,
+.forma-textarea:focus-visible,
+.forma-select:focus-visible {
+  outline: var(--forma-focus-ring-width) solid var(--forma-focus-ring-color);
+  outline-offset: 1px;
+  border-color: var(--forma-input-border-focus);
+}
+
+.forma-input:disabled,
+.forma-textarea:disabled,
+.forma-select:disabled {
+  background-color: var(--forma-color-bg-disabled);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.forma-input[readonly],
+.forma-textarea[readonly] {
+  background-color: var(--forma-color-bg-disabled);
+}
+
+.forma-textarea {
+  resize: vertical;
+  min-height: 5rem;
+}
+
+/* --------------------------------------------------------------------------
+   Input Adorner
+   -------------------------------------------------------------------------- */
+.forma-input-adorner {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--forma-input-border);
+  border-radius: var(--forma-input-radius);
+  overflow: hidden;
+  background-color: var(--forma-input-bg);
+  transition: border-color var(--forma-transition);
+}
+
+.forma-input-adorner:focus-within {
+  outline: var(--forma-focus-ring-width) solid var(--forma-focus-ring-color);
+  outline-offset: 1px;
+  border-color: var(--forma-input-border-focus);
+}
+
+.forma-input-adorner .forma-input,
+.forma-input-adorner .forma-textarea {
+  border: 0;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+}
+
+.forma-input-adorner .forma-input:focus,
+.forma-input-adorner .forma-textarea:focus {
+  outline: none;
+}
+
+.forma-input-adorner__prefix,
+.forma-input-adorner__suffix {
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--forma-color-text-muted);
+  background-color: var(--forma-color-bg-disabled);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.forma-input-adorner__prefix {
+  border-right: 1px solid var(--forma-input-border);
+}
+
+.forma-input-adorner__suffix {
+  border-left: 1px solid var(--forma-input-border);
+}
+
+/* --------------------------------------------------------------------------
+   Select
+   -------------------------------------------------------------------------- */
+.forma-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 12px;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
+.forma-select:disabled {
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------------
+   Checkbox & Radio
+   -------------------------------------------------------------------------- */
+.forma-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--forma-spacing-sm);
+}
+
+.forma-checkbox__input {
+  appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 1px solid var(--forma-input-border);
+  border-radius: 3px;
+  background-color: var(--forma-input-bg);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition:
+    background-color var(--forma-transition),
+    border-color var(--forma-transition);
+}
+
+.forma-checkbox__input:checked {
+  background-color: var(--forma-color-primary);
+  border-color: var(--forma-color-primary);
+}
+
+.forma-checkbox__input:checked::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  width: 6px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.forma-checkbox__input:focus-visible {
+  outline: var(--forma-focus-ring-width) solid var(--forma-focus-ring-color);
+  outline-offset: 1px;
+}
+
+.forma-checkbox__input:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.forma-checkbox__label {
+  font-size: var(--forma-font-size);
+  color: var(--forma-color-text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.forma-radio__input {
+  appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 1px solid var(--forma-input-border);
+  border-radius: 50%;
+  background-color: var(--forma-input-bg);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition:
+    background-color var(--forma-transition),
+    border-color var(--forma-transition);
+}
+
+.forma-radio__input:checked {
+  border-color: var(--forma-color-primary);
+}
+
+.forma-radio__input:checked::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--forma-color-primary);
+}
+
+.forma-radio__input:focus-visible {
+  outline: var(--forma-focus-ring-width) solid var(--forma-focus-ring-color);
+  outline-offset: 1px;
+}
+
+.forma-radio__input:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* --------------------------------------------------------------------------
+   Multi-select (checkbox group)
+   -------------------------------------------------------------------------- */
+.forma-multiselect {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.forma-multiselect__option {
+  display: flex;
+  align-items: center;
+  gap: var(--forma-spacing-sm);
+  padding: var(--forma-spacing-xs) 0;
+}
+
+/* --------------------------------------------------------------------------
+   Array Field
+   -------------------------------------------------------------------------- */
+.forma-array__empty {
+  color: var(--forma-color-text-muted);
+  font-style: italic;
+  margin: var(--forma-spacing-sm) 0;
+}
+
+.forma-array__item {
+  display: flex;
+  gap: var(--forma-spacing-sm);
+  align-items: flex-start;
+  padding: var(--forma-spacing);
+  border: 1px solid var(--forma-input-border);
+  border-radius: var(--forma-input-radius);
+  margin-bottom: var(--forma-spacing-sm);
+}
+
+.forma-array__item-fields {
+  flex: 1;
+  min-width: 0;
+}
+
+.forma-array__item-fields .forma-field {
+  margin-bottom: var(--forma-spacing-sm);
+}
+
+.forma-array__item-fields .forma-field:last-child {
+  margin-bottom: 0;
+}
+
+.forma-array__remove {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.forma-array__add {
+  margin-top: var(--forma-spacing-sm);
+}
+
+/* --------------------------------------------------------------------------
+   Object Field
+   -------------------------------------------------------------------------- */
+.forma-object {
+  border: 1px solid var(--forma-input-border);
+  border-radius: var(--forma-input-radius);
+  padding: var(--forma-spacing);
+  margin: 0;
+}
+
+.forma-object__legend {
+  font-weight: var(--forma-label-font-weight);
+  font-size: var(--forma-label-font-size);
+  color: var(--forma-label-color);
+  padding: 0 var(--forma-spacing-xs);
+}
+
+.forma-object__description {
+  font-size: var(--forma-error-font-size);
+  color: var(--forma-color-text-muted);
+  margin: var(--forma-spacing-xs) 0 var(--forma-spacing-sm);
+}
+
+/* --------------------------------------------------------------------------
+   Computed Display
+   -------------------------------------------------------------------------- */
+.forma-computed {
+  display: block;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--forma-color-text);
+}
+
+/* --------------------------------------------------------------------------
+   Display Field
+   -------------------------------------------------------------------------- */
+.forma-display__content {
+  color: var(--forma-color-text-muted);
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Matrix / Grid
+   -------------------------------------------------------------------------- */
+.forma-matrix__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.forma-matrix__corner {
+  width: 1px;
+}
+
+.forma-matrix__col-header {
+  text-align: center;
+  font-size: var(--forma-label-font-size);
+  font-weight: var(--forma-label-font-weight);
+  padding: var(--forma-spacing-sm);
+  color: var(--forma-color-text-muted);
+}
+
+.forma-matrix__row-header {
+  text-align: left;
+  font-size: var(--forma-font-size);
+  font-weight: normal;
+  padding: var(--forma-spacing-sm);
+  color: var(--forma-color-text);
+}
+
+.forma-matrix__cell {
+  text-align: center;
+  padding: var(--forma-spacing-sm);
+}
+
+.forma-matrix__row:nth-child(even) {
+  background-color: var(--forma-color-bg-disabled);
+}
+
+/* --------------------------------------------------------------------------
+   Fallback Field
+   -------------------------------------------------------------------------- */
+.forma-fallback__warning {
+  font-size: var(--forma-error-font-size);
+  color: var(--forma-color-error);
+  margin: 0 0 var(--forma-spacing-xs);
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+.forma-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--forma-button-padding);
+  font-family: inherit;
+  font-size: var(--forma-font-size);
+  font-weight: 500;
+  line-height: 1;
+  border: 1px solid transparent;
+  border-radius: var(--forma-button-radius);
+  cursor: pointer;
+  transition:
+    background-color var(--forma-transition),
+    border-color var(--forma-transition);
+}
+
+.forma-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.forma-button--primary {
+  background-color: var(--forma-button-bg);
+  color: var(--forma-button-color);
+  border-color: var(--forma-button-bg);
+}
+
+.forma-button--primary:hover:not(:disabled) {
+  background-color: var(--forma-button-bg-hover);
+  border-color: var(--forma-button-bg-hover);
+}
+
+.forma-button--primary:focus-visible {
+  outline: var(--forma-focus-ring-width) solid var(--forma-focus-ring-color);
+  outline-offset: 2px;
+}
+
+.forma-button--secondary {
+  background-color: transparent;
+  color: var(--forma-color-text);
+  border-color: var(--forma-input-border);
+}
+
+.forma-button--secondary:hover:not(:disabled) {
+  background-color: var(--forma-color-bg-disabled);
+}
+
+.forma-button--secondary:focus-visible {
+  outline: var(--forma-focus-ring-width) solid var(--forma-focus-ring-color);
+  outline-offset: 2px;
+}
+
+.forma-button--danger {
+  background-color: transparent;
+  color: var(--forma-color-error);
+  border-color: var(--forma-color-error);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.forma-button--danger:hover:not(:disabled) {
+  background-color: var(--forma-color-error);
+  color: #fff;
+}
+
+/* Submit button */
+.forma-submit--loading {
+  opacity: 0.7;
+}
+
+/* --------------------------------------------------------------------------
+   Form Layout
+   -------------------------------------------------------------------------- */
+.forma-form__actions {
+  margin-top: var(--forma-spacing);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* --------------------------------------------------------------------------
+   Wizard Layout
+   -------------------------------------------------------------------------- */
+.forma-wizard__steps {
+  display: flex;
+  gap: var(--forma-spacing-sm);
+  align-items: center;
+  margin-bottom: calc(var(--forma-spacing) * 1.5);
+  padding-bottom: var(--forma-spacing);
+  border-bottom: 1px solid var(--forma-input-border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.forma-step {
+  display: flex;
+  align-items: center;
+  gap: var(--forma-spacing-xs);
+  flex: 1;
+}
+
+.forma-step__indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  transition:
+    background-color var(--forma-transition),
+    color var(--forma-transition);
+}
+
+.forma-step__label {
+  font-size: var(--forma-label-font-size);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 10rem;
+}
+
+.forma-step--current .forma-step__indicator {
+  background-color: var(--forma-color-primary);
+  color: #fff;
+}
+
+.forma-step--current .forma-step__label {
+  color: var(--forma-color-primary);
+  font-weight: var(--forma-label-font-weight);
+}
+
+.forma-step--completed .forma-step__indicator {
+  background-color: var(--forma-color-primary);
+  color: #fff;
+}
+
+.forma-step--completed .forma-step__label {
+  color: var(--forma-color-text-muted);
+}
+
+.forma-step--upcoming .forma-step__indicator {
+  background-color: var(--forma-color-bg-disabled);
+  color: var(--forma-color-text-muted);
+  border: 1px solid var(--forma-input-border);
+}
+
+.forma-step--upcoming .forma-step__label {
+  color: var(--forma-color-text-muted);
+}
+
+.forma-wizard__nav {
+  display: flex;
+  justify-content: space-between;
+  margin-top: calc(var(--forma-spacing) * 1.5);
+  padding-top: var(--forma-spacing);
+  border-top: 1px solid var(--forma-input-border);
+}
+
+/* --------------------------------------------------------------------------
+   Page Wrapper
+   -------------------------------------------------------------------------- */
+.forma-page__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--forma-color-text);
+  margin: 0 0 var(--forma-spacing-xs);
+}
+
+.forma-page__description {
+  color: var(--forma-color-text-muted);
+  margin: 0 0 var(--forma-spacing);
+}

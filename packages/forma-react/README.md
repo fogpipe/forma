@@ -354,6 +354,88 @@ The error boundary supports:
 - `onError` callback for logging
 - `resetKey` prop to reset error state
 
+## Default Components
+
+Don't want to build every field component yourself? The default component library gives you a working form in 2 lines:
+
+```tsx
+import { DefaultFormRenderer } from "@fogpipe/forma-react/defaults";
+import "@fogpipe/forma-react/defaults/styles.css";
+
+<DefaultFormRenderer spec={formaSpec} onSubmit={handleSubmit} />;
+```
+
+This renders a fully styled, accessible form with all 18 field types, error handling, and wizard support — zero configuration.
+
+### Override Individual Components
+
+Swap any component while keeping the rest:
+
+```tsx
+import { FormRenderer } from "@fogpipe/forma-react";
+import {
+  defaultComponentMap,
+  defaultFieldWrapper,
+  defaultLayout,
+} from "@fogpipe/forma-react/defaults";
+import "@fogpipe/forma-react/defaults/styles.css";
+
+const components = { ...defaultComponentMap, select: MyFancySelect };
+
+<FormRenderer
+  spec={formaSpec}
+  components={components}
+  fieldWrapper={defaultFieldWrapper}
+  layout={defaultLayout}
+  onSubmit={handleSubmit}
+/>;
+```
+
+### Wizard Forms
+
+Enable wizard layout for multi-page forms:
+
+```tsx
+<DefaultFormRenderer spec={wizardSpec} onSubmit={handleSubmit} wizardLayout />
+```
+
+### Theming
+
+Override CSS variables to customize the look:
+
+```css
+:root {
+  --forma-color-primary: #7c3aed;
+  --forma-color-error: #e11d48;
+  --forma-radius: 12px;
+  --forma-font-family: "Inter", sans-serif;
+}
+```
+
+Dark mode works via `[data-theme="dark"]` attribute or `prefers-color-scheme: dark` media query.
+
+### Component Reference
+
+| Field Type | Component | Renders |
+|---|---|---|
+| `text`, `email`, `phone`, `url`, `password` | TextInput | `<input>` with type mapping |
+| `textarea` | TextareaInput | `<textarea>` |
+| `number` | NumberInput | `<input type="number">` with parseFloat |
+| `integer` | IntegerInput | `<input type="number">` with parseInt |
+| `boolean` | BooleanInput | Custom styled checkbox |
+| `date` | DateInput | `<input type="date">` |
+| `datetime` | DateTimeInput | `<input type="datetime-local">` |
+| `select` | SelectInput | Native `<select>` with custom arrow |
+| `multiselect` | MultiSelectInput | Checkbox group |
+| `array` | ArrayField | Item list with Add/Remove |
+| `object` | ObjectField | `<fieldset>` container |
+| `computed` | ComputedDisplay | Read-only `<output>` |
+| `display` | DisplayField | Static content `<div>` |
+| `matrix` | MatrixField | `<table>` with radio/checkbox cells |
+| `fallback` | FallbackField | Text input + dev warning |
+
+See the [full documentation](https://docs.formidable.fogpipe.com/forma-react/default-components) for theming details, all CSS variables, and advanced usage.
+
 ## License
 
 MIT
