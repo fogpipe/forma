@@ -18,6 +18,7 @@ import type {
   ValidationResult,
   JSONSchemaProperty,
   SelectOption,
+  FormatOptions,
 } from "@fogpipe/forma-core";
 import { isAdornableField, isSelectionField } from "@fogpipe/forma-core";
 import { useForma } from "./useForma.js";
@@ -34,6 +35,7 @@ import type {
   ArrayFieldProps,
   ArrayHelpers,
   DisplayFieldProps,
+  ComputedFieldProps,
   MatrixFieldProps,
 } from "./types.js";
 
@@ -64,6 +66,8 @@ export interface FormRendererProps {
   validateOn?: "change" | "blur" | "submit";
   /** Current page for controlled wizard */
   page?: number;
+  /** Format options for number/currency/date display (overrides spec.meta.locale/currency) */
+  formatOptions?: FormatOptions;
 }
 
 /**
@@ -240,6 +244,13 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
       validateOn = "blur",
     } = props;
 
+    // Resolve format options: prop override > spec.meta > defaults
+    const resolvedFormatOptions = useMemo<FormatOptions>(() => ({
+      locale: props.formatOptions?.locale ?? spec.meta.locale,
+      currency: props.formatOptions?.currency ?? spec.meta.currency,
+      nullDisplay: props.formatOptions?.nullDisplay ?? "—",
+    }), [props.formatOptions, spec.meta.locale, spec.meta.currency]);
+
     const forma = useForma({
       spec,
       initialData,
@@ -396,6 +407,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
           | SelectFieldProps
           | ArrayFieldProps
           | DisplayFieldProps
+          | ComputedFieldProps
           | MatrixFieldProps = baseProps;
 
         if (fieldType === "number" || fieldType === "integer") {
@@ -515,6 +527,13 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
           const sourceValue = fieldDef.source
             ? (formaData[fieldDef.source] ?? formaComputed[fieldDef.source])
             : undefined;
+          // Resolve format: display field's own format takes priority,
+          // fall back to the source computed field's format
+          const format =
+            fieldDef.format ??
+            (fieldDef.source
+              ? spec.computed?.[fieldDef.source]?.format
+              : undefined);
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const {
             onChange: _onChange,
@@ -526,8 +545,22 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
             fieldType: "display",
             content: fieldDef.content,
             sourceValue,
-            format: fieldDef.format,
+            format,
+            formatOptions: resolvedFormatOptions,
           } as DisplayFieldProps;
+        } else if (fieldType === "computed" && fieldDef.type === "computed") {
+          // Computed fields (read-only calculated values)
+          const computedDef = spec.computed?.[fieldPath];
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { onChange: _onChangeC, ...computedBaseProps } = baseProps;
+          fieldProps = {
+            ...computedBaseProps,
+            fieldType: "computed",
+            value: formaComputed[fieldPath],
+            expression: computedDef?.expression ?? "",
+            format: computedDef?.format,
+            formatOptions: resolvedFormatOptions,
+          } as ComputedFieldProps;
         } else {
           // Text-based fields
           fieldProps = {
@@ -581,6 +614,7 @@ export const FormRenderer = forwardRef<FormRendererHandle, FormRendererProps>(
         formaErrors,
         formaIsSubmitted,
         validateOn,
+        resolvedFormatOptions,
         setFieldValue,
         setFieldTouched,
         getArrayHelpers,

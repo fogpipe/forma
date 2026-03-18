@@ -491,4 +491,136 @@ describe("Disabled field integration", () => {
 
     expect(screen.getByLabelText("Name")).toBeDisabled();
   });
+
+  it("display field inherits format from source computed field", () => {
+    const spec = createTestSpec({
+      fields: {
+        totalDisplay: {
+          type: "display",
+          label: "Total",
+          source: "total",
+        },
+      },
+      computed: {
+        total: {
+          expression: "42",
+          format: "currency",
+        },
+      },
+    });
+
+    // Provide initial data with the computed value already resolved
+    render(
+      <DefaultFormRenderer
+        spec={spec}
+        onSubmit={vi.fn()}
+        initialData={{ total: 1234.56 }}
+      />,
+    );
+
+    // The display field should inherit "currency" format from computed.total
+    expect(screen.getByText("$1,234.56")).toBeInTheDocument();
+  });
+
+  it("display field's own format takes priority over computed source format", () => {
+    const spec = createTestSpec({
+      fields: {
+        totalDisplay: {
+          type: "display",
+          label: "Total",
+          source: "total",
+          format: "percent",
+        },
+      },
+      computed: {
+        total: {
+          expression: "42",
+          format: "currency",
+        },
+      },
+    });
+
+    render(
+      <DefaultFormRenderer
+        spec={spec}
+        onSubmit={vi.fn()}
+        initialData={{ total: 0.75 }}
+      />,
+    );
+
+    // Display field's own format "percent" should win over computed "currency"
+    expect(screen.getByText("75%")).toBeInTheDocument();
+  });
+});
+
+// ============================================================================
+// Spec-Level Locale/Currency Integration
+// ============================================================================
+describe("Spec-level locale/currency", () => {
+  it("display field uses spec.meta.locale and spec.meta.currency for formatting", () => {
+    const spec = createTestSpec({
+      meta: { locale: "sv-SE", currency: "SEK" },
+      fields: {
+        totalDisplay: {
+          type: "display",
+          label: "Total",
+          source: "total",
+        },
+      },
+      computed: {
+        total: {
+          expression: "42",
+          format: "currency",
+        },
+      },
+    });
+
+    render(
+      <DefaultFormRenderer
+        spec={spec}
+        onSubmit={vi.fn()}
+        initialData={{ total: 209550 }}
+      />,
+    );
+
+    // Should render with Swedish locale and SEK currency, not USD
+    const text = screen.getByText((content) =>
+      content.includes("209") && content.includes("550") && content.includes("kr"),
+    );
+    expect(text).toBeInTheDocument();
+  });
+
+  it("formatOptions prop overrides spec.meta locale/currency", () => {
+    const spec = createTestSpec({
+      meta: { locale: "sv-SE", currency: "SEK" },
+      fields: {
+        totalDisplay: {
+          type: "display",
+          label: "Total",
+          source: "total",
+        },
+      },
+      computed: {
+        total: {
+          expression: "42",
+          format: "currency",
+        },
+      },
+    });
+
+    render(
+      <DefaultFormRenderer
+        spec={spec}
+        onSubmit={vi.fn()}
+        initialData={{ total: 1000 }}
+        formatOptions={{ locale: "de-DE", currency: "EUR" }}
+      />,
+    );
+
+    // Should render with German locale and EUR, overriding spec meta
+    const text = screen.getByText((content) =>
+      content.includes("1.000") && content.includes("€"),
+    );
+    expect(text).toBeInTheDocument();
+  });
 });

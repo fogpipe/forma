@@ -1,4 +1,5 @@
 import React from "react";
+import { formatValue } from "@fogpipe/forma-core";
 import type { ComputedComponentProps } from "../../types.js";
 
 export function ComputedDisplay({ field }: ComputedComponentProps) {
@@ -12,7 +13,7 @@ export function ComputedDisplay({ field }: ComputedComponentProps) {
       displayValue = String(field.value);
     }
   } else {
-    displayValue = String(field.value);
+    displayValue = formatValue(field.value, field.format, field.formatOptions);
   }
 
   return (

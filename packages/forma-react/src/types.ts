@@ -6,6 +6,7 @@ import type {
   Forma,
   FieldDefinition,
   FieldError,
+  FormatOptions,
   MatrixColumn,
   SelectOption,
 } from "@fogpipe/forma-core";
@@ -276,6 +277,10 @@ export interface ComputedFieldProps extends Omit<BaseFieldProps, "onChange"> {
   fieldType: "computed";
   value: unknown;
   expression: string;
+  /** Display format string (e.g., "currency", "percent", "decimal(2)") */
+  format?: string;
+  /** Resolved format options (locale, currency) for number/date formatting */
+  formatOptions?: FormatOptions;
   onChange?: never;
 }
 
@@ -312,6 +317,8 @@ export interface DisplayFieldProps extends Omit<
   sourceValue?: unknown;
   /** Display format string */
   format?: string;
+  /** Resolved format options (locale, currency) for number/date formatting */
+  formatOptions?: FormatOptions;
   /** No onChange - display fields are read-only */
   onChange?: never;
   value?: never;

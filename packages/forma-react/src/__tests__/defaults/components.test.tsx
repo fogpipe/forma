@@ -671,6 +671,120 @@ describe("ComputedDisplay", () => {
     );
     expect(screen.getByText('{"a":1}')).toBeInTheDocument();
   });
+
+  it("formats value with currency format", () => {
+    render(
+      <ComputedDisplay
+        field={makeComputedProps({ value: 1234.56, format: "currency" })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("$1,234.56")).toBeInTheDocument();
+  });
+
+  it("formats value with percent format", () => {
+    render(
+      <ComputedDisplay
+        field={makeComputedProps({ value: 0.5, format: "percent" })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("50%")).toBeInTheDocument();
+  });
+
+  it("formats value with decimal format", () => {
+    render(
+      <ComputedDisplay
+        field={makeComputedProps({ value: 99.999, format: "decimal(2)" })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("100.00")).toBeInTheDocument();
+  });
+
+  it("still shows em-dash for null even with format", () => {
+    render(
+      <ComputedDisplay
+        field={makeComputedProps({ value: null, format: "currency" })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("\u2014")).toBeInTheDocument();
+  });
+
+  it("still shows em-dash for undefined even with format", () => {
+    render(
+      <ComputedDisplay
+        field={makeComputedProps({ value: undefined, format: "currency" })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("\u2014")).toBeInTheDocument();
+  });
+
+  it("renders plain string without format", () => {
+    render(
+      <ComputedDisplay
+        field={makeComputedProps({ value: 42 })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("42")).toBeInTheDocument();
+  });
+
+  it("formats zero with currency (does not show em-dash)", () => {
+    render(
+      <ComputedDisplay
+        field={makeComputedProps({ value: 0, format: "currency" })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("$0.00")).toBeInTheDocument();
+  });
+
+  it("formats boolean without format as string", () => {
+    render(
+      <ComputedDisplay
+        field={makeComputedProps({ value: false })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("false")).toBeInTheDocument();
+  });
+
+  it("formats currency with locale/currency from formatOptions", () => {
+    render(
+      <ComputedDisplay
+        field={makeComputedProps({
+          value: 25444.40,
+          format: "currency",
+          formatOptions: { locale: "sv-SE", currency: "SEK" },
+        })}
+        spec={mockSpec}
+      />,
+    );
+    const text = screen.getByText((content) =>
+      content.includes("25") && content.includes("444") && content.includes("kr"),
+    );
+    expect(text).toBeInTheDocument();
+  });
+
+  it("formats currency with EUR locale from formatOptions", () => {
+    render(
+      <ComputedDisplay
+        field={makeComputedProps({
+          value: 1000,
+          format: "currency",
+          formatOptions: { locale: "de-DE", currency: "EUR" },
+        })}
+        spec={mockSpec}
+      />,
+    );
+    const text = screen.getByText((content) =>
+      content.includes("1.000") && content.includes("€"),
+    );
+    expect(text).toBeInTheDocument();
+  });
 });
 
 // ============================================================================
@@ -706,6 +820,148 @@ describe("DisplayField", () => {
       />,
     );
     expect(screen.getByText("Dynamic value")).toBeInTheDocument();
+  });
+
+  it("formats sourceValue with currency format", () => {
+    render(
+      <DisplayField
+        field={makeDisplayProps({
+          sourceValue: 1234.56,
+          format: "currency",
+          content: "Fallback",
+        })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("$1,234.56")).toBeInTheDocument();
+  });
+
+  it("formats sourceValue with percent format", () => {
+    render(
+      <DisplayField
+        field={makeDisplayProps({
+          sourceValue: 0.75,
+          format: "percent",
+          content: "Fallback",
+        })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("75%")).toBeInTheDocument();
+  });
+
+  it("formats sourceValue with decimal format", () => {
+    render(
+      <DisplayField
+        field={makeDisplayProps({
+          sourceValue: 123.456,
+          format: "decimal(1)",
+          content: "Fallback",
+        })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("123.5")).toBeInTheDocument();
+  });
+
+  it("shows em-dash for null sourceValue with format", () => {
+    render(
+      <DisplayField
+        field={makeDisplayProps({
+          sourceValue: null,
+          format: "currency",
+          content: "Fallback",
+        })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("\u2014")).toBeInTheDocument();
+  });
+
+  it("shows em-dash for undefined sourceValue with format", () => {
+    render(
+      <DisplayField
+        field={makeDisplayProps({
+          sourceValue: undefined,
+          format: "currency",
+        })}
+        spec={mockSpec}
+      />,
+    );
+    // sourceValue is undefined → falls through to content
+    expect(screen.getByText("Hello world")).toBeInTheDocument();
+  });
+
+  it("falls back to string for non-numeric sourceValue with currency format", () => {
+    render(
+      <DisplayField
+        field={makeDisplayProps({
+          sourceValue: "not a number",
+          format: "currency",
+        })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("not a number")).toBeInTheDocument();
+  });
+
+  it("formats sourceValue without format as plain string", () => {
+    render(
+      <DisplayField
+        field={makeDisplayProps({
+          sourceValue: 42,
+        })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("42")).toBeInTheDocument();
+  });
+
+  it("formats zero sourceValue with currency (does not skip rendering)", () => {
+    render(
+      <DisplayField
+        field={makeDisplayProps({
+          sourceValue: 0,
+          format: "currency",
+        })}
+        spec={mockSpec}
+      />,
+    );
+    expect(screen.getByText("$0.00")).toBeInTheDocument();
+  });
+
+  it("formats currency with locale/currency from formatOptions", () => {
+    render(
+      <DisplayField
+        field={makeDisplayProps({
+          sourceValue: 209550,
+          format: "currency",
+          formatOptions: { locale: "sv-SE", currency: "SEK" },
+        })}
+        spec={mockSpec}
+      />,
+    );
+    const text = screen.getByText((content) =>
+      content.includes("209") && content.includes("550") && content.includes("kr"),
+    );
+    expect(text).toBeInTheDocument();
+  });
+
+  it("formats currency with EUR locale", () => {
+    render(
+      <DisplayField
+        field={makeDisplayProps({
+          sourceValue: 1234.56,
+          format: "currency",
+          formatOptions: { locale: "de-DE", currency: "EUR" },
+        })}
+        spec={mockSpec}
+      />,
+    );
+    const text = screen.getByText((content) =>
+      content.includes("1.234,56") || (content.includes("1234") && content.includes("€")),
+    );
+    expect(text).toBeInTheDocument();
   });
 });
 

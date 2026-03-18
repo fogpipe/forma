@@ -69,3 +69,13 @@ export * from "./feel/index.js";
 
 // Form state engines
 export * from "./engine/index.js";
+
+// Format utilities
+export {
+  formatValue,
+  isValidFormat,
+  parseDecimalFormat,
+  SUPPORTED_FORMATS,
+  DECIMAL_FORMAT_PATTERN,
+} from "./format/index.js";
+export type { FormatOptions, SupportedFormat } from "./format/index.js";

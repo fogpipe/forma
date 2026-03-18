@@ -25,12 +25,13 @@ export function createTestSpec(
   options: {
     fields?: Record<string, { type: string; [key: string]: unknown }>;
     fieldOrder?: string[];
-    computed?: Record<string, { expression: string }>;
+    computed?: Record<string, { expression: string; format?: string }>;
     pages?: PageDefinition[];
     referenceData?: Record<string, unknown>;
+    meta?: Partial<Forma["meta"]>;
   } = {},
 ): Forma {
-  const { fields = {}, fieldOrder, computed, pages, referenceData } = options;
+  const { fields = {}, fieldOrder, computed, pages, referenceData, meta } = options;
 
   // Build schema from fields
   const schemaProperties: Record<string, unknown> = {};
@@ -113,6 +114,7 @@ export function createTestSpec(
     meta: {
       id: "test-form",
       title: "Test Form",
+      ...meta,
     },
     schema: {
       type: "object",

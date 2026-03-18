@@ -493,6 +493,10 @@ export interface FormMeta {
   description?: string;
   /** Form version */
   version?: string;
+  /** Default locale for number/date formatting (BCP 47 tag, e.g., "sv-SE") */
+  locale?: string;
+  /** Default currency code for currency formatting (ISO 4217, e.g., "SEK") */
+  currency?: string;
 }
 
 /**

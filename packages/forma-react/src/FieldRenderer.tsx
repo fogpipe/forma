@@ -10,6 +10,7 @@ import type {
   FieldDefinition,
   JSONSchemaProperty,
   SelectOption,
+  FormatOptions,
 } from "@fogpipe/forma-core";
 import { isAdornableField } from "@fogpipe/forma-core";
 import { useFormaContext } from "./context.js";
@@ -24,6 +25,7 @@ import type {
   ArrayFieldProps,
   ArrayHelpers,
   DisplayFieldProps,
+  ComputedFieldProps,
   MatrixFieldProps,
 } from "./types.js";
 
@@ -109,6 +111,13 @@ export function FieldRenderer({
   const forma = useFormaContext();
   const { spec } = forma;
 
+  // Resolve format options from spec.meta
+  const resolvedFormatOptions: FormatOptions = {
+    locale: spec.meta.locale,
+    currency: spec.meta.currency,
+    nullDisplay: "—",
+  };
+
   const fieldDef = spec.fields[fieldPath];
   if (!fieldDef) {
     console.warn(`Field not found: ${fieldPath}`);
@@ -181,6 +190,7 @@ export function FieldRenderer({
     | MultiSelectFieldProps
     | ArrayFieldProps
     | DisplayFieldProps
+    | ComputedFieldProps
     | MatrixFieldProps = baseProps;
 
   if (fieldType === "number") {
@@ -347,6 +357,11 @@ export function FieldRenderer({
     const sourceValue = fieldDef.source
       ? (forma.data[fieldDef.source] ?? forma.computed[fieldDef.source])
       : undefined;
+    // Resolve format: display field's own format takes priority,
+    // fall back to the source computed field's format
+    const format =
+      fieldDef.format ??
+      (fieldDef.source ? spec.computed?.[fieldDef.source]?.format : undefined);
     const {
       onChange: _onChange, // omit from display props
       value: _value, // omit from display props
@@ -359,8 +374,25 @@ export function FieldRenderer({
       fieldType: "display",
       content: fieldDef.content,
       sourceValue,
-      format: fieldDef.format,
+      format,
+      formatOptions: resolvedFormatOptions,
     } as DisplayFieldProps;
+  } else if (fieldType === "computed" && fieldDef.type === "computed") {
+    // Computed fields (read-only calculated values)
+    const computedDef = spec.computed?.[fieldPath];
+    const {
+      onChange: _onChangeC, // omit from computed props
+      ...computedBaseProps
+    } = baseProps;
+    void _onChangeC;
+    fieldProps = {
+      ...computedBaseProps,
+      fieldType: "computed",
+      value: forma.computed[fieldPath],
+      expression: computedDef?.expression ?? "",
+      format: computedDef?.format,
+      formatOptions: resolvedFormatOptions,
+    } as ComputedFieldProps;
   } else {
     // Text-based fields
     fieldProps = {
