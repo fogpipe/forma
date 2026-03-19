@@ -111,12 +111,16 @@ describe("format module", () => {
         expect(result).toBe("$1,234.56");
       });
 
-      it("formats zero", () => {
-        expect(formatValue(0, "currency")).toBe("$0.00");
+      it("formats zero (strips trailing zeros for integers)", () => {
+        expect(formatValue(0, "currency")).toBe("$0");
       });
 
-      it("formats negative numbers", () => {
-        expect(formatValue(-100, "currency")).toBe("-$100.00");
+      it("formats negative integers (strips trailing zeros)", () => {
+        expect(formatValue(-100, "currency")).toBe("-$100");
+      });
+
+      it("keeps decimals for fractional values", () => {
+        expect(formatValue(-100.5, "currency")).toBe("-$100.50");
       });
 
       it("respects currency option", () => {

@@ -739,7 +739,7 @@ describe("ComputedDisplay", () => {
         spec={mockSpec}
       />,
     );
-    expect(screen.getByText("$0.00")).toBeInTheDocument();
+    expect(screen.getByText("$0")).toBeInTheDocument();
   });
 
   it("formats boolean without format as string", () => {
@@ -927,7 +927,7 @@ describe("DisplayField", () => {
         spec={mockSpec}
       />,
     );
-    expect(screen.getByText("$0.00")).toBeInTheDocument();
+    expect(screen.getByText("$0")).toBeInTheDocument();
   });
 
   it("formats currency with locale/currency from formatOptions", () => {

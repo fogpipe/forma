@@ -106,6 +106,7 @@ export function parseDecimalFormat(format: string): number | null {
  * @example
  * formatValue(1234.567, "decimal(2)")  // "1234.57"
  * formatValue(1234.5, "currency")       // "$1,234.50"
+ * formatValue(1234, "currency")         // "$1,234" (trailing zeros stripped for integers)
  * formatValue(0.156, "percent")         // "15.6%"
  * formatValue(null, undefined, { nullDisplay: "—" })  // "—"
  */
@@ -141,6 +142,7 @@ export function formatValue(
       ? new Intl.NumberFormat(locale, {
           style: "currency",
           currency: currency,
+          trailingZeroDisplay: "stripIfInteger",
         }).format(value)
       : String(value);
   }
