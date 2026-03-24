@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 60" fill="none">
+  <!-- Gold → Copper → Bronze -->
+  <rect y="0"  width="52" height="12" rx="3" fill="#D4982A"/>
+  <rect y="24" width="38" height="12" rx="3" fill="#B86B3D"/>
+  <rect y="48" width="22" height="12" rx="3" fill="#8B6914"/>
+</svg>

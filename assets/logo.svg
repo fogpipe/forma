@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 86" fill="none">
+  <defs>
+    <style>
+      .wm {
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        font-size: 54px;
+        font-weight: 700;
+        letter-spacing: -1.5px;
+        fill: #2A2A35;
+      }
+      @media (prefers-color-scheme: dark) {
+        .wm { fill: #F0EDE8; }
+      }
+    </style>
+  </defs>
+
+  <!--
+    Three bars = F (gestalt) = form fields (product) = emergence (ge form åt)
+    Colors from the Formidable palette: gold → copper → bronze
+    No container. Confident, minimal. The shape is being formed.
+  -->
+  <g transform="translate(0, 5)">
+    <!-- Top bar: gold — the fullest, most formed -->
+    <rect y="0"  width="52" height="12" rx="3" fill="#D4982A"/>
+    <!-- Middle bar: copper — taking shape -->
+    <rect y="24" width="38" height="12" rx="3" fill="#B86B3D"/>
+    <!-- Bottom bar: bronze — barely formed, a mark emerging -->
+    <rect y="48" width="22" height="12" rx="3" fill="#8B6914"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="74" y="62" class="wm">forma</text>
+</svg>
