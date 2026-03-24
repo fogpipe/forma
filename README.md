@@ -27,6 +27,8 @@ A Forma spec is a portable JSON document with [FEEL (Friendly Enough Expression 
 - **Headless** — Bring your own UI components, full control over rendering
 - **Framework-agnostic core** — React integration today, anything tomorrow
 
+Forma powers [Formidable](https://formidable.software) — an AI-powered form builder for creating, publishing, and managing dynamic forms.
+
 ## Packages
 
 | Package | Description | npm |
@@ -186,6 +188,7 @@ Forma uses FEEL expressions for dynamic behavior:
 
 ## Documentation
 
+- [Full documentation](https://docs.formidable.software) — Forma specification, FEEL reference, conditional logic, and guides
 - [forma-core README](./packages/forma-core/README.md) — Core runtime API
 - [forma-react README](./packages/forma-react/README.md) — React integration guide
 
