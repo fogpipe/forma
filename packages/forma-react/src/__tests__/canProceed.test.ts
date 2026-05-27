@@ -130,6 +130,56 @@ describe("canProceed", () => {
 
       expect(result.current.wizard?.canProceed).toBe(true);
     });
+
+    it("only proceeds when every row of a required matrix is answered", () => {
+      const spec = createTestSpec({
+        fields: {
+          satisfaction: {
+            type: "matrix",
+            label: "Satisfaction",
+            required: true,
+            rows: [
+              { id: "speed", label: "Speed" },
+              { id: "quality", label: "Quality" },
+              { id: "support", label: "Support" },
+            ],
+            columns: [
+              { value: 1, label: "Poor" },
+              { value: 5, label: "Great" },
+            ],
+          },
+        },
+        pages: [{ id: "page1", title: "Page 1", fields: ["satisfaction"] }],
+      });
+
+      const { result } = renderHook(() =>
+        useForma({ spec, initialData: { satisfaction: {} } }),
+      );
+
+      expect(result.current.wizard?.canProceed).toBe(false);
+
+      act(() => {
+        result.current.setFieldValue("satisfaction", { speed: 5 });
+      });
+      expect(result.current.wizard?.canProceed).toBe(false);
+
+      act(() => {
+        result.current.setFieldValue("satisfaction", {
+          speed: 5,
+          quality: 5,
+        });
+      });
+      expect(result.current.wizard?.canProceed).toBe(false);
+
+      act(() => {
+        result.current.setFieldValue("satisfaction", {
+          speed: 5,
+          quality: 5,
+          support: 1,
+        });
+      });
+      expect(result.current.wizard?.canProceed).toBe(true);
+    });
   });
 
   describe("visibility integration", () => {

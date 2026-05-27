@@ -732,10 +732,14 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
         if (!currentPage) return true;
         // Get errors only for visible fields on the current page
         const pageErrors = validation.errors.filter((e) => {
-          // Check if field is on current page (including array items like "items[0].name")
+          // Check if field is on current page (including array items like
+          // "items[0].name" and matrix rows like "satisfaction.q1")
           const isOnCurrentPage =
             currentPage.fields.includes(e.field) ||
-            currentPage.fields.some((f) => e.field.startsWith(`${f}[`));
+            currentPage.fields.some(
+              (f) =>
+                e.field.startsWith(`${f}[`) || e.field.startsWith(`${f}.`),
+            );
           // Only count errors for visible fields
           const isVisible = visibility[e.field] !== false;
           // Only count actual errors, not warnings
@@ -754,8 +758,13 @@ export function useForma(options: UseFormaOptions): UseFormaReturn {
       },
       validateCurrentPage: () => {
         if (!currentPage) return true;
-        const pageErrors = validation.errors.filter((e) =>
-          currentPage.fields.includes(e.field),
+        const pageErrors = validation.errors.filter(
+          (e) =>
+            currentPage.fields.includes(e.field) ||
+            currentPage.fields.some(
+              (f) =>
+                e.field.startsWith(`${f}[`) || e.field.startsWith(`${f}.`),
+            ),
         );
         return pageErrors.length === 0;
       },
